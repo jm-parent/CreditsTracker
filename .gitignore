@@ -3,3 +3,4 @@ node_modules/
 .vitest/
 out/
 *.log
+.worktrees/
