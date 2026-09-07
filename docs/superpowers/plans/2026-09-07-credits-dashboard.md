@@ -115,7 +115,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
-    outDir: '.vite/build',
+    outDir: '.vite/build/preload',
     lib: {
       entry: 'src/preload.ts',
       formats: ['cjs'],
@@ -127,6 +127,11 @@ export default defineConfig({
   },
 });
 ```
+
+Note: this outputs to `.vite/build/preload/preload.js`, a subdirectory of the
+main process's `.vite/build/main.js` — `src/main.ts` (Step 12) resolves the
+preload path relative to its own `__dirname` (`.vite/build`), so it must
+reference `preload/preload.js`, not `../preload/preload.js`.
 
 - [ ] **Step 6: Create `vite.renderer.config.ts`**
 
@@ -224,7 +229,7 @@ function createWindow(): void {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.js'),
+      preload: path.join(__dirname, 'preload/preload.js'),
     },
   });
 
