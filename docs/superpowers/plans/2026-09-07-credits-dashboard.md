@@ -841,7 +841,19 @@ vi.mock('./db', async () => {
   const actual = await vi.importActual<typeof import('./db')>('./db');
   return {
     ...actual,
-    openDatabase: vi.fn(() => new Database(':memory:')),
+    openDatabase: vi.fn(() => {
+      // Empty in-memory DB still needs the schema, since the real
+      // (unmocked) getFilterOptions/getUsage query these tables.
+      const db = new Database(':memory:');
+      db.exec(`
+        CREATE TABLE sessions (id TEXT PRIMARY KEY, cwd TEXT, repository TEXT);
+        CREATE TABLE assistant_usage_events (
+          session_id TEXT, model TEXT, total_nano_aiu INTEGER,
+          input_tokens INTEGER, output_tokens INTEGER, created_at TEXT
+        );
+      `);
+      return db;
+    }),
   };
 });
 
