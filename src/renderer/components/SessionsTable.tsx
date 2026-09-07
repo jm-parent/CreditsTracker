@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import type { BreakdownPoint } from '../../shared/types';
 
 interface SessionsTableProps {
@@ -22,7 +25,7 @@ export function SessionsTable({ rows }: SessionsTableProps) {
   const [sort, setSort] = useState<SortDirection>('default');
 
   if (rows.length === 0) {
-    return <p>No sessions for this selection.</p>;
+    return <p className="text-sm text-muted-foreground">No sessions for this selection.</p>;
   }
 
   const sortedRows = [...rows].sort((a, b) =>
@@ -30,23 +33,34 @@ export function SessionsTable({ rows }: SessionsTableProps) {
   );
 
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>Project</th>
-          <th role="columnheader" onClick={() => setSort(nextSortDirection)} style={{ cursor: 'pointer' }}>
-            AIU credits
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {sortedRows.map((row) => (
-          <tr key={row.key}>
-            <td>{row.key}</td>
-            <td>{row.aiuCredits.toFixed(2)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Project</TableHead>
+              <TableHead
+                role="columnheader"
+                onClick={() => setSort(nextSortDirection)}
+                className="cursor-pointer select-none"
+              >
+                <span className="inline-flex items-center gap-1">
+                  AIU credits
+                  {sort === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />}
+                </span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedRows.map((row) => (
+              <TableRow key={row.key}>
+                <TableCell>{row.key}</TableCell>
+                <TableCell>{row.aiuCredits.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
