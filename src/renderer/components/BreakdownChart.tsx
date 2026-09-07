@@ -5,9 +5,10 @@ import type { BreakdownPoint } from '../../shared/types';
 interface BreakdownChartProps {
   title: string;
   data: BreakdownPoint[];
+  onBarClick?: (key: string) => void;
 }
 
-export function BreakdownChart({ title, data }: BreakdownChartProps) {
+export function BreakdownChart({ title, data, onBarClick }: BreakdownChartProps) {
   return (
     <Card className="chart-card">
       <CardHeader>
@@ -23,7 +24,12 @@ export function BreakdownChart({ title, data }: BreakdownChartProps) {
                 <XAxis dataKey="key" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip contentStyle={{ backgroundColor: '#131922', border: '1px solid #263242', color: '#e5e9f0' }} />
-                <Bar dataKey="aiuCredits" fill="#22d3ee" />
+                <Bar
+                  dataKey="aiuCredits"
+                  fill="#22d3ee"
+                  cursor={onBarClick ? 'pointer' : undefined}
+                  onClick={onBarClick ? (entry: BreakdownPoint) => onBarClick(entry.key) : undefined}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
