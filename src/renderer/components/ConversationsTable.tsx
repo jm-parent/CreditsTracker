@@ -1,5 +1,6 @@
 import { Card, CardContent } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { formatTokens } from '../lib/format';
 import type { ConversationSummary } from '../../shared/types';
 
 interface ConversationsTableProps {
@@ -32,7 +33,7 @@ export function ConversationsTable({ conversations }: ConversationsTableProps) {
                 <TableCell>{conversation.summary ?? '—'}</TableCell>
                 <TableCell>{conversation.models}</TableCell>
                 <TableCell>{conversation.aiuCredits.toFixed(2)}</TableCell>
-                <TableCell>{conversation.tokens}</TableCell>
+                <TableCell>{formatTokens(conversation.tokens)}</TableCell>
                 <TableCell>{conversation.requests}</TableCell>
               </TableRow>
             ))}

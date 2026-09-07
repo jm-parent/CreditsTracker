@@ -8,7 +8,7 @@ describe('SummaryCards', () => {
 
     expect(screen.getByText('12.50')).toBeInTheDocument();
     expect(screen.getByText('AIU credits')).toBeInTheDocument();
-    expect(screen.getByText('3400')).toBeInTheDocument();
+    expect(screen.getByText('3.4k')).toBeInTheDocument();
     expect(screen.getByText('Tokens')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('Requests')).toBeInTheDocument();

@@ -1,4 +1,5 @@
 import { Card, CardContent } from './ui/card';
+import { formatTokens } from '../lib/format';
 import type { UsageTotals } from '../../shared/types';
 
 interface SummaryCardsProps {
@@ -16,7 +17,7 @@ export function SummaryCards({ totals }: SummaryCardsProps) {
       </Card>
       <Card className="summary-card">
         <CardContent className="flex flex-col gap-1 p-4">
-          <span className="summary-value text-2xl font-semibold text-foreground">{totals.tokens}</span>
+          <span className="summary-value text-2xl font-semibold text-foreground">{formatTokens(totals.tokens)}</span>
           <span className="summary-label text-sm text-muted-foreground">Tokens</span>
         </CardContent>
       </Card>
