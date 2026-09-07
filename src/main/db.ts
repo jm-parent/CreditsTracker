@@ -6,9 +6,13 @@ import type {
   ConversationSummary,
   FilterOptions,
   ProjectDetailResult,
+  RawTableName,
+  RawTablePage,
   UsageFilters,
   UsageResult,
 } from '../shared/types';
+
+const RAW_TABLES: readonly RawTableName[] = ['sessions', 'assistant_usage_events'];
 
 export class DatabaseNotFoundError extends Error {
   constructor(public readonly dbPath: string) {
@@ -179,4 +183,41 @@ export function getProjectDetail(
     totals: totalsRow,
     conversations,
   };
+}
+
+export function getRawTablePage(
+  db: Database.Database,
+  table: RawTableName,
+  page: number,
+  pageSize: number,
+): RawTablePage {
+  if (!RAW_TABLES.includes(table)) {
+    throw new Error(`Unknown table: ${table}`);
+  }
+  const safePage = Math.max(0, Math.floor(page));
+  const safePageSize = Math.min(500, Math.max(1, Math.floor(pageSize)));
+  const offset = safePage * safePageSize;
+
+  const totalRow = db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as {
+    count: number;
+  };
+
+  const rows = db
+    .prepare(`SELECT * FROM ${table} ORDER BY rowid DESC LIMIT @limit OFFSET @offset`)
+    .all({ limit: safePageSize, offset }) as Array<Record<string, unknown>>;
+
+  const columns = rows.length > 0 ? Object.keys(rows[0]) : getTableColumns(db, table);
+
+  return {
+    columns,
+    rows,
+    total: totalRow.count,
+    page: safePage,
+    pageSize: safePageSize,
+  };
+}
+
+function getTableColumns(db: Database.Database, table: RawTableName): string[] {
+  const info = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  return info.map((col) => col.name);
 }

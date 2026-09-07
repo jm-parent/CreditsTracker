@@ -52,3 +52,19 @@ export interface ProjectDetailResult {
   totals: UsageTotals;
   conversations: ConversationSummary[];
 }
+
+export type RawTableName = 'sessions' | 'assistant_usage_events';
+
+export interface RawTablePage {
+  columns: string[];
+  rows: Array<Record<string, unknown>>;
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface RawTableParams {
+  table: RawTableName;
+  page: number;
+  pageSize: number;
+}

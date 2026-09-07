@@ -10,6 +10,7 @@ import {
   getFilterOptions,
   getUsage,
   getProjectDetail,
+  getRawTablePage,
 } from './db';
 
 describe('resolveDefaultDbPath', () => {
@@ -289,5 +290,63 @@ describe('getProjectDetail', () => {
     expect(result.conversations).toEqual([]);
     expect(result.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
     db.close();
+  });
+});
+
+describe('getRawTablePage', () => {
+  it('returns columns, rows, and pagination info for the sessions table', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const result = getRawTablePage(db, 'sessions', 0, 10);
+
+    expect(result.total).toBe(2);
+    expect(result.page).toBe(0);
+    expect(result.pageSize).toBe(10);
+    expect(result.columns).toEqual(['id', 'cwd', 'repository', 'created_at']);
+    expect(result.rows).toHaveLength(2);
+    db.close();
+  });
+
+  it('returns columns, rows, and pagination info for the assistant_usage_events table', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const result = getRawTablePage(db, 'assistant_usage_events', 0, 10);
+
+    expect(result.total).toBe(2);
+    expect(result.rows).toHaveLength(2);
+    expect(result.columns).toContain('total_nano_aiu');
+    db.close();
+  });
+
+  it('paginates results based on page and pageSize', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const firstPage = getRawTablePage(db, 'sessions', 0, 1);
+    const secondPage = getRawTablePage(db, 'sessions', 1, 1);
+
+    expect(firstPage.rows).toHaveLength(1);
+    expect(secondPage.rows).toHaveLength(1);
+    expect(firstPage.rows[0].id).not.toBe(secondPage.rows[0].id);
+    db.close();
+  });
+
+  it('returns empty rows with correct columns for a table with no data', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const result = getRawTablePage(db, 'sessions', 5, 10);
+
+    expect(result.rows).toEqual([]);
+    expect(result.total).toBe(2);
+  });
+
+  it('throws for an unknown table name', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    expect(() => getRawTablePage(db, 'drop table sessions; --' as never, 0, 10)).toThrow();
   });
 });

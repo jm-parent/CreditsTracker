@@ -51,6 +51,13 @@ beforeEach(() => {
     getFilterOptions: vi.fn().mockResolvedValue(options),
     getUsage: vi.fn().mockResolvedValue(usage),
     getProjectDetail: vi.fn().mockResolvedValue(projectDetail),
+    getRawTablePage: vi.fn().mockResolvedValue({
+      columns: ['id'],
+      rows: [],
+      total: 0,
+      page: 0,
+      pageSize: 50,
+    }),
   };
 });
 
@@ -142,5 +149,30 @@ describe('App', () => {
     expect(await screen.findByText('Credits by project')).toBeInTheDocument();
     expect(screen.queryByText('Fixed the login bug')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
+  });
+
+  it('navigates to the raw data page when "Raw data" is clicked and back again', async () => {
+    window.api.getRawTablePage = vi.fn().mockResolvedValue({
+      columns: ['id', 'cwd'],
+      rows: [{ id: 's1', cwd: 'C:/repo-a' }],
+      total: 1,
+      page: 0,
+      pageSize: 50,
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'Raw data' }));
+
+    expect(await screen.findByRole('heading', { name: 'Raw data' })).toBeInTheDocument();
+    expect(screen.getByText('s1')).toBeInTheDocument();
+    expect(screen.queryByText('Credits by project')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '← Back' }));
+
+    expect(await screen.findByText('Credits by project')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Raw data' })).not.toBeInTheDocument();
   });
 });

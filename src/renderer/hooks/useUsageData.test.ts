@@ -14,6 +14,8 @@ beforeEach(() => {
   window.api = {
     getFilterOptions: vi.fn(),
     getUsage: vi.fn().mockResolvedValue(sampleResult),
+    getProjectDetail: vi.fn(),
+    getRawTablePage: vi.fn(),
   };
 });
 

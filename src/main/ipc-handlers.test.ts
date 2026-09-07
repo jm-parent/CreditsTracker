@@ -56,6 +56,7 @@ describe('registerIpcHandlers', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('get-filter-options', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-usage', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-project-detail', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('get-raw-table-page', expect.any(Function));
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {
@@ -84,6 +85,22 @@ describe('registerIpcHandlers', () => {
       project: 'org/repo-a',
       totals: { aiuCredits: 0, tokens: 0, requests: 0 },
       conversations: [],
+    });
+  });
+
+  it('get-raw-table-page handler forwards params and returns a RawTablePage shape', async () => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as { __handlers: Map<string, (...args: unknown[]) => unknown> }).__handlers;
+    const getRawTablePageHandler = handlers.get('get-raw-table-page')!;
+
+    const result = await getRawTablePageHandler({}, { table: 'sessions', page: 0, pageSize: 10 });
+
+    expect(result).toEqual({
+      columns: ['id', 'cwd', 'repository', 'summary', 'created_at'],
+      rows: [],
+      total: 0,
+      page: 0,
+      pageSize: 10,
     });
   });
 });
