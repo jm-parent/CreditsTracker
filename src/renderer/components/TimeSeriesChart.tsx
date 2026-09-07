@@ -67,7 +67,7 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
               <BarChart data={data}>
                 <XAxis dataKey="date" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
-                <Tooltip content={StackedTooltip} />
+                <Tooltip content={StackedTooltip} cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
                 {projectKeys.length > 0 ? (
                   projectKeys.map((key) => (
                     <Bar

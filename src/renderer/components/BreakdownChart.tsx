@@ -32,7 +32,10 @@ export function BreakdownChart({ title, data, onBarClick, colorByKey = false }: 
               <BarChart data={data} onClick={onBarClick ? handleChartClick : undefined}>
                 <XAxis dataKey="key" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ backgroundColor: '#131922', border: '1px solid #263242', color: '#e5e9f0' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#131922', border: '1px solid #263242', color: '#e5e9f0' }}
+                  cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }}
+                />
                 <Bar
                   dataKey="aiuCredits"
                   fill="#22d3ee"
