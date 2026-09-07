@@ -6,6 +6,7 @@ import { SummaryCards } from './components/SummaryCards';
 import { TimeSeriesChart } from './components/TimeSeriesChart';
 import { BreakdownChart } from './components/BreakdownChart';
 import { SessionsTable } from './components/SessionsTable';
+import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { Skeleton } from './components/ui/skeleton';
 import type { FilterOptions, UsageFilters } from '../shared/types';
 
@@ -15,6 +16,7 @@ export function App() {
   const [options, setOptions] = useState<FilterOptions>(EMPTY_OPTIONS);
   const [optionsError, setOptionsError] = useState<Error | null>(null);
   const [filters, setFilters] = useState<UsageFilters>({});
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const { data, loading, error } = useUsageData(filters);
 
   useEffect(() => {
@@ -49,11 +51,24 @@ export function App() {
           <Skeleton className="h-24 w-full" />
         </div>
       )}
-      {data && (
+      {data && selectedProject && (
+        <div className="mt-6">
+          <ProjectDetailPage
+            project={selectedProject}
+            filters={filters}
+            onBack={() => setSelectedProject(null)}
+          />
+        </div>
+      )}
+      {data && !selectedProject && (
         <div className="mt-6 flex flex-col gap-6">
           <SummaryCards totals={data.totals} />
           <TimeSeriesChart data={data.timeSeries} />
-          <BreakdownChart title="Credits by project" data={data.byProject} />
+          <BreakdownChart
+            title="Credits by project"
+            data={data.byProject}
+            onBarClick={setSelectedProject}
+          />
           <BreakdownChart title="Credits by model" data={data.byModel} />
           <SessionsTable rows={data.byProject} />
         </div>

@@ -1,11 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
-import type { FilterOptions, UsageResult } from '../shared/types';
+import type { FilterOptions, ProjectDetailResult, UsageResult } from '../shared/types';
 
+vi.mock('recharts', async () => {
+  const actual = await vi.importActual<typeof import('recharts')>('recharts');
 
-
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+      <actual.ResponsiveContainer width={600} height={240}>
+        {children}
+      </actual.ResponsiveContainer>
+    ),
+  };
+});
 const options: FilterOptions = {
   projects: ['org/repo-a'],
   models: ['claude-sonnet-5'],
@@ -20,10 +30,27 @@ const usage: UsageResult = {
   byModel: [{ key: 'claude-sonnet-5', aiuCredits: 1.5 }],
 };
 
+const projectDetail: ProjectDetailResult = {
+  project: 'org/repo-a',
+  totals: { aiuCredits: 1.5, tokens: 60, requests: 1 },
+  conversations: [
+    {
+      sessionId: 's1',
+      createdAt: '2026-09-01 10:00:00',
+      summary: 'Fixed the login bug',
+      models: 'claude-sonnet-5',
+      aiuCredits: 1.5,
+      tokens: 60,
+      requests: 1,
+    },
+  ],
+};
+
 beforeEach(() => {
   window.api = {
     getFilterOptions: vi.fn().mockResolvedValue(options),
     getUsage: vi.fn().mockResolvedValue(usage),
+    getProjectDetail: vi.fn().mockResolvedValue(projectDetail),
   };
 });
 
@@ -90,5 +117,24 @@ describe('App', () => {
     resolveUsage(usage);
     expect(await screen.findByText('3.00')).toBeInTheDocument();
     expect(screen.queryAllByRole('status', { name: 'Loading' })).toHaveLength(0);
+  });
+
+  it('navigates to the project detail page when a project bar is clicked and back again', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await screen.findByText('3.00');
+
+    const bar = container.querySelector('.recharts-bar-rectangle');
+    expect(bar).not.toBeNull();
+
+    fireEvent.click(bar as Element);
+
+    expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
+    expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
+    expect(window.api.getProjectDetail).toHaveBeenCalledWith({ project: 'org/repo-a' });
+
+    await user.click(screen.getByRole('button', { name: /back/i }));
+
+    expect(await screen.findByText('3.00')).toBeInTheDocument();
   });
 });
