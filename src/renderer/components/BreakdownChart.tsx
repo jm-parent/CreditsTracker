@@ -1,15 +1,17 @@
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { MouseHandlerDataParam } from 'recharts/types/synchronisation/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { getColorForKey } from '../lib/colors';
 import type { BreakdownPoint } from '../../shared/types';
 
 interface BreakdownChartProps {
   title: string;
   data: BreakdownPoint[];
   onBarClick?: (key: string) => void;
+  colorByKey?: boolean;
 }
 
-export function BreakdownChart({ title, data, onBarClick }: BreakdownChartProps) {
+export function BreakdownChart({ title, data, onBarClick, colorByKey = false }: BreakdownChartProps) {
   function handleChartClick(state: MouseHandlerDataParam): void {
     if (onBarClick && typeof state?.activeLabel === 'string') {
       onBarClick(state.activeLabel);
@@ -36,7 +38,10 @@ export function BreakdownChart({ title, data, onBarClick }: BreakdownChartProps)
                   fill="#22d3ee"
                   cursor={onBarClick ? 'pointer' : undefined}
                   onClick={onBarClick ? (entry: BreakdownPoint) => onBarClick(entry.key) : undefined}
-                />
+                >
+                  {colorByKey &&
+                    data.map((entry) => <Cell key={entry.key} fill={getColorForKey(entry.key)} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>

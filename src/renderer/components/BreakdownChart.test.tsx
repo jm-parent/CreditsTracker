@@ -69,4 +69,33 @@ describe('BreakdownChart', () => {
 
     expect(screen.getByTestId('breakdown-chart')).toBeInTheDocument();
   });
+
+  it('renders without error when colorByKey is set', () => {
+    render(
+      <BreakdownChart
+        title="Credits by project"
+        data={[
+          { key: 'org/repo-a', aiuCredits: 3 },
+          { key: 'org/repo-b', aiuCredits: 1 },
+        ]}
+        colorByKey
+      />,
+    );
+
+    expect(screen.getByTestId('breakdown-chart')).toBeInTheDocument();
+  });
+
+  it('renders all bars with the same color when colorByKey is not set', () => {
+    render(
+      <BreakdownChart
+        title="Credits by model"
+        data={[
+          { key: 'claude-sonnet-5', aiuCredits: 3 },
+          { key: 'gpt-5.4', aiuCredits: 1 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('breakdown-chart')).toBeInTheDocument();
+  });
 });

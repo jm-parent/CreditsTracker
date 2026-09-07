@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { getColorForKey } from '../lib/colors';
 import type { BreakdownPoint } from '../../shared/types';
 
 interface SessionsTableProps {
@@ -54,7 +55,16 @@ export function SessionsTable({ rows }: SessionsTableProps) {
           <TableBody>
             {sortedRows.map((row) => (
               <TableRow key={row.key}>
-                <TableCell>{row.key}</TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: getColorForKey(row.key) }}
+                    />
+                    {row.key}
+                  </span>
+                </TableCell>
                 <TableCell>{row.aiuCredits.toFixed(2)}</TableCell>
               </TableRow>
             ))}

@@ -89,6 +89,7 @@ export function App() {
                 title="Credits by project"
                 data={data.byProject}
                 onBarClick={setSelectedProject}
+                colorByKey
               />
               <BreakdownChart title="Credits by model" data={data.byModel} />
               <SessionsTable rows={data.byProject} />
