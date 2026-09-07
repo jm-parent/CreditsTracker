@@ -57,32 +57,6 @@ export function FilterBar({ options, filters, onChange }: FilterBarProps) {
           ))}
         </select>
       </div>
-
-      <div className="flex flex-col gap-1">
-        <label htmlFor="from-filter" className="text-xs font-medium text-muted-foreground">
-          From
-        </label>
-        <input
-          id="from-filter"
-          type="date"
-          className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          value={filters.from ?? ''}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => update({ from: event.target.value || undefined })}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label htmlFor="to-filter" className="text-xs font-medium text-muted-foreground">
-          To
-        </label>
-        <input
-          id="to-filter"
-          type="date"
-          className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          value={filters.to ?? ''}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => update({ to: event.target.value || undefined })}
-        />
-      </div>
     </div>
   );
 }
