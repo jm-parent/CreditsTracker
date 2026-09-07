@@ -20,10 +20,12 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-/* Recharts renders each chart as a focusable SVG (tabindex="0"), which
-   triggers the browser's default orange focus outline on click. The chart
-   isn't a real interactive control, so we suppress its outline entirely. */
-.recharts-wrapper svg:focus,
-.recharts-surface:focus {
-  outline: none;
+/* Recharts renders bars, the chart surface, and the wrapper as focusable
+   elements (tabindex="0"), which triggers the browser's default orange
+   focus outline on click. None of these are real interactive controls, so
+   we suppress the outline on the whole chart subtree. */
+.recharts-wrapper,
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible {
+  outline: none !important;
 }
