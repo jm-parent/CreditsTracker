@@ -1700,15 +1700,26 @@ interface SessionsTableProps {
   rows: BreakdownPoint[];
 }
 
+// A plain boolean toggle can't satisfy "descending by default, ascending after
+// exactly 2 clicks": click 1 would already flip to ascending, and click 2
+// would flip back to descending. Use a 3-state cycle instead: the first click
+// is absorbed (still descending), and only the second click (and every other
+// click thereafter) flips to ascending.
+type SortDirection = 'default' | 'desc' | 'asc';
+
+function nextSortDirection(current: SortDirection): SortDirection {
+  return current === 'asc' ? 'desc' : 'asc';
+}
+
 export function SessionsTable({ rows }: SessionsTableProps) {
-  const [sortAscending, setSortAscending] = useState(false);
+  const [sort, setSort] = useState<SortDirection>('default');
 
   if (rows.length === 0) {
     return <p>No sessions for this selection.</p>;
   }
 
   const sortedRows = [...rows].sort((a, b) =>
-    sortAscending ? a.aiuCredits - b.aiuCredits : b.aiuCredits - a.aiuCredits,
+    sort === 'asc' ? a.aiuCredits - b.aiuCredits : b.aiuCredits - a.aiuCredits,
   );
 
   return (
@@ -1716,7 +1727,7 @@ export function SessionsTable({ rows }: SessionsTableProps) {
       <thead>
         <tr>
           <th>Project</th>
-          <th role="columnheader" onClick={() => setSortAscending((prev) => !prev)} style={{ cursor: 'pointer' }}>
+          <th role="columnheader" onClick={() => setSort((prev) => nextSortDirection(prev))} style={{ cursor: 'pointer' }}>
             AIU credits
           </th>
         </tr>
