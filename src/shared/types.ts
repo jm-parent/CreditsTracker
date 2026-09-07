@@ -36,3 +36,19 @@ export interface FilterOptions {
   minDate: string | null;
   maxDate: string | null;
 }
+
+export interface ConversationSummary {
+  sessionId: string;
+  createdAt: string;
+  summary: string | null;
+  models: string;
+  aiuCredits: number;
+  tokens: number;
+  requests: number;
+}
+
+export interface ProjectDetailResult {
+  project: string;
+  totals: UsageTotals;
+  conversations: ConversationSummary[];
+}
