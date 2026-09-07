@@ -72,4 +72,30 @@ describe('ProjectDetailPage', () => {
 
     expect(await screen.findByText("Couldn't load details for this project.")).toBeInTheDocument();
   });
+
+  it('shows a refresh notice while keeping stale data visible when a refetch fails', async () => {
+    window.api.getProjectDetail = vi
+      .fn()
+      .mockResolvedValueOnce(detail)
+      .mockRejectedValueOnce(new Error('refresh failed'));
+
+    const { rerender } = render(
+      <ProjectDetailPage project="org/repo-a" filters={{ from: '2026-09-01' }} onBack={vi.fn()} />,
+    );
+
+    expect(await screen.findByText('3.50')).toBeInTheDocument();
+    expect(screen.getByText('210')).toBeInTheDocument();
+    expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
+
+    rerender(
+      <ProjectDetailPage project="org/repo-a" filters={{ from: '2026-09-02' }} onBack={vi.fn()} />,
+    );
+
+    expect(
+      await screen.findByText("Couldn't refresh — showing last known data."),
+    ).toBeInTheDocument();
+    expect(screen.getByText('3.50')).toBeInTheDocument();
+    expect(screen.getByText('210')).toBeInTheDocument();
+    expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
+  });
 });
