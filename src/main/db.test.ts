@@ -3,7 +3,14 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import Database from 'better-sqlite3';
-import { openDatabase, resolveDefaultDbPath, DatabaseNotFoundError, getFilterOptions, getUsage } from './db';
+import {
+  openDatabase,
+  resolveDefaultDbPath,
+  DatabaseNotFoundError,
+  getFilterOptions,
+  getUsage,
+  getProjectDetail,
+} from './db';
 
 describe('resolveDefaultDbPath', () => {
   it('points at ~/.copilot/session-store.db', () => {
@@ -170,6 +177,117 @@ describe('getUsage', () => {
     expect(noMatch.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
     expect(noMatch.timeSeries).toEqual([]);
 
+    db.close();
+  });
+});
+
+describe('getProjectDetail', () => {
+  function seedWithSummaryAndSecondEvent(db: Database.Database): void {
+    db.exec(`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        cwd TEXT,
+        repository TEXT,
+        summary TEXT,
+        created_at TEXT
+      );
+      CREATE TABLE assistant_usage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        model TEXT NOT NULL,
+        total_nano_aiu INTEGER,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        created_at TEXT
+      );
+    `);
+    db.prepare(
+      `INSERT INTO sessions (id, cwd, repository, summary, created_at) VALUES (?, ?, ?, ?, ?)`,
+    ).run('s1', 'C:/repo-a', 'org/repo-a', 'Fixed the login bug', '2026-09-01 10:00:00');
+    db.prepare(
+      `INSERT INTO sessions (id, cwd, repository, summary, created_at) VALUES (?, ?, ?, ?, ?)`,
+    ).run('s2', 'C:/repo-a', 'org/repo-a', 'Added tests', '2026-09-03 10:00:00');
+    db.prepare(
+      `INSERT INTO sessions (id, cwd, repository, summary, created_at) VALUES (?, ?, ?, ?, ?)`,
+    ).run('s3', 'C:/repo-b', null, 'Unrelated project work', '2026-09-02 10:00:00');
+    db.prepare(
+      `INSERT INTO assistant_usage_events (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('s1', 'claude-sonnet-5', 2_000_000_000, 100, 20, '2026-09-01 10:00:05');
+    db.prepare(
+      `INSERT INTO assistant_usage_events (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('s1', 'claude-sonnet-5', 1_000_000_000, 50, 10, '2026-09-01 10:05:00');
+    db.prepare(
+      `INSERT INTO assistant_usage_events (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('s2', 'gpt-5.4', 500_000_000, 30, 5, '2026-09-03 10:00:05');
+    db.prepare(
+      `INSERT INTO assistant_usage_events (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('s3', 'gpt-5.4', 9_000_000_000, 900, 90, '2026-09-02 10:00:05');
+  }
+
+  it('returns totals and conversations scoped to the given project, most recent first', () => {
+    const db = new Database(':memory:');
+    seedWithSummaryAndSecondEvent(db);
+
+    const result = getProjectDetail(db, { project: 'org/repo-a' });
+
+    expect(result.project).toBe('org/repo-a');
+    expect(result.totals).toEqual({ aiuCredits: 3.5, tokens: 215, requests: 3 });
+    expect(result.conversations).toEqual([
+      {
+        sessionId: 's2',
+        createdAt: '2026-09-03 10:00:00',
+        summary: 'Added tests',
+        models: 'gpt-5.4',
+        aiuCredits: 0.5,
+        tokens: 35,
+        requests: 1,
+      },
+      {
+        sessionId: 's1',
+        createdAt: '2026-09-01 10:00:00',
+        summary: 'Fixed the login bug',
+        models: 'claude-sonnet-5',
+        aiuCredits: 3,
+        tokens: 180,
+        requests: 2,
+      },
+    ]);
+    db.close();
+  });
+
+  it('excludes conversations from other projects', () => {
+    const db = new Database(':memory:');
+    seedWithSummaryAndSecondEvent(db);
+
+    const result = getProjectDetail(db, { project: 'org/repo-a' });
+
+    expect(result.conversations.some((c) => c.sessionId === 's3')).toBe(false);
+    db.close();
+  });
+
+  it('applies additional filters (model) on top of the project filter', () => {
+    const db = new Database(':memory:');
+    seedWithSummaryAndSecondEvent(db);
+
+    const result = getProjectDetail(db, { project: 'org/repo-a', model: 'gpt-5.4' });
+
+    expect(result.conversations.map((c) => c.sessionId)).toEqual(['s2']);
+    expect(result.totals).toEqual({ aiuCredits: 0.5, tokens: 35, requests: 1 });
+    db.close();
+  });
+
+  it('returns an empty conversations list and zeroed totals for a project with no matching data', () => {
+    const db = new Database(':memory:');
+    seedWithSummaryAndSecondEvent(db);
+
+    const result = getProjectDetail(db, { project: 'org/does-not-exist' });
+
+    expect(result.conversations).toEqual([]);
+    expect(result.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
     db.close();
   });
 });

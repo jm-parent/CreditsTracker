@@ -2,7 +2,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import type { FilterOptions, UsageFilters, UsageResult } from '../shared/types';
+import type {
+  ConversationSummary,
+  FilterOptions,
+  ProjectDetailResult,
+  UsageFilters,
+  UsageResult,
+} from '../shared/types';
 
 export class DatabaseNotFoundError extends Error {
   constructor(public readonly dbPath: string) {
@@ -132,5 +138,45 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
     timeSeries,
     byProject,
     byModel,
+  };
+}
+
+export function getProjectDetail(
+  db: Database.Database,
+  filters: UsageFilters & { project: string },
+): ProjectDetailResult {
+  const { sql: whereSql, params } = buildWhereClause(filters);
+  const baseFrom = `FROM assistant_usage_events e JOIN sessions s ON s.id = e.session_id ${whereSql}`;
+
+  const totalsRow = db
+    .prepare(
+      `SELECT
+         COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits,
+         COALESCE(SUM(e.input_tokens + e.output_tokens), 0) AS tokens,
+         COUNT(*) AS requests
+       ${baseFrom}`,
+    )
+    .get(params) as { aiuCredits: number; tokens: number; requests: number };
+
+  const conversations = db
+    .prepare(
+      `SELECT
+         s.id AS sessionId,
+         s.created_at AS createdAt,
+         s.summary AS summary,
+         GROUP_CONCAT(DISTINCT e.model) AS models,
+         SUM(e.total_nano_aiu) / 1e9 AS aiuCredits,
+         SUM(e.input_tokens + e.output_tokens) AS tokens,
+         COUNT(*) AS requests
+       ${baseFrom}
+       GROUP BY s.id
+       ORDER BY s.created_at DESC`,
+    )
+    .all(params) as ConversationSummary[];
+
+  return {
+    project: filters.project,
+    totals: totalsRow,
+    conversations,
   };
 }
