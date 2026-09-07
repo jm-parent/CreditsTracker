@@ -26,6 +26,7 @@ vi.mock('./db', async () => {
           id TEXT PRIMARY KEY,
           cwd TEXT,
           repository TEXT,
+          summary TEXT,
           created_at TEXT
         );
         CREATE TABLE assistant_usage_events (
@@ -54,6 +55,7 @@ describe('registerIpcHandlers', () => {
 
     expect(ipcMain.handle).toHaveBeenCalledWith('get-filter-options', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-usage', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('get-project-detail', expect.any(Function));
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {
@@ -68,6 +70,20 @@ describe('registerIpcHandlers', () => {
       timeSeries: [],
       byProject: [],
       byModel: [],
+    });
+  });
+
+  it('get-project-detail handler forwards filters and returns a ProjectDetailResult shape', async () => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as { __handlers: Map<string, (...args: unknown[]) => unknown> }).__handlers;
+    const getProjectDetailHandler = handlers.get('get-project-detail')!;
+
+    const result = await getProjectDetailHandler({}, { project: 'org/repo-a' });
+
+    expect(result).toEqual({
+      project: 'org/repo-a',
+      totals: { aiuCredits: 0, tokens: 0, requests: 0 },
+      conversations: [],
     });
   });
 });

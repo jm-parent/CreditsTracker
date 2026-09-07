@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { openDatabase, getFilterOptions, getUsage } from './db';
+import { openDatabase, getFilterOptions, getUsage, getProjectDetail } from './db';
 import type { UsageFilters } from '../shared/types';
 
 export function registerIpcHandlers(dbPath: string): void {
@@ -11,5 +11,9 @@ export function registerIpcHandlers(dbPath: string): void {
 
   ipcMain.handle('get-usage', (_event, filters: UsageFilters) => {
     return getUsage(db, filters ?? {});
+  });
+
+  ipcMain.handle('get-project-detail', (_event, params: UsageFilters & { project: string }) => {
+    return getProjectDetail(db, params);
   });
 }
