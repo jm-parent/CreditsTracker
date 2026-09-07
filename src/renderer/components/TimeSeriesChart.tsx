@@ -1,10 +1,48 @@
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import type { TooltipContentProps } from 'recharts/types/component/Tooltip';
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { getColorForKey } from '../lib/colors';
 import type { TimeSeriesPoint } from '../../shared/types';
 
 interface TimeSeriesChartProps {
   data: TimeSeriesPoint[];
+}
+
+function StackedTooltip({ active, payload, label }: TooltipContentProps<ValueType, NameType>) {
+  if (!active || !payload) {
+    return null;
+  }
+
+  const nonZeroEntries = payload.filter((entry) => Number(entry.value) > 0);
+  if (nonZeroEntries.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        backgroundColor: '#131922',
+        border: '1px solid #263242',
+        color: '#e5e9f0',
+        padding: 10,
+      }}
+    >
+      <p style={{ margin: 0 }}>{label}</p>
+      {nonZeroEntries.map((entry) => (
+        <p key={String(entry.name)} style={{ margin: 0, color: entry.color }}>
+          {entry.name} : {Number(entry.value).toFixed(2)}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 export function TimeSeriesChart({ data }: TimeSeriesChartProps) {
@@ -28,7 +66,7 @@ export function TimeSeriesChart({ data }: TimeSeriesChartProps) {
               <BarChart data={data}>
                 <XAxis dataKey="date" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ backgroundColor: '#131922', border: '1px solid #263242', color: '#e5e9f0' }} />
+                <Tooltip content={StackedTooltip} />
                 {projectKeys.length > 0 ? (
                   projectKeys.map((key) => (
                     <Bar

@@ -1,14 +1,16 @@
 const PALETTE = [
   '#22d3ee', // cyan
-  '#a78bfa', // violet
-  '#34d399', // emerald
-  '#f472b6', // pink
-  '#fbbf24', // amber
-  '#60a5fa', // blue
-  '#f87171', // red
-  '#4ade80', // green
-  '#c084fc', // purple
-  '#fb923c', // orange
+  '#f97316', // orange
+  '#a3e635', // lime
+  '#ec4899', // pink
+  '#3b82f6', // blue
+  '#eab308', // yellow
+  '#ef4444', // red
+  '#14b8a6', // teal
+  '#a855f7', // purple
+  '#84cc16', // green
+  '#f43f5e', // rose
+  '#0ea5e9', // sky
 ];
 
 /**
