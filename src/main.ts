@@ -26,10 +26,15 @@ app.whenReady().then(() => {
   try {
     registerIpcHandlers(resolveDefaultDbPath());
   } catch (error) {
+    // Any DB-open failure (missing file, corrupt DB, permission error, or a
+    // native-module load failure) must never prevent the window from
+    // opening — the renderer's EmptyState covers all of these via its own
+    // IPC-call rejections. Only DatabaseNotFoundError gets a distinct log
+    // message; everything else is logged generically but still non-fatal.
     if (error instanceof DatabaseNotFoundError) {
       console.error(error.message);
     } else {
-      throw error;
+      console.error('Failed to initialize database access:', error);
     }
   }
   createWindow();
