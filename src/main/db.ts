@@ -111,7 +111,7 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
     )
     .get(params) as { aiuCredits: number; tokens: number; requests: number };
 
-  const timeSeries = db
+  const timeSeriesRows = db
     .prepare(
       `SELECT date(e.created_at) AS date, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
        ${baseFrom}
@@ -119,6 +119,28 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
        ORDER BY date(e.created_at)`,
     )
     .all(params) as Array<{ date: string; aiuCredits: number }>;
+
+  const timeSeriesByProjectRows = db
+    .prepare(
+      `SELECT date(e.created_at) AS date, COALESCE(s.repository, s.cwd) AS project, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+       ${baseFrom}
+       GROUP BY date(e.created_at), project
+       ORDER BY date(e.created_at)`,
+    )
+    .all(params) as Array<{ date: string; project: string | null; aiuCredits: number }>;
+
+  const byProjectPerDate = new Map<string, Record<string, number>>();
+  for (const row of timeSeriesByProjectRows) {
+    if (!row.project) continue;
+    const entry = byProjectPerDate.get(row.date) ?? {};
+    entry[row.project] = row.aiuCredits;
+    byProjectPerDate.set(row.date, entry);
+  }
+
+  const timeSeries = timeSeriesRows.map((row) => ({
+    ...row,
+    byProject: byProjectPerDate.get(row.date) ?? {},
+  }));
 
   const byProject = db
     .prepare(

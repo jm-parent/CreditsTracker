@@ -16,6 +16,8 @@ export interface UsageTotals {
 export interface TimeSeriesPoint {
   date: string;
   aiuCredits: number;
+  /** Credits for this date broken down by project key. Only populated for the main dashboard chart. */
+  byProject?: Record<string, number>;
 }
 
 export interface BreakdownPoint {

@@ -24,4 +24,25 @@ describe('TimeSeriesChart', () => {
     expect(screen.queryByText('No data for this selection.')).not.toBeInTheDocument();
     expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
   });
+
+  it('renders without error when points include a per-project breakdown', () => {
+    render(
+      <TimeSeriesChart
+        data={[
+          {
+            date: '2026-09-01',
+            aiuCredits: 3,
+            byProject: { 'org/repo-a': 1, 'org/repo-b': 2 },
+          },
+          {
+            date: '2026-09-02',
+            aiuCredits: 2,
+            byProject: { 'org/repo-a': 2 },
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
+  });
 });

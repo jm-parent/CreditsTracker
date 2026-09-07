@@ -146,8 +146,8 @@ describe('getUsage', () => {
 
     expect(result.totals).toEqual({ aiuCredits: 4, tokens: 180, requests: 2 });
     expect(result.timeSeries).toEqual([
-      { date: '2026-09-01', aiuCredits: 3 },
-      { date: '2026-09-03', aiuCredits: 1 },
+      { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+      { date: '2026-09-03', aiuCredits: 1, byProject: { 'C:/repo-b': 1 } },
     ]);
     expect(result.byProject.sort((a, b) => a.key.localeCompare(b.key))).toEqual([
       { key: 'C:/repo-b', aiuCredits: 1 },
