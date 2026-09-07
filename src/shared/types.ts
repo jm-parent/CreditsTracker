@@ -50,6 +50,7 @@ export interface ConversationSummary {
 export interface ProjectDetailResult {
   project: string;
   totals: UsageTotals;
+  timeSeries: TimeSeriesPoint[];
   conversations: ConversationSummary[];
 }
 

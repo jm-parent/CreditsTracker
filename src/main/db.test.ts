@@ -260,6 +260,19 @@ describe('getProjectDetail', () => {
     db.close();
   });
 
+  it('returns a daily time series of credits scoped to the given project', () => {
+    const db = new Database(':memory:');
+    seedWithSummaryAndSecondEvent(db);
+
+    const result = getProjectDetail(db, { project: 'org/repo-a' });
+
+    expect(result.timeSeries).toEqual([
+      { date: '2026-09-01', aiuCredits: 3 },
+      { date: '2026-09-03', aiuCredits: 0.5 },
+    ]);
+    db.close();
+  });
+
   it('excludes conversations from other projects', () => {
     const db = new Database(':memory:');
     seedWithSummaryAndSecondEvent(db);

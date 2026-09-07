@@ -1,4 +1,5 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import type { MouseHandlerDataParam } from 'recharts/types/synchronisation/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import type { BreakdownPoint } from '../../shared/types';
 
@@ -9,6 +10,12 @@ interface BreakdownChartProps {
 }
 
 export function BreakdownChart({ title, data, onBarClick }: BreakdownChartProps) {
+  function handleChartClick(state: MouseHandlerDataParam): void {
+    if (onBarClick && typeof state?.activeLabel === 'string') {
+      onBarClick(state.activeLabel);
+    }
+  }
+
   return (
     <Card className="chart-card">
       <CardHeader>
@@ -20,7 +27,7 @@ export function BreakdownChart({ title, data, onBarClick }: BreakdownChartProps)
         ) : (
           <div data-testid="breakdown-chart" style={{ width: '100%', height: 240 }}>
             <ResponsiveContainer>
-              <BarChart data={data}>
+              <BarChart data={data} onClick={onBarClick ? handleChartClick : undefined}>
                 <XAxis dataKey="key" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip contentStyle={{ backgroundColor: '#131922', border: '1px solid #263242', color: '#e5e9f0' }} />

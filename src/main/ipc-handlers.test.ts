@@ -84,6 +84,7 @@ describe('registerIpcHandlers', () => {
     expect(result).toEqual({
       project: 'org/repo-a',
       totals: { aiuCredits: 0, tokens: 0, requests: 0 },
+      timeSeries: [],
       conversations: [],
     });
   });

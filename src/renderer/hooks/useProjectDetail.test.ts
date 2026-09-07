@@ -6,6 +6,7 @@ import type { ProjectDetailResult } from '../../shared/types';
 const detail: ProjectDetailResult = {
   project: 'org/repo-a',
   totals: { aiuCredits: 3, tokens: 120, requests: 2 },
+  timeSeries: [{ date: '2026-09-01', aiuCredits: 3 }],
   conversations: [
     {
       sessionId: 's1',

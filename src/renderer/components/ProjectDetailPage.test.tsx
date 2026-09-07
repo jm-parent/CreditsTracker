@@ -4,9 +4,23 @@ import userEvent from '@testing-library/user-event';
 import { ProjectDetailPage } from './ProjectDetailPage';
 import type { ProjectDetailResult } from '../../shared/types';
 
+vi.mock('recharts', async () => {
+  const actual = await vi.importActual<typeof import('recharts')>('recharts');
+
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+      <actual.ResponsiveContainer width={600} height={240}>
+        {children}
+      </actual.ResponsiveContainer>
+    ),
+  };
+});
+
 const detail: ProjectDetailResult = {
   project: 'org/repo-a',
   totals: { aiuCredits: 3.5, tokens: 210, requests: 3 },
+  timeSeries: [{ date: '2026-09-01', aiuCredits: 3.5 }],
   conversations: [
     {
       sessionId: 's1',
@@ -36,6 +50,13 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('org/repo-a')).toBeInTheDocument();
     expect(await screen.findByText('3.50')).toBeInTheDocument();
     expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
+  });
+
+  it('renders a daily credit consumption chart', async () => {
+    render(<ProjectDetailPage project="org/repo-a" filters={{}} onBack={vi.fn()} />);
+
+    expect(await screen.findByTestId('time-series-chart')).toBeInTheDocument();
+    expect(screen.getByText('Credits over time')).toBeInTheDocument();
   });
 
   it('calls onBack when the back button is clicked', async () => {

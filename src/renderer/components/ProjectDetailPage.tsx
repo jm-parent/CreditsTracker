@@ -1,5 +1,6 @@
 import { useProjectDetail } from '../hooks/useProjectDetail';
 import { SummaryCards } from './SummaryCards';
+import { TimeSeriesChart } from './TimeSeriesChart';
 import { ConversationsTable } from './ConversationsTable';
 import { Skeleton } from './ui/skeleton';
 import type { UsageFilters } from '../../shared/types';
@@ -47,6 +48,7 @@ export function ProjectDetailPage({ project, filters, onBack }: ProjectDetailPag
       {data && (
         <>
           <SummaryCards totals={data.totals} />
+          <TimeSeriesChart data={data.timeSeries} />
           <ConversationsTable conversations={data.conversations} />
         </>
       )}

@@ -33,6 +33,7 @@ const usage: UsageResult = {
 const projectDetail: ProjectDetailResult = {
   project: 'org/repo-a',
   totals: { aiuCredits: 1.5, tokens: 60, requests: 1 },
+  timeSeries: [{ date: '2026-09-01', aiuCredits: 1.5 }],
   conversations: [
     {
       sessionId: 's1',

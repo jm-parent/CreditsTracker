@@ -8,6 +8,7 @@ import type {
   ProjectDetailResult,
   RawTableName,
   RawTablePage,
+  TimeSeriesPoint,
   UsageFilters,
   UsageResult,
 } from '../shared/types';
@@ -162,6 +163,15 @@ export function getProjectDetail(
     )
     .get(params) as { aiuCredits: number; tokens: number; requests: number };
 
+  const timeSeries = db
+    .prepare(
+      `SELECT date(e.created_at) AS date, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+       ${baseFrom}
+       GROUP BY date(e.created_at)
+       ORDER BY date(e.created_at)`,
+    )
+    .all(params) as TimeSeriesPoint[];
+
   const conversations = db
     .prepare(
       `SELECT
@@ -181,6 +191,7 @@ export function getProjectDetail(
   return {
     project: filters.project,
     totals: totalsRow,
+    timeSeries,
     conversations,
   };
 }
