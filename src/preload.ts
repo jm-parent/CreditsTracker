@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ProjectDetailResult, RawTableParams, RawTablePage, UsageFilters } from './shared/types';
+import type {
+  HourlyDetailParams,
+  HourlyPoint,
+  ProjectDetailResult,
+  RawTableParams,
+  RawTablePage,
+  UsageFilters,
+} from './shared/types';
 
 contextBridge.exposeInMainWorld('api', {
   getFilterOptions: () => ipcRenderer.invoke('get-filter-options'),
@@ -8,4 +15,6 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-project-detail', params),
   getRawTablePage: (params: RawTableParams): Promise<RawTablePage> =>
     ipcRenderer.invoke('get-raw-table-page', params),
+  getHourlyDetail: (params: HourlyDetailParams): Promise<HourlyPoint[]> =>
+    ipcRenderer.invoke('get-hourly-detail', params),
 });

@@ -17,6 +17,7 @@ beforeEach(() => {
     getUsage: vi.fn(),
     getProjectDetail: vi.fn(),
     getRawTablePage: vi.fn().mockResolvedValue(page),
+    getHourlyDetail: vi.fn(),
   };
 });
 

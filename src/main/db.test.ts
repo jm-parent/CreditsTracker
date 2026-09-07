@@ -9,6 +9,7 @@ import {
   DatabaseNotFoundError,
   getFilterOptions,
   getUsage,
+  getHourlyDetail,
   getProjectDetail,
   getRawTablePage,
 } from './db';
@@ -177,6 +178,55 @@ describe('getUsage', () => {
     const noMatch = getUsage(db, { project: 'nonexistent' });
     expect(noMatch.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
     expect(noMatch.timeSeries).toEqual([]);
+
+    db.close();
+  });
+});
+
+describe('getHourlyDetail', () => {
+  it('returns an hourly breakdown by project for the given date', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+    // seedSchemaAndFixtures has org/repo-a at 2026-09-01 10:00:05 and C:/repo-b at 2026-09-03 11:00:00
+    db.prepare(
+      `INSERT INTO assistant_usage_events (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('s1', 'claude-sonnet-5', 2_000_000_000, 100, 20, '2026-09-01 14:30:00');
+
+    const result = getHourlyDetail(db, { date: '2026-09-01' });
+
+    expect(result).toEqual([
+      { hour: '10:00', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+      { hour: '14:00', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
+    ]);
+
+    db.close();
+  });
+
+  it('returns an empty array for a date with no matching events', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const result = getHourlyDetail(db, { date: '2099-01-01' });
+
+    expect(result).toEqual([]);
+
+    db.close();
+  });
+
+  it('applies additional filters (project, model) on top of the date', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+    db.prepare(
+      `INSERT INTO assistant_usage_events (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('s1', 'gpt-5.4', 500_000_000, 10, 5, '2026-09-01 11:00:00');
+
+    const result = getHourlyDetail(db, { date: '2026-09-01', model: 'gpt-5.4' });
+
+    expect(result).toEqual([
+      { hour: '11:00', aiuCredits: 0.5, byProject: { 'org/repo-a': 0.5 } },
+    ]);
 
     db.close();
   });

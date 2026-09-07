@@ -59,6 +59,7 @@ beforeEach(() => {
       page: 0,
       pageSize: 50,
     }),
+    getHourlyDetail: vi.fn().mockResolvedValue([]),
   };
 });
 

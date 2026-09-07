@@ -5,6 +5,8 @@ import Database from 'better-sqlite3';
 import type {
   ConversationSummary,
   FilterOptions,
+  HourlyDetailParams,
+  HourlyPoint,
   ProjectDetailResult,
   RawTableName,
   RawTablePage,
@@ -166,6 +168,42 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
     byProject,
     byModel,
   };
+}
+
+export function getHourlyDetail(
+  db: Database.Database,
+  params: HourlyDetailParams,
+): HourlyPoint[] {
+  const { date, ...filters } = params;
+  const { sql: whereSql, params: whereParams } = buildWhereClause(filters);
+  const dateCondition = whereSql
+    ? `${whereSql} AND date(e.created_at) = @date`
+    : 'WHERE date(e.created_at) = @date';
+  const baseFrom = `FROM assistant_usage_events e JOIN sessions s ON s.id = e.session_id ${dateCondition}`;
+  const queryParams = { ...whereParams, date };
+
+  const hourlyByProjectRows = db
+    .prepare(
+      `SELECT strftime('%H:00', e.created_at) AS hour, COALESCE(s.repository, s.cwd) AS project, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+       ${baseFrom}
+       GROUP BY hour, project
+       ORDER BY hour`,
+    )
+    .all(queryParams) as Array<{ hour: string; project: string | null; aiuCredits: number }>;
+
+  const byHour = new Map<string, { aiuCredits: number; byProject: Record<string, number> }>();
+  for (const row of hourlyByProjectRows) {
+    const entry = byHour.get(row.hour) ?? { aiuCredits: 0, byProject: {} };
+    entry.aiuCredits += row.aiuCredits;
+    if (row.project) {
+      entry.byProject[row.project] = (entry.byProject[row.project] ?? 0) + row.aiuCredits;
+    }
+    byHour.set(row.hour, entry);
+  }
+
+  return Array.from(byHour.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([hour, entry]) => ({ hour, aiuCredits: entry.aiuCredits, byProject: entry.byProject }));
 }
 
 export function getProjectDetail(

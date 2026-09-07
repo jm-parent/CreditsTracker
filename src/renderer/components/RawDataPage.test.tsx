@@ -28,6 +28,7 @@ beforeEach(() => {
     getRawTablePage: vi.fn().mockImplementation(({ table }: { table: string }) =>
       Promise.resolve(table === 'sessions' ? sessionsPage : eventsPage),
     ),
+    getHourlyDetail: vi.fn(),
   };
 });
 

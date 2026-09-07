@@ -57,6 +57,7 @@ describe('registerIpcHandlers', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('get-usage', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-project-detail', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-raw-table-page', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('get-hourly-detail', expect.any(Function));
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {
@@ -103,5 +104,15 @@ describe('registerIpcHandlers', () => {
       page: 0,
       pageSize: 10,
     });
+  });
+
+  it('get-hourly-detail handler forwards params and returns an array of hourly points', async () => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as { __handlers: Map<string, (...args: unknown[]) => unknown> }).__handlers;
+    const getHourlyDetailHandler = handlers.get('get-hourly-detail')!;
+
+    const result = await getHourlyDetailHandler({}, { date: '2026-09-01' });
+
+    expect(result).toEqual([]);
   });
 });

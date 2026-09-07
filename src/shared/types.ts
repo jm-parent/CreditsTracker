@@ -20,6 +20,18 @@ export interface TimeSeriesPoint {
   byProject?: Record<string, number>;
 }
 
+export interface HourlyPoint {
+  /** Hour of day, formatted 'HH:00' */
+  hour: string;
+  aiuCredits: number;
+  byProject: Record<string, number>;
+}
+
+export interface HourlyDetailParams extends UsageFilters {
+  /** Inclusive ISO date string 'YYYY-MM-DD' to zoom into */
+  date: string;
+}
+
 export interface BreakdownPoint {
   key: string;
   aiuCredits: number;

@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
-import { openDatabase, getFilterOptions, getUsage, getProjectDetail, getRawTablePage } from './db';
-import type { RawTableParams, UsageFilters } from '../shared/types';
+import { openDatabase, getFilterOptions, getUsage, getProjectDetail, getRawTablePage, getHourlyDetail } from './db';
+import type { HourlyDetailParams, RawTableParams, UsageFilters } from '../shared/types';
 
 export function registerIpcHandlers(dbPath: string): void {
   const db = openDatabase(dbPath);
@@ -19,5 +19,9 @@ export function registerIpcHandlers(dbPath: string): void {
 
   ipcMain.handle('get-raw-table-page', (_event, params: RawTableParams) => {
     return getRawTablePage(db, params.table, params.page, params.pageSize);
+  });
+
+  ipcMain.handle('get-hourly-detail', (_event, params: HourlyDetailParams) => {
+    return getHourlyDetail(db, params);
   });
 }

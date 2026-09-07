@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useUsageData } from './hooks/useUsageData';
+import { useHourlyDetail } from './hooks/useHourlyDetail';
 import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
 import { SummaryCards } from './components/SummaryCards';
@@ -8,6 +9,7 @@ import { BreakdownChart } from './components/BreakdownChart';
 import { SessionsTable } from './components/SessionsTable';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
+import { HourlyDetailPanel } from './components/HourlyDetailPanel';
 import { Skeleton } from './components/ui/skeleton';
 import type { FilterOptions, UsageFilters } from '../shared/types';
 
@@ -19,7 +21,9 @@ export function App() {
   const [filters, setFilters] = useState<UsageFilters>({});
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [showRawData, setShowRawData] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const { data, loading, error } = useUsageData(filters);
+  const hourlyDetail = useHourlyDetail(selectedDate, filters);
 
   useEffect(() => {
     window.api
@@ -84,7 +88,7 @@ export function App() {
           {data && !selectedProject && (
             <div className="mt-6 flex flex-col gap-6">
               <SummaryCards totals={data.totals} />
-              <TimeSeriesChart data={data.timeSeries} />
+              <TimeSeriesChart data={data.timeSeries} onDayClick={setSelectedDate} />
               <BreakdownChart
                 title="Credits by project"
                 data={data.byProject}
@@ -96,6 +100,15 @@ export function App() {
             </div>
           )}
         </>
+      )}
+      {selectedDate && (
+        <HourlyDetailPanel
+          date={selectedDate}
+          data={hourlyDetail.data}
+          loading={hourlyDetail.loading}
+          error={hourlyDetail.error}
+          onClose={() => setSelectedDate(null)}
+        />
       )}
     </div>
   );

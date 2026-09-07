@@ -14,6 +14,7 @@ import type { TimeSeriesPoint } from '../../shared/types';
 
 interface TimeSeriesChartProps {
   data: TimeSeriesPoint[];
+  onDayClick?: (date: string) => void;
 }
 
 function StackedTooltip({ active, payload, label }: TooltipContentProps<ValueType, NameType>) {
@@ -45,7 +46,7 @@ function StackedTooltip({ active, payload, label }: TooltipContentProps<ValueTyp
   );
 }
 
-export function TimeSeriesChart({ data }: TimeSeriesChartProps) {
+export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
   // Collect every project key seen across the whole range so each gets a
   // stable stacked-bar series, even on days it had no activity.
   const projectKeys = Array.from(
@@ -74,11 +75,18 @@ export function TimeSeriesChart({ data }: TimeSeriesChartProps) {
                       dataKey={(point: TimeSeriesPoint) => point.byProject?.[key] ?? 0}
                       name={key}
                       stackId="credits"
+                      cursor={onDayClick ? 'pointer' : undefined}
                       fill={getColorForKey(key)}
+                      onClick={onDayClick ? (entry: TimeSeriesPoint) => onDayClick(entry.date) : undefined}
                     />
                   ))
                 ) : (
-                  <Bar dataKey="aiuCredits" fill="#22d3ee" />
+                  <Bar
+                    dataKey="aiuCredits"
+                    fill="#22d3ee"
+                    cursor={onDayClick ? 'pointer' : undefined}
+                    onClick={onDayClick ? (entry: TimeSeriesPoint) => onDayClick(entry.date) : undefined}
+                  />
                 )}
               </BarChart>
             </ResponsiveContainer>
