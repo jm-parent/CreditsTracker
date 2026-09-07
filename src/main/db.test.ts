@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import Database from 'better-sqlite3';
-import { openDatabase, resolveDefaultDbPath, DatabaseNotFoundError, getFilterOptions } from './db';
+import { openDatabase, resolveDefaultDbPath, DatabaseNotFoundError, getFilterOptions, getUsage } from './db';
 
 describe('resolveDefaultDbPath', () => {
   it('points at ~/.copilot/session-store.db', () => {
@@ -124,6 +124,51 @@ describe('getFilterOptions', () => {
     expect(options.models).toEqual(['claude-opus']);
     // Should not include 'isolated-repo' (s3 has no usage events)
     expect(options.projects).not.toContain('isolated-repo');
+
+    db.close();
+  });
+});
+
+describe('getUsage', () => {
+  it('returns totals, a daily time series, and breakdowns by project and model, unfiltered', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const result = getUsage(db, {});
+
+    expect(result.totals).toEqual({ aiuCredits: 4, tokens: 180, requests: 2 });
+    expect(result.timeSeries).toEqual([
+      { date: '2026-09-01', aiuCredits: 3 },
+      { date: '2026-09-03', aiuCredits: 1 },
+    ]);
+    expect(result.byProject.sort((a, b) => a.key.localeCompare(b.key))).toEqual([
+      { key: 'C:/repo-b', aiuCredits: 1 },
+      { key: 'org/repo-a', aiuCredits: 3 },
+    ]);
+    expect(result.byModel.sort((a, b) => a.key.localeCompare(b.key))).toEqual([
+      { key: 'claude-sonnet-5', aiuCredits: 3 },
+      { key: 'gpt-5.4', aiuCredits: 1 },
+    ]);
+
+    db.close();
+  });
+
+  it('filters by project, model, and inclusive date range', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const byProject = getUsage(db, { project: 'org/repo-a' });
+    expect(byProject.totals).toEqual({ aiuCredits: 3, tokens: 120, requests: 1 });
+
+    const byModel = getUsage(db, { model: 'gpt-5.4' });
+    expect(byModel.totals).toEqual({ aiuCredits: 1, tokens: 60, requests: 1 });
+
+    const byDate = getUsage(db, { from: '2026-09-02', to: '2026-09-03' });
+    expect(byDate.totals).toEqual({ aiuCredits: 1, tokens: 60, requests: 1 });
+
+    const noMatch = getUsage(db, { project: 'nonexistent' });
+    expect(noMatch.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
+    expect(noMatch.timeSeries).toEqual([]);
 
     db.close();
   });

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import type { FilterOptions } from '../shared/types';
+import type { FilterOptions, UsageFilters, UsageResult } from '../shared/types';
 
 export class DatabaseNotFoundError extends Error {
   constructor(public readonly dbPath: string) {
@@ -51,5 +51,86 @@ export function getFilterOptions(db: Database.Database): FilterOptions {
     models,
     minDate: bounds.minDate,
     maxDate: bounds.maxDate,
+  };
+}
+
+interface WhereClause {
+  sql: string;
+  params: Record<string, string>;
+}
+
+function buildWhereClause(filters: UsageFilters): WhereClause {
+  const conditions: string[] = [];
+  const params: Record<string, string> = {};
+
+  if (filters.project) {
+    conditions.push('COALESCE(s.repository, s.cwd) = @project');
+    params.project = filters.project;
+  }
+  if (filters.model) {
+    conditions.push('e.model = @model');
+    params.model = filters.model;
+  }
+  if (filters.from) {
+    conditions.push('date(e.created_at) >= @from');
+    params.from = filters.from;
+  }
+  if (filters.to) {
+    conditions.push('date(e.created_at) <= @to');
+    params.to = filters.to;
+  }
+
+  return {
+    sql: conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '',
+    params,
+  };
+}
+
+export function getUsage(db: Database.Database, filters: UsageFilters): UsageResult {
+  const { sql: whereSql, params } = buildWhereClause(filters);
+  const baseFrom = `FROM assistant_usage_events e JOIN sessions s ON s.id = e.session_id ${whereSql}`;
+
+  const totalsRow = db
+    .prepare(
+      `SELECT
+         COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits,
+         COALESCE(SUM(e.input_tokens + e.output_tokens), 0) AS tokens,
+         COUNT(*) AS requests
+       ${baseFrom}`,
+    )
+    .get(params) as { aiuCredits: number; tokens: number; requests: number };
+
+  const timeSeries = db
+    .prepare(
+      `SELECT date(e.created_at) AS date, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+       ${baseFrom}
+       GROUP BY date(e.created_at)
+       ORDER BY date(e.created_at)`,
+    )
+    .all(params) as Array<{ date: string; aiuCredits: number }>;
+
+  const byProject = db
+    .prepare(
+      `SELECT COALESCE(s.repository, s.cwd) AS key, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+       ${baseFrom}
+       GROUP BY key
+       ORDER BY key`,
+    )
+    .all(params) as Array<{ key: string; aiuCredits: number }>;
+
+  const byModel = db
+    .prepare(
+      `SELECT e.model AS key, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+       ${baseFrom}
+       GROUP BY e.model
+       ORDER BY e.model`,
+    )
+    .all(params) as Array<{ key: string; aiuCredits: number }>;
+
+  return {
+    totals: totalsRow,
+    timeSeries,
+    byProject,
+    byModel,
   };
 }
