@@ -1,0 +1,38 @@
+export interface UsageFilters {
+  project?: string;
+  model?: string;
+  /** Inclusive ISO date string 'YYYY-MM-DD' */
+  from?: string;
+  /** Inclusive ISO date string 'YYYY-MM-DD' */
+  to?: string;
+}
+
+export interface UsageTotals {
+  aiuCredits: number;
+  tokens: number;
+  requests: number;
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  aiuCredits: number;
+}
+
+export interface BreakdownPoint {
+  key: string;
+  aiuCredits: number;
+}
+
+export interface UsageResult {
+  totals: UsageTotals;
+  timeSeries: TimeSeriesPoint[];
+  byProject: BreakdownPoint[];
+  byModel: BreakdownPoint[];
+}
+
+export interface FilterOptions {
+  projects: string[];
+  models: string[];
+  minDate: string | null;
+  maxDate: string | null;
+}
