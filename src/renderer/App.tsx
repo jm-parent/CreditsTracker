@@ -39,18 +39,20 @@ export function App() {
 
   return (
     <div className="app min-h-screen bg-background px-6 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Credits Dashboard</h1>
-        {!showRawData && !selectedProject && (
-          <button
-            type="button"
-            onClick={() => setShowRawData(true)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted"
-          >
-            Raw data
-          </button>
-        )}
-      </div>
+      {!selectedProject && (
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">Credits Dashboard</h1>
+          {!showRawData && (
+            <button
+              type="button"
+              onClick={() => setShowRawData(true)}
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted"
+            >
+              Raw data
+            </button>
+          )}
+        </div>
+      )}
       {showRawData ? (
         <RawDataPage onBack={() => setShowRawData(false)} />
       ) : (

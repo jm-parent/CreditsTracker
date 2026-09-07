@@ -144,12 +144,14 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
     expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
     expect(window.api.getProjectDetail).toHaveBeenCalledWith({ project: 'org/repo-a' });
+    expect(screen.queryByRole('heading', { name: 'Credits Dashboard' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /back/i }));
 
     expect(await screen.findByText('Credits by project')).toBeInTheDocument();
     expect(screen.queryByText('Fixed the login bug')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Credits Dashboard' })).toBeInTheDocument();
   });
 
   it('navigates to the raw data page when "Raw data" is clicked and back again', async () => {
