@@ -33,7 +33,7 @@ export function TimeSeriesChart({ data }: TimeSeriesChartProps) {
                   projectKeys.map((key) => (
                     <Bar
                       key={key}
-                      dataKey={`byProject.${key}`}
+                      dataKey={(point: TimeSeriesPoint) => point.byProject?.[key] ?? 0}
                       name={key}
                       stackId="credits"
                       fill={getColorForKey(key)}
