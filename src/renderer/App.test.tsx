@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import type { FilterOptions, ProjectDetailResult, UsageResult } from '../shared/types';
@@ -121,13 +121,17 @@ describe('App', () => {
 
   it('navigates to the project detail page when a project bar is clicked and back again', async () => {
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    render(<App />);
     await screen.findByText('3.00');
 
-    const bar = container.querySelector('.recharts-bar-rectangle');
+    const projectChartCard = screen.getByText('Credits by project').closest('.chart-card') as HTMLElement;
+    expect(projectChartCard).not.toBeNull();
+
+    const projectChart = within(projectChartCard).getByTestId('breakdown-chart');
+    const bar = projectChart.querySelector('.recharts-bar-rectangle');
     expect(bar).not.toBeNull();
 
-    fireEvent.click(bar as Element);
+    await user.click(bar as Element);
 
     expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
     expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
@@ -135,6 +139,8 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: /back/i }));
 
-    expect(await screen.findByText('3.00')).toBeInTheDocument();
+    expect(await screen.findByText('Credits by project')).toBeInTheDocument();
+    expect(screen.queryByText('Fixed the login bug')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
   });
 });
