@@ -36,11 +36,15 @@ describe('ConversationsTable', () => {
 
     expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('2026-09-01 10:00:00')).toBeInTheDocument();
+    expect(screen.getByText('2026-09-03 10:00:00')).toBeInTheDocument();
     expect(screen.getByText('claude-sonnet-5')).toBeInTheDocument();
     expect(screen.getByText('gpt-5.4')).toBeInTheDocument();
     expect(screen.getByText('3.00')).toBeInTheDocument();
     expect(screen.getByText('0.50')).toBeInTheDocument();
     expect(screen.getByText('180')).toBeInTheDocument();
+    expect(screen.getByText('35')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
   });
 });
