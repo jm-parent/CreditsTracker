@@ -73,4 +73,22 @@ describe('App', () => {
     expect(await screen.findByText("Couldn't refresh — showing last known data.")).toBeInTheDocument();
     expect(screen.getByText('3.00')).toBeInTheDocument();
   });
+
+  it('shows a loading skeleton before the first successful data fetch', async () => {
+    let resolveUsage: (value: UsageResult) => void = () => {};
+    window.api.getUsage = vi.fn().mockImplementation(
+      () =>
+        new Promise<UsageResult>((resolve) => {
+          resolveUsage = resolve;
+        }),
+    );
+
+    render(<App />);
+
+    expect(screen.getAllByRole('status', { name: 'Loading' }).length).toBeGreaterThan(0);
+
+    resolveUsage(usage);
+    expect(await screen.findByText('3.00')).toBeInTheDocument();
+    expect(screen.queryAllByRole('status', { name: 'Loading' })).toHaveLength(0);
+  });
 });
