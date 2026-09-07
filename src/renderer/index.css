@@ -29,3 +29,10 @@ body {
 .recharts-wrapper *:focus-visible {
   outline: none !important;
 }
+
+/* Click-and-drag across the chart (e.g. over the axis labels) triggers the
+   browser's native text-selection highlight, which isn't useful on a chart.
+   Disable text selection across the whole chart subtree. */
+.recharts-wrapper {
+  user-select: none;
+}
