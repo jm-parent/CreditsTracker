@@ -1,5 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
+import { registerIpcHandlers } from './main/ipc-handlers';
+import { resolveDefaultDbPath, DatabaseNotFoundError } from './main/db';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -21,6 +23,15 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  try {
+    registerIpcHandlers(resolveDefaultDbPath());
+  } catch (error) {
+    if (error instanceof DatabaseNotFoundError) {
+      console.error(error.message);
+    } else {
+      throw error;
+    }
+  }
   createWindow();
 });
 
