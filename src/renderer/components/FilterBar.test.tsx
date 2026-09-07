@@ -30,4 +30,21 @@ describe('FilterBar', () => {
 
     expect(onChange).toHaveBeenCalledWith({ project: 'org/repo-b' });
   });
+
+  it('hides the project filter when showProjectFilter is false', () => {
+    render(<FilterBar options={options} filters={{}} onChange={vi.fn()} showProjectFilter={false} />);
+
+    expect(screen.queryByLabelText('Project')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model')).toBeInTheDocument();
+  });
+
+  it('calls onChange with the updated model when a model is selected', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<FilterBar options={options} filters={{}} onChange={onChange} showProjectFilter={false} />);
+
+    await user.selectOptions(screen.getByLabelText('Model'), 'gpt-5.4');
+
+    expect(onChange).toHaveBeenCalledWith({ model: 'gpt-5.4' });
+  });
 });

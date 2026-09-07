@@ -1,17 +1,26 @@
 import { useProjectDetail } from '../hooks/useProjectDetail';
+import { FilterBar } from './FilterBar';
 import { SummaryCards } from './SummaryCards';
 import { TimeSeriesChart } from './TimeSeriesChart';
 import { ConversationsTable } from './ConversationsTable';
 import { Skeleton } from './ui/skeleton';
-import type { UsageFilters } from '../../shared/types';
+import type { FilterOptions, UsageFilters } from '../../shared/types';
 
 interface ProjectDetailPageProps {
   project: string;
   filters: UsageFilters;
+  options: FilterOptions;
+  onFiltersChange: (filters: UsageFilters) => void;
   onBack: () => void;
 }
 
-export function ProjectDetailPage({ project, filters, onBack }: ProjectDetailPageProps) {
+export function ProjectDetailPage({
+  project,
+  filters,
+  options,
+  onFiltersChange,
+  onBack,
+}: ProjectDetailPageProps) {
   const { data, loading, error } = useProjectDetail(project, filters);
 
   return (
@@ -26,6 +35,8 @@ export function ProjectDetailPage({ project, filters, onBack }: ProjectDetailPag
         </button>
         <h2 className="text-xl font-semibold text-foreground">{project}</h2>
       </div>
+
+      <FilterBar options={options} filters={filters} onChange={onFiltersChange} showProjectFilter={false} />
 
       {error && !data && (
         <p className="text-sm text-muted-foreground">Couldn't load details for this project.</p>

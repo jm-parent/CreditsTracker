@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProjectDetailPage } from './ProjectDetailPage';
-import type { ProjectDetailResult } from '../../shared/types';
+import type { FilterOptions, ProjectDetailResult } from '../../shared/types';
 
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
@@ -16,6 +16,13 @@ vi.mock('recharts', async () => {
     ),
   };
 });
+
+const options: FilterOptions = {
+  projects: ['org/repo-a'],
+  models: ['claude-sonnet-5', 'gpt-5.4'],
+  minDate: '2026-09-01',
+  maxDate: '2026-09-07',
+};
 
 const detail: ProjectDetailResult = {
   project: 'org/repo-a',
@@ -45,7 +52,15 @@ beforeEach(() => {
 
 describe('ProjectDetailPage', () => {
   it('shows the project name, loads detail data, and renders totals + conversations', async () => {
-    render(<ProjectDetailPage project="org/repo-a" filters={{}} onBack={vi.fn()} />);
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('org/repo-a')).toBeInTheDocument();
     expect(await screen.findByText('3.50')).toBeInTheDocument();
@@ -53,16 +68,71 @@ describe('ProjectDetailPage', () => {
   });
 
   it('renders a daily credit consumption chart', async () => {
-    render(<ProjectDetailPage project="org/repo-a" filters={{}} onBack={vi.fn()} />);
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
 
     expect(await screen.findByTestId('time-series-chart')).toBeInTheDocument();
     expect(screen.getByText('Credits over time')).toBeInTheDocument();
   });
 
+  it('renders only the model filter, placed below the back button/title row', () => {
+    const { container } = render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Project')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Model')).toBeInTheDocument();
+
+    const page = container.querySelector('.project-detail-page') as HTMLElement;
+    const backButton = screen.getByRole('button', { name: /back/i });
+    const filterBar = page.querySelector('.filter-bar') as HTMLElement;
+    expect(backButton.compareDocumentPosition(filterBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('calls onFiltersChange with the updated model when a model is selected', async () => {
+    const onFiltersChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={onFiltersChange}
+        onBack={vi.fn()}
+      />,
+    );
+    await screen.findByText('3.50');
+
+    await user.selectOptions(screen.getByLabelText('Model'), 'gpt-5.4');
+
+    expect(onFiltersChange).toHaveBeenCalledWith({ model: 'gpt-5.4' });
+  });
+
   it('calls onBack when the back button is clicked', async () => {
     const onBack = vi.fn();
     const user = userEvent.setup();
-    render(<ProjectDetailPage project="org/repo-a" filters={{}} onBack={onBack} />);
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={onBack}
+      />,
+    );
     await screen.findByText('3.50');
 
     await user.click(screen.getByRole('button', { name: /back/i }));
@@ -79,7 +149,15 @@ describe('ProjectDetailPage', () => {
         }),
     );
 
-    render(<ProjectDetailPage project="org/repo-a" filters={{}} onBack={vi.fn()} />);
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
 
     expect(screen.getAllByRole('status', { name: 'Loading' }).length).toBeGreaterThan(0);
 
@@ -90,7 +168,15 @@ describe('ProjectDetailPage', () => {
   it('shows an error message when the fetch fails and no data has loaded', async () => {
     window.api.getProjectDetail = vi.fn().mockRejectedValue(new Error('db not found'));
 
-    render(<ProjectDetailPage project="org/repo-a" filters={{}} onBack={vi.fn()} />);
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
 
     expect(await screen.findByText("Couldn't load details for this project.")).toBeInTheDocument();
   });
@@ -102,7 +188,13 @@ describe('ProjectDetailPage', () => {
       .mockRejectedValueOnce(new Error('refresh failed'));
 
     const { rerender } = render(
-      <ProjectDetailPage project="org/repo-a" filters={{ from: '2026-09-01' }} onBack={vi.fn()} />,
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{ model: 'claude-sonnet-5' }}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
     );
 
     expect(await screen.findByText('3.50')).toBeInTheDocument();
@@ -110,7 +202,13 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
 
     rerender(
-      <ProjectDetailPage project="org/repo-a" filters={{ from: '2026-09-02' }} onBack={vi.fn()} />,
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{ model: 'gpt-5.4' }}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
     );
 
     expect(

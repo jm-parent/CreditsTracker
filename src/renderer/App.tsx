@@ -55,7 +55,7 @@ export function App() {
         <RawDataPage onBack={() => setShowRawData(false)} />
       ) : (
         <>
-          <FilterBar options={options} filters={filters} onChange={setFilters} />
+          {!selectedProject && <FilterBar options={options} filters={filters} onChange={setFilters} />}
           {error && data && (
             <p className="refresh-notice mt-4 rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
               Couldn't refresh — showing last known data.
@@ -73,6 +73,8 @@ export function App() {
               <ProjectDetailPage
                 project={selectedProject}
                 filters={filters}
+                options={options}
+                onFiltersChange={setFilters}
                 onBack={() => setSelectedProject(null)}
               />
             </div>
