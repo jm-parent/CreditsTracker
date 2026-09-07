@@ -60,8 +60,19 @@ that's a follow-up, not a blocker for this round.
   existing feature components in `src/renderer/components/`.
 - Supporting libraries: `class-variance-authority`, `clsx`, `tailwind-merge`
   (shadcn's standard `cn()` utility, in a new `src/renderer/lib/utils.ts`),
-  `lucide-react` (icon set used by shadcn examples), `@radix-ui/react-select`
-  (underlies the shadcn `Select` component).
+  `lucide-react` (icon set used by shadcn examples).
+- **Correction made during planning:** the original draft of this spec
+  proposed replacing `FilterBar`'s native `<select>` elements with shadcn's
+  `Select` component (Radix UI-based). This was reconsidered: Radix's
+  `Select` does not render a native `<select>` element (it's a
+  button-triggered, portal-rendered custom listbox), which is incompatible
+  with the existing test suite's `userEvent.selectOptions(...)` calls
+  (`FilterBar.test.tsx`) — that API only works on real `<select>` elements.
+  Since "no existing test may need to change" is a hard constraint of this
+  redesign, **`FilterBar` keeps native `<select>`/`<input type="date">`
+  elements**, restyled with Tailwind utility classes only (border, rounded
+  corners, dark background, focus ring) — no Radix/shadcn `Select`
+  component, no `@radix-ui/react-select` dependency needed.
 - New file: `src/renderer/index.css` — Tailwind directives + shadcn's CSS
   custom properties (`--background`, `--foreground`, `--card`, `--primary`,
   `--border`, etc.), dark values only, set on `:root` (no `.dark` class
@@ -77,7 +88,7 @@ signature changes.
 |---|---|
 | `App.tsx` | Wraps content in a dark-background full-height layout: sticky header (title), filter bar row, responsive grid for cards/charts/table below. Replaces the bare `<p className="refresh-notice">` with a small dismissible-looking banner (still just conditional JSX, no new state). Uses the previously-unused `loading` value from `useUsageData` to render `Skeleton` placeholders during the very first load (when `data` is still `null` and `loading` is `true`). |
 | `SummaryCards.tsx` | Three `Card` components in a flex/grid row, each with an icon (lucide-react), a large bold value, and a muted label underneath. |
-| `FilterBar.tsx` | Horizontal flex row; native `<select>` elements replaced with shadcn `Select` (Radix-based), same `id`/`aria-label` wiring so `getByLabelText('Project')` etc. keep working; date `<input type="date">` kept (shadcn has no native date-input replacement) but restyled with Tailwind classes for border/focus-ring. |
+| `FilterBar.tsx` | Horizontal flex row; native `<select>` and `<input type="date">` elements are kept as-is (see correction above) but restyled with Tailwind classes (border, rounded corners, dark background, focus ring); same `id`/`htmlFor` wiring preserved so `getByLabelText('Project')` etc. keep working. |
 | `TimeSeriesChart.tsx` / `BreakdownChart.tsx` | Each wrapped in a `Card`; recharts `stroke`/`fill` colors updated to the theme's accent color (CSS variable read via a plain hex/rgb fallback, since recharts doesn't consume CSS variables directly for SVG props); grid lines/tooltip restyled to match dark theme. |
 | `SessionsTable.tsx` | Wrapped in `Card`; native `<table>` replaced with shadcn `Table` primitives; sort indicator becomes a small chevron icon (↑/↓) next to "AIU credits" header instead of relying purely on cursor style; sorting logic (the 3-state cycle) is unchanged. |
 | `EmptyState.tsx` | Centered flex column, icon + heading + message, matches the dark theme. |
