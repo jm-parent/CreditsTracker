@@ -35,16 +35,15 @@ export function BreakdownSummaryCards({
       </Card>
       <Card className="summary-card">
         <CardContent className="flex flex-col gap-1 p-4">
-          <span className="summary-value text-2xl font-semibold text-foreground">
+          <span
+            className="summary-value block truncate text-2xl font-semibold text-foreground"
+            title={topKey || undefined}
+          >
             {topKey ? topKey : '—'}
           </span>
-          {topKey ? (
-            <>
-              <span className="summary-label text-sm text-muted-foreground">{topLabel}</span>
-              <span className="summary-label text-sm text-muted-foreground">{topCredits.toFixed(2)}</span>
-            </>
-          ) : (
-            <span className="summary-label text-sm text-muted-foreground">{topLabel}</span>
+          <span className="summary-label text-sm text-muted-foreground">{topLabel}</span>
+          {topKey && (
+            <span className="summary-label text-sm text-muted-foreground">{topCredits.toFixed(2)}</span>
           )}
         </CardContent>
       </Card>

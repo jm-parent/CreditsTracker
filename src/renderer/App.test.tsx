@@ -214,4 +214,24 @@ describe('App', () => {
 
     expect(screen.queryByRole('dialog', { name: /hourly detail/i })).not.toBeInTheDocument();
   });
+
+  it('clears an open project detail view when switching tabs', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+
+    const projectChartCard = screen.getByText('Credits by project').closest('.chart-card') as HTMLElement;
+    const projectChart = within(projectChartCard).getByTestId('breakdown-chart');
+    const bar = projectChart.querySelector('.recharts-bar-rectangle');
+    await user.click(bar as Element);
+
+    expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Daily consumption' }));
+
+    expect(screen.queryByRole('heading', { name: 'org/repo-a' })).not.toBeInTheDocument();
+    expect(await screen.findByText('Credits over time')).toBeInTheDocument();
+  });
 });

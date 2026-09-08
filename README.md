@@ -7,19 +7,26 @@ permissions required.
 
 ## Features
 
-- **Dashboard overview** — total AIU credits, tokens, and requests at a
+A sidebar lets you switch between four tabs, each scoped to the current
+project/model/date filters:
+
+- **Daily consumption** — total AIU credits, tokens, and requests at a
   glance, with a stacked bar chart of credits over time broken down by
   project (hover a bar to see the per-project breakdown for that day).
-- **Filtering** — filter all charts and stats by project and/or model.
-- **Credits by model** — bar chart comparing AIU credit usage across every
-  model used (Claude, GPT, etc.).
-- **Hourly detail** — click a day in the "Credits over time" chart to open
-  an hourly breakdown showing usage trends throughout that day.
-- **Raw data table** — a sortable table of every session with date,
-  summary, model(s) used, AIU credits, tokens, and request count, for
-  drilling into the underlying data.
+  Click a day to open an hourly breakdown showing usage trends throughout
+  that day.
+- **By project** — per-project totals with a breakdown chart and table;
+  click a project's bar to drill into a detail page for that project.
+- **By model** — per-model totals with a breakdown chart and a table
+  showing AIU credits and each model's "% of total" share of usage.
+- **Raw data** — a sortable table of every session with date, summary,
+  model(s) used, AIU credits, tokens, and request count, for drilling into
+  the underlying data.
+- **Filtering** — filter all tabs' charts and stats by project and/or model.
 
 ### Screenshots
+
+<!-- TODO: screenshots below still show the pre-sidebar single-page layout; refresh after next UI pass -->
 
 **Dashboard overview**
 

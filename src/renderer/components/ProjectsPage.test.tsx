@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ProjectsPage } from './ProjectsPage';
 
 vi.mock('recharts', async () => {
@@ -34,11 +34,10 @@ describe('ProjectsPage', () => {
   });
 
   it('renders an empty state without crashing when there are no projects', () => {
-    render(<ProjectsPage byProject={[]} onProjectClick={vi.fn()} />);
+    const { container } = render(<ProjectsPage byProject={[]} onProjectClick={vi.fn()} />);
 
-    // Use getAllByText with index selector since recharts creates a measurement span with '0'
-    const zeroElements = screen.getAllByText('0');
-    expect(zeroElements.length).toBeGreaterThan(0);
+    const summaryCards = container.querySelector('.summary-cards') as HTMLElement;
+    expect(within(summaryCards).getByText('0')).toBeInTheDocument(); // count of projects
     expect(screen.getByText('No data for this selection.')).toBeInTheDocument();
   });
 
