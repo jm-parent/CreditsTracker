@@ -20,6 +20,31 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* Match the scrollbar to the app's dark theme instead of the OS default. */
+* {
+  scrollbar-color: var(--color-border) var(--color-background);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 8px;
+  border: 3px solid var(--color-background);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-muted-foreground);
+}
+
 /* Recharts renders bars, the chart surface, and the wrapper as focusable
    elements (tabindex="0"), which triggers the browser's default orange
    focus outline on click. None of these are real interactive controls, so
