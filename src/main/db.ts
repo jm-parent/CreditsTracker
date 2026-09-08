@@ -185,7 +185,7 @@ export function getHourlyDetail(
 
   const hourlyByProjectRows = db
     .prepare(
-      `SELECT strftime('%H:00', e.created_at) AS hour, COALESCE(s.repository, s.cwd) AS project, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT strftime('%H:00', e.created_at, 'localtime') AS hour, COALESCE(s.repository, s.cwd) AS project, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY hour, project
        ORDER BY hour`,

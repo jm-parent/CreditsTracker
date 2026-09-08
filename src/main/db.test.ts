@@ -185,6 +185,13 @@ describe('getUsage', () => {
   });
 });
 
+// getHourlyDetail converts stored UTC timestamps to the machine's local hour, so
+// tests compute the expected hour dynamically instead of hardcoding a timezone.
+function localHourLabel(utcNaiveDateTime: string): string {
+  const hours = new Date(`${utcNaiveDateTime.replace(' ', 'T')}Z`).getHours();
+  return `${String(hours).padStart(2, '0')}:00`;
+}
+
 describe('getHourlyDetail', () => {
   it('returns an hourly breakdown by project for the given date', () => {
     const db = new Database(':memory:');
@@ -198,8 +205,8 @@ describe('getHourlyDetail', () => {
     const result = getHourlyDetail(db, { date: '2026-09-01' });
 
     expect(result).toEqual([
-      { hour: '10:00', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
-      { hour: '14:00', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
+      { hour: localHourLabel('2026-09-01 10:00:05'), aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+      { hour: localHourLabel('2026-09-01 14:30:00'), aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
     ]);
 
     db.close();
@@ -227,7 +234,7 @@ describe('getHourlyDetail', () => {
     const result = getHourlyDetail(db, { date: '2026-09-01', model: 'gpt-5.4' });
 
     expect(result).toEqual([
-      { hour: '11:00', aiuCredits: 0.5, byProject: { 'org/repo-a': 0.5 } },
+      { hour: localHourLabel('2026-09-01 11:00:00'), aiuCredits: 0.5, byProject: { 'org/repo-a': 0.5 } },
     ]);
 
     db.close();
