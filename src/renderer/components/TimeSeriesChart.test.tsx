@@ -102,6 +102,32 @@ describe('TimeSeriesChart', () => {
     expect(onDayClick).toHaveBeenCalledWith('2026-09-01');
   });
 
+  it('makes the grey column area clickable for every day, including ones where the first project series is zero', () => {
+    // Recharts only renders a stacked series' background rectangle on days
+    // where that specific series contributed a non-zero value, so relying
+    // on a single project's series to cover every day's grey area would
+    // silently drop days where that project happened to have no activity.
+    const onDayClick = vi.fn();
+    const data = [
+      { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+      { date: '2026-09-02', aiuCredits: 5, byProject: { 'org/repo-b': 5 } },
+      { date: '2026-09-03', aiuCredits: 1, byProject: { 'org/repo-c': 1 } },
+    ];
+    const { container } = render(<TimeSeriesChart data={data} onDayClick={onDayClick} />);
+
+    const backgrounds = Array.from(
+      container.querySelectorAll('.recharts-bar-background-rectangle'),
+    );
+    const clickedDates = new Set<string>();
+    backgrounds.forEach((bg) => {
+      onDayClick.mockClear();
+      fireEvent.click(bg);
+      onDayClick.mock.calls.forEach(([date]) => clickedDates.add(date));
+    });
+
+    expect(clickedDates).toEqual(new Set(data.map((point) => point.date)));
+  });
+
   it('does not attach a click handler when onDayClick is omitted', () => {
     render(
       <TimeSeriesChart data={[{ date: '2026-09-01', aiuCredits: 1 }]} />,

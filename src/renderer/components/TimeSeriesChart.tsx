@@ -73,7 +73,7 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
                 <YAxis stroke="#94a3b8" />
                 <Tooltip content={StackedTooltip} cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
                 {projectKeys.length > 0 ? (
-                  projectKeys.map((key, index) => (
+                  projectKeys.map((key) => (
                     <Bar
                       key={key}
                       dataKey={(point: TimeSeriesPoint) => point.byProject?.[key] ?? 0}
@@ -86,10 +86,13 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
                       // whole plot height for the bar's column (the same grey
                       // area the hover cursor highlights), reusing the same
                       // onClick — so clicking anywhere in a day's column
-                      // triggers it, not just the (possibly tiny) visible bar.
-                      // Only needed once per column, so it's added to a single
-                      // series rather than every stacked one.
-                      background={index === 0 ? { fill: 'transparent' } : undefined}
+                      // triggers it, not just the (possibly tiny) visible
+                      // segment. It's applied to every stacked series
+                      // (not just one) because Recharts skips rendering a
+                      // series' background on a day where that specific
+                      // series contributed 0 — only whichever series is
+                      // non-zero that day ends up producing it.
+                      background={{ fill: 'transparent' }}
                     />
                   ))
                 ) : (
