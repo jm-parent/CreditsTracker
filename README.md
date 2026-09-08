@@ -1,9 +1,18 @@
 # Credits Dashboard
 
 A local desktop app that shows your GitHub Copilot CLI credit (AIU) and token
-consumption, filterable by project, model, and date range. Reads
+consumption, filterable by project, model, and date range.
+
+🔒 **Privacy-first**: everything runs on your machine. It reads
 `~/.copilot/session-store.db` read-only — no network calls, no GitHub
-permissions required.
+permissions required, nothing ever leaves your computer.
+
+## Download
+
+Grab the latest Windows build from the
+[Releases page](https://github.com/jm-parent/CreditsTracker/releases/latest):
+download the zip, extract it, and run the executable inside — no
+installation, no Node.js required.
 
 ## Features
 
@@ -26,8 +35,11 @@ project/model/date filters:
 - **Live updates** — the dashboard refreshes itself automatically every few
   seconds, so credits from a Copilot CLI (or Copilot Chat) session you just
   finished show up on screen shortly after, without restarting the app.
+- **Copilot Chat included** — usage from the GitHub Copilot Chat extension in
+  VS Code is merged in alongside Copilot CLI usage, so you get one unified
+  view of your Copilot credit consumption.
 
-### Screenshots
+## Screenshots
 
 <!-- TODO: screenshots below still show the pre-sidebar single-page layout; refresh after next UI pass -->
 
@@ -47,67 +59,7 @@ project/model/date filters:
 
 ![Raw data table](docs/screenshots/raw-data-table.png)
 
-## Development
+## For developers
 
-    npm install
-    npm start
-
-Opens the app in a dev window with hot reload.
-
-## Tests
-
-    npm test
-
-## Building a distributable zip
-
-    npm run make
-
-Produces a self-contained `.zip` under `out/make/zip/<platform>/<arch>/` that
-can be copied to another Windows PC and run without installing Node.js —
-just extract and launch the executable inside.
-
-## Releases
-
-Versioning and GitHub Releases are fully automated with
-[semantic-release](https://semantic-release.gitbook.io/), driven by
-[Conventional Commits](https://www.conventionalcommits.org/) on `master`:
-
-- `fix: ...` → patch release (1.0.0 → 1.0.1)
-- `feat: ...` → minor release (1.0.0 → 1.1.0)
-- `feat!: ...` or a commit body containing `BREAKING CHANGE:` → major release (1.0.0 → 2.0.0)
-- Other prefixes (`chore:`, `docs:`, `refactor:`, `test:`, ...) don't trigger a release
-
-Every push to `master` runs the **Release** workflow
-(`.github/workflows/release.yml`), which, when a release is warranted:
-
-1. Bumps the version in `package.json` and updates `CHANGELOG.md`.
-2. Builds the Windows zip (`npm run make`).
-3. Tags the commit and pushes it back to `master`.
-4. Publishes a GitHub Release with the zip attached.
-
-The workflow can also be triggered manually from the **Actions** tab
-(`Run workflow`) to retry a release without needing a new commit. A separate
-**CI** workflow (`.github/workflows/ci.yml`) runs the test suite on every
-push and pull request.
-
-To preview what the next release would look like without publishing
-anything:
-
-    npm run release:dry-run
-
-## Data source
-
-The app reads `~/.copilot/session-store.db`, the local SQLite database that
-Copilot CLI already maintains. If that file doesn't exist on a machine, the
-app shows an empty-state message instead of failing.
-
-It also scans VS Code's `User/workspaceStorage` folder (read-only) for
-Copilot Chat conversation logs (`chatSessions/*.jsonl`) recorded by the
-GitHub Copilot Chat extension, and merges their token/credit usage into the
-same dashboard, so CLI and VS Code usage show up side by side — filterable by
-project and model just like CLI sessions. If that folder is missing or
-unreadable, it's silently skipped and only CLI data is shown.
-
-Both sources are re-read from disk at most once every 5 seconds, and the
-dashboard polls for new data on the same cadence, so usage from an
-in-progress or just-finished session appears on screen within a few seconds.
+Building, testing, releasing, and a technical overview of how the app works
+live in the [developer guide](docs/DEVELOPMENT.md).
