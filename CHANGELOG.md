@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/jm-parent/CreditsTracker/compare/v1.1.1...v1.1.2) (2026-09-08)
+
+
+### Bug Fixes
+
+* refresh usage data from disk periodically instead of only at startup ([7c378ec](https://github.com/jm-parent/CreditsTracker/commit/7c378ec4291d9ad6d2d5339eda4bf4494d1ab853))
+
 ## [1.1.1](https://github.com/jm-parent/CreditsTracker/compare/v1.1.0...v1.1.1) (2026-09-08)
 
 
