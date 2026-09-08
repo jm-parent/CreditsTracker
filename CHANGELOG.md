@@ -1,3 +1,22 @@
+# [1.1.0](https://github.com/jm-parent/CreditsTracker/compare/v1.0.0...v1.1.0) (2026-09-08)
+
+
+### Bug Fixes
+
+* address final review findings (README, test coverage, minor polish) ([c8e3443](https://github.com/jm-parent/CreditsTracker/commit/c8e34435217c2d13a2c279375592084add39b4ab))
+* scope ModelsPage empty-state test to summary cards region ([c06cc91](https://github.com/jm-parent/CreditsTracker/commit/c06cc91a58a78b50c83068a702504e2d0ee913ff))
+
+
+### Features
+
+* add BreakdownSummaryCards component ([50bbc59](https://github.com/jm-parent/CreditsTracker/commit/50bbc59054adf1faa9a8d31db9bfc1102d19b62e))
+* add DailyConsumptionPage component ([00fba68](https://github.com/jm-parent/CreditsTracker/commit/00fba683469d3ca3639a207d2209dffd4e3fb637))
+* add ModelsPage component ([c5425a1](https://github.com/jm-parent/CreditsTracker/commit/c5425a133e147ed7adc07ea1d3234ccec574e82e))
+* add ModelTable component with percentage-of-total column ([fbfb19d](https://github.com/jm-parent/CreditsTracker/commit/fbfb19de124f695e5c26ff8b51d8ac1db9a7a328))
+* add ProjectsPage component ([6091ae2](https://github.com/jm-parent/CreditsTracker/commit/6091ae266531915c974a0797d17ec424afb08180))
+* add Sidebar navigation component ([877b1ac](https://github.com/jm-parent/CreditsTracker/commit/877b1ac58aefea1d14e2e424434908f6813fe31f))
+* wire sidebar navigation with daily/projects/models/raw tabs into App ([2e13758](https://github.com/jm-parent/CreditsTracker/commit/2e1375881c510a37932272f9da1189513874848e))
+
 # 1.0.0 (2026-09-08)
 
 
