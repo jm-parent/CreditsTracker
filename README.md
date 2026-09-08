@@ -23,6 +23,9 @@ project/model/date filters:
   model(s) used, AIU credits, tokens, and request count, for drilling into
   the underlying data.
 - **Filtering** — filter all tabs' charts and stats by project and/or model.
+- **Live updates** — the dashboard refreshes itself automatically every few
+  seconds, so credits from a Copilot CLI (or Copilot Chat) session you just
+  finished show up on screen shortly after, without restarting the app.
 
 ### Screenshots
 
@@ -104,3 +107,7 @@ GitHub Copilot Chat extension, and merges their token/credit usage into the
 same dashboard, so CLI and VS Code usage show up side by side — filterable by
 project and model just like CLI sessions. If that folder is missing or
 unreadable, it's silently skipped and only CLI data is shown.
+
+Both sources are re-read from disk at most once every 5 seconds, and the
+dashboard polls for new data on the same cadence, so usage from an
+in-progress or just-finished session appears on screen within a few seconds.
