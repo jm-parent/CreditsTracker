@@ -5,6 +5,9 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 
 const config: ForgeConfig = {
   packagerConfig: {
+    // electron-packager appends the platform-appropriate extension
+    // (.ico on Windows, .icns on macOS, .png on Linux) to this base path.
+    icon: './assets/icon',
     asar: {
       // better-sqlite3's compiled .node binary cannot be dlopen'd from inside
       // an asar archive, so it must be unpacked alongside the archive.

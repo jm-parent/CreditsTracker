@@ -11,6 +11,10 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    // Only resolves during `npm start` (assets/ is excluded from packaged
+    // builds by forge.config.ts). Packaged builds get their icon from
+    // packagerConfig.icon, embedded directly into the executable instead.
+    icon: path.join(__dirname, '../../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload/preload.js'),
     },
