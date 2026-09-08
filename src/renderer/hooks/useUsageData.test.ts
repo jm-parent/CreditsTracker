@@ -67,7 +67,7 @@ describe('useUsageData', () => {
     expect(result.current.data).toBeNull();
   });
 
-  it('polls again after 15 seconds', async () => {
+  it('polls again after 5 seconds', async () => {
     vi.useFakeTimers();
     try {
       const { result } = renderHook(() => useUsageData({}));
@@ -75,9 +75,9 @@ describe('useUsageData', () => {
       // First call happens on mount
       expect(window.api.getUsage).toHaveBeenCalledTimes(1);
 
-      // Advance timers by 15 seconds to trigger the next poll
+      // Advance timers by 5 seconds to trigger the next poll
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(15_000);
+        await vi.advanceTimersByTimeAsync(5_000);
       });
 
       // Should have been called a second time

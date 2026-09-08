@@ -25,7 +25,20 @@ import type { VscodeUsageData } from './vscode-chat-store';
  * `User/workspaceStorage` folder and is scanned for chat session logs. It is
  * omitted in tests to keep handler behavior deterministic.
  */
-export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string): void {
+/**
+ * The merged database is rebuilt from the on-disk CLI database (and, when
+ * configured, the VS Code chat usage files) at most once per this interval.
+ * Rebuilding is triggered lazily, right before serving a renderer request,
+ * so usage recorded since the last rebuild (e.g. a Copilot CLI action run
+ * moments ago) shows up on screen within roughly this delay instead of only
+ * after the app is restarted.
+ */
+const DB_REFRESH_INTERVAL_MS = 5_000;
+
+function buildMergedDatabaseFromSources(
+  dbPath: string,
+  workspaceStorageDir: string | undefined,
+): Database.Database {
   let cliDb: Database.Database;
   try {
     cliDb = openDatabase(dbPath);
@@ -57,25 +70,39 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
     }
   }
 
-  const db = buildMergedDatabase(cliDb, vscodeData);
+  return buildMergedDatabase(cliDb, vscodeData);
+}
+
+export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string): void {
+  let db = buildMergedDatabaseFromSources(dbPath, workspaceStorageDir);
+  let lastBuiltAt = Date.now();
+
+  function currentDb(): Database.Database {
+    const now = Date.now();
+    if (now - lastBuiltAt >= DB_REFRESH_INTERVAL_MS) {
+      db = buildMergedDatabaseFromSources(dbPath, workspaceStorageDir);
+      lastBuiltAt = now;
+    }
+    return db;
+  }
 
   ipcMain.handle('get-filter-options', () => {
-    return getFilterOptions(db);
+    return getFilterOptions(currentDb());
   });
 
   ipcMain.handle('get-usage', (_event, filters: UsageFilters) => {
-    return getUsage(db, filters ?? {});
+    return getUsage(currentDb(), filters ?? {});
   });
 
   ipcMain.handle('get-project-detail', (_event, params: UsageFilters & { project: string }) => {
-    return getProjectDetail(db, params);
+    return getProjectDetail(currentDb(), params);
   });
 
   ipcMain.handle('get-raw-table-page', (_event, params: RawTableParams) => {
-    return getRawTablePage(db, params.table, params.page, params.pageSize);
+    return getRawTablePage(currentDb(), params.table, params.page, params.pageSize);
   });
 
   ipcMain.handle('get-hourly-detail', (_event, params: HourlyDetailParams) => {
-    return getHourlyDetail(db, params);
+    return getHourlyDetail(currentDb(), params);
   });
 }

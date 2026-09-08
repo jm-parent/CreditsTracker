@@ -115,4 +115,30 @@ describe('registerIpcHandlers', () => {
 
     expect(result).toEqual([]);
   });
+
+  it('rebuilds the merged database from disk after the refresh interval elapses, so new usage becomes visible without an app restart', async () => {
+    const { openDatabase } = await import('./db');
+    vi.useFakeTimers();
+    try {
+      registerIpcHandlers('/fake/path.db');
+      const handlers = (ipcMain as unknown as { __handlers: Map<string, (...args: unknown[]) => unknown> })
+        .__handlers;
+      const getUsageHandler = handlers.get('get-usage')!;
+
+      // openDatabase is called once during registration to build the initial db.
+      expect(openDatabase).toHaveBeenCalledTimes(1);
+
+      // Calls within the refresh window reuse the same in-memory db.
+      await getUsageHandler({}, {});
+      await getUsageHandler({}, {});
+      expect(openDatabase).toHaveBeenCalledTimes(1);
+
+      // Once the refresh interval elapses, the next call rebuilds from disk.
+      vi.advanceTimersByTime(5_000);
+      await getUsageHandler({}, {});
+      expect(openDatabase).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
