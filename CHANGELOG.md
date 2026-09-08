@@ -1,3 +1,11 @@
+## [1.1.1](https://github.com/jm-parent/CreditsTracker/compare/v1.1.0...v1.1.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* keep sidebar fixed while content area scrolls independently ([6626299](https://github.com/jm-parent/CreditsTracker/commit/66262998317816daa0757ce18376ba244efe7c99))
+* style scrollbar to match dark theme ([3492553](https://github.com/jm-parent/CreditsTracker/commit/34925536c4dfbb48eab6a75545c4b36f814d94fc))
+
 # [1.1.0](https://github.com/jm-parent/CreditsTracker/compare/v1.0.0...v1.1.0) (2026-09-08)
 
 
