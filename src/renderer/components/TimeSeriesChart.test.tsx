@@ -79,6 +79,29 @@ describe('TimeSeriesChart', () => {
     expect(onDayClick).toHaveBeenCalledWith('2026-09-01');
   });
 
+  it('calls onDayClick when clicking the grey column area beside a (possibly tiny) bar', () => {
+    const onDayClick = vi.fn();
+    const { container } = render(
+      <TimeSeriesChart
+        data={[
+          { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+          { date: '2026-09-02', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
+        ]}
+        onDayClick={onDayClick}
+      />,
+    );
+
+    // Recharts renders this as a transparent rect spanning the full plot
+    // height for each day's column (the grey area the hover cursor
+    // highlights), separate from the visible `.recharts-bar-rectangle`.
+    const backgrounds = container.querySelectorAll('.recharts-bar-background-rectangle');
+    expect(backgrounds.length).toBeGreaterThan(0);
+
+    fireEvent.click(backgrounds[0]);
+
+    expect(onDayClick).toHaveBeenCalledWith('2026-09-01');
+  });
+
   it('does not attach a click handler when onDayClick is omitted', () => {
     render(
       <TimeSeriesChart data={[{ date: '2026-09-01', aiuCredits: 1 }]} />,

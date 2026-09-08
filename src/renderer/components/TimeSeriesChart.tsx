@@ -53,6 +53,10 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
     new Set(data.flatMap((point) => Object.keys(point.byProject ?? {}))),
   ).sort();
 
+  const handleBarClick = onDayClick
+    ? (entry: TimeSeriesPoint) => onDayClick(entry.date)
+    : undefined;
+
   return (
     <Card className="chart-card">
       <CardHeader>
@@ -69,15 +73,23 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
                 <YAxis stroke="#94a3b8" />
                 <Tooltip content={StackedTooltip} cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
                 {projectKeys.length > 0 ? (
-                  projectKeys.map((key) => (
+                  projectKeys.map((key, index) => (
                     <Bar
                       key={key}
                       dataKey={(point: TimeSeriesPoint) => point.byProject?.[key] ?? 0}
                       name={key}
                       stackId="credits"
-                      cursor={onDayClick ? 'pointer' : undefined}
                       fill={getColorForKey(key)}
-                      onClick={onDayClick ? (entry: TimeSeriesPoint) => onDayClick(entry.date) : undefined}
+                      cursor={onDayClick ? 'pointer' : undefined}
+                      onClick={handleBarClick}
+                      // Recharts draws this as a transparent rect spanning the
+                      // whole plot height for the bar's column (the same grey
+                      // area the hover cursor highlights), reusing the same
+                      // onClick — so clicking anywhere in a day's column
+                      // triggers it, not just the (possibly tiny) visible bar.
+                      // Only needed once per column, so it's added to a single
+                      // series rather than every stacked one.
+                      background={index === 0 ? { fill: 'transparent' } : undefined}
                     />
                   ))
                 ) : (
@@ -85,7 +97,8 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
                     dataKey="aiuCredits"
                     fill="#22d3ee"
                     cursor={onDayClick ? 'pointer' : undefined}
-                    onClick={onDayClick ? (entry: TimeSeriesPoint) => onDayClick(entry.date) : undefined}
+                    onClick={handleBarClick}
+                    background={{ fill: 'transparent' }}
                   />
                 )}
               </BarChart>
