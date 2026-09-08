@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
-          npm ci
+          npm ci --ignore-scripts
 
       - name: Run tests
         run: npm test
