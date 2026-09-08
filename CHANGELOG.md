@@ -1,0 +1,45 @@
+# 1.0.0 (2026-09-08)
+
+
+### Bug Fixes
+
+* always create window even when DB init fails with an unexpected error ([5f8d91d](https://github.com/jm-parent/CreditsTracker/commit/5f8d91d6a44e428e46b854eeef889a77cffd026a))
+* correct preload build output path to match main.ts resolution ([4e59261](https://github.com/jm-parent/CreditsTracker/commit/4e5926153346b3ebbc84fe835ebb2445e0167973))
+* disable text selection on chart click-and-drag ([5e8e9e9](https://github.com/jm-parent/CreditsTracker/commit/5e8e9e9f225114d77b054db7afaa15f1a3adc17d))
+* ensure better-sqlite3 native module is unpacked in packaged app ([a9a0dad](https://github.com/jm-parent/CreditsTracker/commit/a9a0dad3a6c773fc58c0cc7fb3d52949471e13d7))
+* hide 'Credits Dashboard' title on project detail page ([1dae146](https://github.com/jm-parent/CreditsTracker/commit/1dae14674f44fa2e093189e0f210e9fb794e0484))
+* **plan:** correct preload output path to match main.ts resolution ([a850538](https://github.com/jm-parent/CreditsTracker/commit/a85053871d4df51d566980f328e77501d8907208))
+* remove all orange focus outlines from chart bars and container ([08a2c6c](https://github.com/jm-parent/CreditsTracker/commit/08a2c6cbaf60d276cd7db0406d6d6d0fe9c3e2ad))
+* remove from/to date filter from filter bar ([c0a0a35](https://github.com/jm-parent/CreditsTracker/commit/c0a0a35117e77385ecc1a2df8f3693577d61e7cc))
+* remove ugly orange focus outline on chart click ([9ab55d2](https://github.com/jm-parent/CreditsTracker/commit/9ab55d2f49297d993c80bb26419049e1d47b1c29))
+* show only model filter on project detail page, placed below header ([c1c7de5](https://github.com/jm-parent/CreditsTracker/commit/c1c7de5f2bede7942f2a943cb852630dee45b884))
+
+
+### Features
+
+* add ConversationsTable component ([074d744](https://github.com/jm-parent/CreditsTracker/commit/074d74497ec0d2ee0c3c4d2eca00568cc02beb0b))
+* add ConversationSummary and ProjectDetailResult types ([93c73d7](https://github.com/jm-parent/CreditsTracker/commit/93c73d757c4dfe0bedd31b2761c45fcf72ae5ca6))
+* add EmptyState component for no-data/error/db-missing states ([8f7f907](https://github.com/jm-parent/CreditsTracker/commit/8f7f90716c557dfa2263bd8f9997ec87e79390e4))
+* add FilterBar component for project/model/date filtering ([281766c](https://github.com/jm-parent/CreditsTracker/commit/281766c660e9f35381d278a86550e80837bea211))
+* add generic BreakdownChart component for by-project/by-model views ([b20f799](https://github.com/jm-parent/CreditsTracker/commit/b20f799ead6cd009a5d2e37ff5c33670348b9ad5))
+* add getFilterOptions query for project/model/date-range filters ([c184a73](https://github.com/jm-parent/CreditsTracker/commit/c184a73584fa9e404a9cb5804447ae6cf99ad191))
+* add getProjectDetail query to db.ts ([29a9198](https://github.com/jm-parent/CreditsTracker/commit/29a91980180d2610424a7af9c7bbeda93510254f))
+* add getUsage aggregation query with project/model/date filters ([70e6516](https://github.com/jm-parent/CreditsTracker/commit/70e65166718a4bc91e60f52f707d952563fb6d7e))
+* add optional onBarClick handler to BreakdownChart ([3a2bc07](https://github.com/jm-parent/CreditsTracker/commit/3a2bc078ca040e379ff8f0c38badb4f6b3ccaabd))
+* add ProjectDetailPage component ([270a19b](https://github.com/jm-parent/CreditsTracker/commit/270a19b1ef6320a4699efe2f7b437ce37f70fd08))
+* add raw data screen exposing source DB tables ([a062891](https://github.com/jm-parent/CreditsTracker/commit/a06289119ccc01b94dba512a384906c69dbcee44))
+* add read-only sqlite connection with db-not-found handling ([9b65682](https://github.com/jm-parent/CreditsTracker/commit/9b656827757039711833feae1d6ec632b3f357bf))
+* add shadcn-style Card, Badge, Skeleton UI primitives ([0acee96](https://github.com/jm-parent/CreditsTracker/commit/0acee96863c5f38fba41292b8580c6d8f82d6e9f))
+* add shadcn-style Table UI primitive ([80b332f](https://github.com/jm-parent/CreditsTracker/commit/80b332fc81fd47d0709a9d91833ed8f761bf5849))
+* add shared usage/filter type definitions ([3be72f6](https://github.com/jm-parent/CreditsTracker/commit/3be72f6b4e1af43f6d0553a3204a813041d4c5e5))
+* add sortable SessionsTable drill-down component ([68d3764](https://github.com/jm-parent/CreditsTracker/commit/68d37647dd658574555b3c64c41daebf22ef90f1))
+* add SummaryCards component for total credits/tokens/requests ([e91c82b](https://github.com/jm-parent/CreditsTracker/commit/e91c82bd4b428c7146d2c3ebe43daec58929e70a))
+* add TimeSeriesChart component for daily credit consumption ([44a2e2f](https://github.com/jm-parent/CreditsTracker/commit/44a2e2fc26716e2eb19960c8c9b6ed86e0c84107))
+* add useProjectDetail hook ([53816b4](https://github.com/jm-parent/CreditsTracker/commit/53816b407f6ff029fd22f169d499c6016c005f76))
+* add useUsageData hook with polling and error/loading state ([bcedd32](https://github.com/jm-parent/CreditsTracker/commit/bcedd32352e847429c5f7e8aedf896f7b39cdda3))
+* compose full dashboard in App with filters, cards, charts, and drill-down ([93b76a3](https://github.com/jm-parent/CreditsTracker/commit/93b76a3762761f33c3440fedf360741ff460082e))
+* expose getProjectDetail over IPC and preload API ([9c76f52](https://github.com/jm-parent/CreditsTracker/commit/9c76f52e79e29e4e813257bf238aa503d48f3eb3))
+* format token counts with k/M/B suffixes ([b3eb5a1](https://github.com/jm-parent/CreditsTracker/commit/b3eb5a132919f50fabd0d0353058c5006625f584))
+* navigate to project detail from full column hover area, add daily credits chart to project detail ([08bb7f6](https://github.com/jm-parent/CreditsTracker/commit/08bb7f6e7e7eb726d282cb1a8ae8e1b87aa2d413))
+* navigate to project detail page on project bar click ([280409b](https://github.com/jm-parent/CreditsTracker/commit/280409b08b7ce6416cde70f74f31c9a5a9057ffd))
+* wire IPC handlers and expose window.api via contextBridge ([1852510](https://github.com/jm-parent/CreditsTracker/commit/1852510a945efa16439c7364cdd638fd351c3e35))
