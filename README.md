@@ -56,6 +56,35 @@ Produces a self-contained `.zip` under `out/make/zip/<platform>/<arch>/` that
 can be copied to another Windows PC and run without installing Node.js —
 just extract and launch the executable inside.
 
+## Releases
+
+Versioning and GitHub Releases are fully automated with
+[semantic-release](https://semantic-release.gitbook.io/), driven by
+[Conventional Commits](https://www.conventionalcommits.org/) on `master`:
+
+- `fix: ...` → patch release (1.0.0 → 1.0.1)
+- `feat: ...` → minor release (1.0.0 → 1.1.0)
+- `feat!: ...` or a commit body containing `BREAKING CHANGE:` → major release (1.0.0 → 2.0.0)
+- Other prefixes (`chore:`, `docs:`, `refactor:`, `test:`, ...) don't trigger a release
+
+Every push to `master` runs the **Release** workflow
+(`.github/workflows/release.yml`), which, when a release is warranted:
+
+1. Bumps the version in `package.json` and updates `CHANGELOG.md`.
+2. Builds the Windows zip (`npm run make`).
+3. Tags the commit and pushes it back to `master`.
+4. Publishes a GitHub Release with the zip attached.
+
+The workflow can also be triggered manually from the **Actions** tab
+(`Run workflow`) to retry a release without needing a new commit. A separate
+**CI** workflow (`.github/workflows/ci.yml`) runs the test suite on every
+push and pull request.
+
+To preview what the next release would look like without publishing
+anything:
+
+    npm run release:dry-run
+
 ## Data source
 
 The app reads `~/.copilot/session-store.db`, the local SQLite database that

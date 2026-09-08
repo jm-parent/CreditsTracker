@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      # semantic-release analyzes commit messages since the last release tag
+      # (Conventional Commits: fix: -> patch, feat: -> minor, "BREAKING
+      # CHANGE"/"!" -> major). If nothing warrants a release, it exits
+      # without creating one. On release it bumps package.json, updates
+      # CHANGELOG.md, builds the Windows zip (electron-forge make), tags the
+      # commit, pushes it back to master, and publishes a GitHub Release
+      # with the zip attached.
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
