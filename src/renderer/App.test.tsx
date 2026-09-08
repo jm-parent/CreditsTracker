@@ -133,6 +133,8 @@ describe('App', () => {
     render(<App />);
     await screen.findByText('3.00');
 
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+
     const projectChartCard = screen.getByText('Credits by project').closest('.chart-card') as HTMLElement;
     expect(projectChartCard).not.toBeNull();
 
@@ -176,7 +178,40 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: '← Back' }));
 
-    expect(await screen.findByText('Credits by project')).toBeInTheDocument();
+    expect(await screen.findByText('3.00')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Raw data' })).not.toBeInTheDocument();
+  });
+
+  it('shows the models tab with a breakdown chart and table', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'By model' }));
+
+    expect(await screen.findByText('Credits by model')).toBeInTheDocument();
+    expect(screen.getByText('% of total')).toBeInTheDocument();
+  });
+
+  it('clears an open hourly detail panel when switching tabs', async () => {
+    window.api.getHourlyDetail = vi.fn().mockResolvedValue([
+      { hour: '10:00', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+    ]);
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    const timeSeriesChart = screen.getByTestId('time-series-chart');
+    const bar = timeSeriesChart.querySelector('.recharts-bar-rectangle');
+    expect(bar).not.toBeNull();
+    await user.click(bar as Element);
+
+    const hourlyDialog = await screen.findByRole('dialog', { name: /hourly detail/i });
+    expect(within(hourlyDialog).getByText('10:00')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+
+    expect(screen.queryByRole('dialog', { name: /hourly detail/i })).not.toBeInTheDocument();
   });
 });
