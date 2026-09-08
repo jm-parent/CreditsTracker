@@ -12,7 +12,9 @@ import {
   getHourlyDetail,
   getProjectDetail,
   getRawTablePage,
+  buildMergedDatabase,
 } from './db';
+import type { VscodeUsageData } from './vscode-chat-store';
 
 describe('resolveDefaultDbPath', () => {
   it('points at ~/.copilot/session-store.db', () => {
@@ -411,5 +413,113 @@ describe('getRawTablePage', () => {
     seedSchemaAndFixtures(db);
 
     expect(() => getRawTablePage(db, 'drop table sessions; --' as never, 0, 10)).toThrow();
+  });
+});
+
+describe('buildMergedDatabase', () => {
+  it('copies CLI sessions and events into the merged database unchanged', () => {
+    const cliDb = new Database(':memory:');
+    seedSchemaAndFixtures(cliDb);
+    const emptyVscodeData: VscodeUsageData = { events: [], sessions: [] };
+
+    const merged = buildMergedDatabase(cliDb, emptyVscodeData);
+
+    const result = getUsage(merged, {});
+    expect(result.totals).toEqual({ aiuCredits: 4, tokens: 180, requests: 2 });
+    merged.close();
+    cliDb.close();
+  });
+
+  it('layers VS Code usage events alongside CLI usage under a namespaced session id', () => {
+    const cliDb = new Database(':memory:');
+    seedSchemaAndFixtures(cliDb);
+    const vscodeData: VscodeUsageData = {
+      sessions: [
+        {
+          sessionId: 'vs-session-1',
+          project: 'C:/Devs/MyProject',
+          summary: 'Explained a bug',
+          createdAt: '2026-09-05 09:00:00',
+        },
+      ],
+      events: [
+        {
+          sessionId: 'vs-session-1',
+          project: 'C:/Devs/MyProject',
+          model: 'gpt-6-astra',
+          aiuCredits: 2.5,
+          inputTokens: 1000,
+          outputTokens: 200,
+          createdAt: '2026-09-05 09:00:05',
+        },
+      ],
+    };
+
+    const merged = buildMergedDatabase(cliDb, vscodeData);
+
+    const result = getUsage(merged, {});
+    expect(result.totals).toEqual({ aiuCredits: 6.5, tokens: 1380, requests: 3 });
+    expect(result.byProject).toContainEqual({ key: 'C:/Devs/MyProject', aiuCredits: 2.5 });
+    expect(result.byModel).toContainEqual({ key: 'gpt-6-astra', aiuCredits: 2.5 });
+
+    const filterOptions = getFilterOptions(merged);
+    expect(filterOptions.projects).toContain('C:/Devs/MyProject');
+    expect(filterOptions.models).toContain('gpt-6-astra');
+
+    const projectDetail = getProjectDetail(merged, { project: 'C:/Devs/MyProject' });
+    expect(projectDetail.conversations).toEqual([
+      {
+        sessionId: 'vscode:vs-session-1',
+        createdAt: '2026-09-05 09:00:00',
+        summary: 'Explained a bug',
+        models: 'gpt-6-astra',
+        aiuCredits: 2.5,
+        tokens: 1200,
+        requests: 1,
+      },
+    ]);
+
+    merged.close();
+    cliDb.close();
+  });
+
+  it('still works when the CLI database has no data at all', () => {
+    const emptyCliDb = new Database(':memory:');
+    emptyCliDb.exec(`
+      CREATE TABLE sessions (id TEXT PRIMARY KEY, cwd TEXT, repository TEXT, summary TEXT, created_at TEXT);
+      CREATE TABLE assistant_usage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        model TEXT NOT NULL,
+        total_nano_aiu INTEGER,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        created_at TEXT
+      );
+    `);
+    const vscodeData: VscodeUsageData = {
+      sessions: [
+        { sessionId: 'vs-1', project: 'proj', summary: null, createdAt: '2026-09-05 09:00:00' },
+      ],
+      events: [
+        {
+          sessionId: 'vs-1',
+          project: 'proj',
+          model: 'gpt-5.4',
+          aiuCredits: 1,
+          inputTokens: 10,
+          outputTokens: 5,
+          createdAt: '2026-09-05 09:00:00',
+        },
+      ],
+    };
+
+    const merged = buildMergedDatabase(emptyCliDb, vscodeData);
+
+    const result = getUsage(merged, {});
+    expect(result.totals).toEqual({ aiuCredits: 1, tokens: 15, requests: 1 });
+
+    merged.close();
+    emptyCliDb.close();
   });
 });

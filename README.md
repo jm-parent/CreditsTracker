@@ -29,3 +29,10 @@ just extract and launch the executable inside.
 The app reads `~/.copilot/session-store.db`, the local SQLite database that
 Copilot CLI already maintains. If that file doesn't exist on a machine, the
 app shows an empty-state message instead of failing.
+
+It also scans VS Code's `User/workspaceStorage` folder (read-only) for
+Copilot Chat conversation logs (`chatSessions/*.jsonl`) recorded by the
+GitHub Copilot Chat extension, and merges their token/credit usage into the
+same dashboard, so CLI and VS Code usage show up side by side — filterable by
+project and model just like CLI sessions. If that folder is missing or
+unreadable, it's silently skipped and only CLI data is shown.
