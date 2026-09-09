@@ -49,7 +49,6 @@ const config: ForgeConfig = {
     new MakerSquirrel({
       authors: 'jm-parent',
       setupIcon: './assets/icon.ico',
-      createDesktopShortcut: true,
     }),
   ],
   plugins: [

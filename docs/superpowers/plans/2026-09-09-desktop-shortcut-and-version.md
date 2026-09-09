@@ -4,13 +4,19 @@
 
 **Goal:** Create a Squirrel.Windows desktop shortcut and display the packaged application version in the sidebar footer for the 1.4.1 patch release.
 
-**Architecture:** Configure Squirrel directly for the installer behavior. Expose Electron's `app.getVersion()` through an IPC handler and the preload bridge, then load it once in `App` and render it in a non-interactive `Sidebar` footer.
+**Architecture:** Handle Squirrel installation lifecycle events in the Electron
+main process and call `Update.exe` to create desktop and Start menu shortcuts.
+Expose Electron's `app.getVersion()` through an IPC handler and the preload
+bridge, then load it once in `App` and render it in a non-interactive
+`Sidebar` footer.
 
 **Tech Stack:** Electron 44, Electron Forge MakerSquirrel, React 19, TypeScript 7, Tailwind CSS, Vitest, Testing Library, semantic-release.
 
 ## Global Constraints
 
-- Enable Squirrel's native `createDesktopShortcut` behavior without changing Start menu, uninstall, or auto-update behavior.
+- On Squirrel install or update, invoke `Update.exe --createShortcut` with
+  `--shortcut-locations Desktop,StartMenu` before normal Electron startup.
+- Do not alter uninstall or auto-update behavior.
 - Render the exact installed package version as `v{version}` at the bottom of the lateral navigation menu.
 - Omit the version footer if retrieving it fails; dashboard data loading must remain unaffected.
 - Do not add dependencies.
@@ -22,8 +28,9 @@
 
 | File | Responsibility |
 |---|---|
-| `forge.config.ts` | Enables the native Squirrel desktop-shortcut setting. |
-| `forge.config.test.ts` | Captures the Squirrel-maker options passed by Forge configuration. |
+| `forge.config.ts` | Keeps the Squirrel maker metadata limited to supported installer options. |
+| `src/main/squirrel-events.ts` | Handles Squirrel install/update events and schedules shortcut creation through `Update.exe`. |
+| `src/main.test.ts` | Verifies Squirrel install/update handling and unchanged startup for ordinary or unhandled launches. |
 | `src/main/ipc-handlers.ts` | Registers the renderer-facing application-version IPC handler. |
 | `src/main/ipc-handlers.test.ts` | Verifies the version IPC channel delegates to Electron's app version. |
 | `src/preload.ts` | Exposes the version channel through the constrained renderer bridge. |
@@ -33,70 +40,105 @@
 | `src/renderer/components/Sidebar.tsx` | Renders the fixed footer version text. |
 | `src/renderer/components/Sidebar.test.tsx` | Covers footer content and navigation preservation. |
 
-### Task 1: Configure Squirrel desktop shortcut
+## Approved Corrective Decision
+
+`MakerSquirrel` and its `electron-winstaller` dependency do not implement
+`createDesktopShortcut`; the original Task 1 configuration option is ignored.
+The approved implementation replaces that option and its tautological test
+with a dedicated `src/main/squirrel-events.ts` helper and test. The helper
+must recognize `--squirrel-install` and `--squirrel-updated` in
+`process.argv`, call the installed application's adjacent `Update.exe` with
+`--createShortcut <packaged-executable-name> --shortcut-locations
+Desktop,StartMenu`, then quit the Electron app before regular startup.
+Non-Squirrel launches and every other Squirrel event must leave normal
+startup unchanged. This decision supersedes Task 1's MakerSquirrel-specific
+requirements while preserving all other plan constraints.
+
+### Task 1: Handle Squirrel shortcut creation in the main process
 
 **Files:**
-- Create: `forge.config.test.ts`
-- Modify: `forge.config.ts:44-48`
+- Create: `src/main/squirrel-events.ts`
+- Create: `src/main.test.ts`
+- Modify: `src/main.ts`
+- Modify: `forge.config.ts`
 
 **Interfaces:**
-- Consumes: `MakerSquirrel` constructor options from `@electron-forge/maker-squirrel`.
-- Produces: a `MakerSquirrel` instance constructed with `{ authors: 'jm-parent', setupIcon: './assets/icon.ico', createDesktopShortcut: true }`.
+- Consumes: `process.argv`, `process.execPath`, Electron's `app.quit()`, and `Update.exe --createShortcut`.
+- Produces: `handleSquirrelEvent(): boolean`, which returns `true` only for handled install/update events and prevents the rest of Electron startup from running.
 
-- [ ] **Step 1: Write the failing configuration test**
+- [ ] **Step 1: Write the failing startup tests**
 
 ```ts
-import { describe, expect, it, vi } from 'vitest';
+it('creates Desktop and Start menu shortcuts during Squirrel install and stops startup', async () => {
+  await importMainFor(['CreditsTracker.exe', '--squirrel-install']);
 
-const squirrelOptions: Array<Record<string, unknown>> = [];
-
-vi.mock('@electron-forge/maker-squirrel', () => ({
-  MakerSquirrel: class {
-    constructor(options: Record<string, unknown>) {
-      squirrelOptions.push(options);
-    }
-  },
-}));
-
-vi.mock('@electron-forge/maker-zip', () => ({ MakerZIP: class {} }));
-vi.mock('@electron-forge/plugin-vite', () => ({ VitePlugin: class {} }));
-vi.mock('@electron-forge/plugin-auto-unpack-natives', () => ({ AutoUnpackNativesPlugin: class {} }));
-
-describe('Forge Squirrel configuration', () => {
-  it('requests a desktop shortcut from Squirrel.Windows', async () => {
-    await import('./forge.config');
-    expect(squirrelOptions).toContainEqual(
-      expect.objectContaining({ createDesktopShortcut: true }),
-    );
-  });
+  expect(mockedSpawn.mock.calls[0]?.[0]).toBe(expectedUpdateExePath);
+  expect(mockedSpawn.mock.calls[0]?.[1]).toEqual([
+    '--createShortcut',
+    'CreditsTracker.exe',
+    '--shortcut-locations',
+    'Desktop,StartMenu',
+  ]);
+  expect(app.quit).toHaveBeenCalledTimes(1);
+  expect(updateElectronApp).not.toHaveBeenCalled();
+  expect(app.whenReady).not.toHaveBeenCalled();
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `npm test -- forge.config.test.ts`  
-Expected: FAIL because `createDesktopShortcut` is absent.
+Run: `npm test -- src/main.test.ts`  
+Expected: FAIL because install/update launches still follow the normal startup path.
 
-- [ ] **Step 3: Add the native Squirrel option**
+- [ ] **Step 3: Add the Squirrel event helper and wire it into startup**
 
 ```ts
-new MakerSquirrel({
-  authors: 'jm-parent',
-  setupIcon: './assets/icon.ico',
-  createDesktopShortcut: true,
-}),
+// src/main/squirrel-events.ts
+export function handleSquirrelEvent(
+  argv: string[] = process.argv,
+  execPath: string = process.execPath,
+): boolean {
+  if (!argv.some((arg) => arg === '--squirrel-install' || arg === '--squirrel-updated')) {
+    return false;
+  }
+
+  spawn(path.resolve(path.dirname(execPath), '..', 'Update.exe'), [
+    '--createShortcut',
+    path.basename(execPath),
+    '--shortcut-locations',
+    'Desktop,StartMenu',
+  ]);
+
+  app.quit();
+  return true;
+}
+
+// src/main.ts
+if (!handleSquirrelEvent()) {
+  if (app.isPackaged) {
+    updateElectronApp({ repo: 'jm-parent/CreditsTracker' });
+  }
+
+  app.whenReady().then(/* existing startup */);
+  app.on('window-all-closed', /* existing handler */);
+}
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [ ] **Step 4: Remove the unsupported maker option**
 
-Run: `npm test -- forge.config.test.ts`  
+Delete `forge.config.test.ts` and keep `forge.config.ts` limited to supported
+`MakerSquirrel` options (`authors` and `setupIcon`).
+
+- [ ] **Step 5: Run the tests to verify they pass**
+
+Run: `npm test -- src/main.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit the installer behavior**
+- [ ] **Step 6: Commit the installer behavior**
 
 ```bash
-git add forge.config.ts forge.config.test.ts
-git commit -m "fix: create a desktop shortcut on Windows install"
+git add forge.config.ts src/main.ts src/main/squirrel-events.ts src/main.test.ts
+git commit -m "fix: create desktop shortcut during Squirrel install"
 ```
 
 ### Task 2: Expose the packaged app version

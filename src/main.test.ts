@@ -1,0 +1,120 @@
+import path from 'node:path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { app, BrowserWindow } from 'electron';
+import { spawn } from 'node:child_process';
+import { updateElectronApp } from 'update-electron-app';
+
+const mockedWhenReadyThen = vi.hoisted(() => vi.fn());
+const mockedSpawn = vi.hoisted(() => vi.fn(() => ({ unref: vi.fn() })));
+
+vi.mock('electron', () => ({
+  app: {
+    isPackaged: true,
+    quit: vi.fn(),
+    whenReady: vi.fn(() => ({ then: mockedWhenReadyThen })),
+    on: vi.fn(),
+  },
+  BrowserWindow: vi.fn(),
+}));
+
+vi.mock('node:child_process', () => ({
+  __esModule: true,
+  default: { spawn: mockedSpawn },
+  spawn: mockedSpawn,
+}));
+
+vi.mock('update-electron-app', () => ({
+  updateElectronApp: vi.fn(),
+}));
+
+vi.mock('./main/ipc-handlers', () => ({
+  registerIpcHandlers: vi.fn(),
+}));
+
+vi.mock('./main/db', () => ({
+  resolveDefaultDbPath: vi.fn(() => 'C:\\fake\\session-store.db'),
+  DatabaseNotFoundError: class DatabaseNotFoundError extends Error {},
+}));
+
+vi.mock('./main/vscode-chat-store', () => ({
+  resolveDefaultWorkspaceStorageDir: vi.fn(() => 'C:\\fake\\workspace-storage'),
+}));
+
+describe('main process startup', () => {
+  const originalArgv = process.argv.slice();
+  const originalExecPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
+  const installedExePath = 'C:\\Users\\jm-parent\\AppData\\Local\\CreditsTracker\\app-1.4.1\\CreditsTracker.exe';
+  const expectedUpdateExePath = path.win32.resolve(path.win32.dirname(installedExePath), '..', 'Update.exe');
+  const expectedShortcutArgs = [
+    '--createShortcut',
+    'CreditsTracker.exe',
+    '--shortcut-locations',
+    'Desktop,StartMenu',
+  ];
+
+  async function importMainFor(argv: string[]): Promise<void> {
+    process.argv = argv;
+    Object.defineProperty(process, 'execPath', {
+      configurable: true,
+      value: installedExePath,
+    });
+
+    await import('./main');
+  }
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    mockedWhenReadyThen.mockReset();
+    process.argv = originalArgv.slice();
+    if (originalExecPathDescriptor) {
+      Object.defineProperty(process, 'execPath', originalExecPathDescriptor);
+    }
+  });
+
+  it('creates Desktop and Start menu shortcuts during Squirrel install and stops startup', async () => {
+    await importMainFor(['CreditsTracker.exe', '--squirrel-install']);
+
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(mockedSpawn.mock.calls[0]?.[0]).toBe(expectedUpdateExePath);
+    expect(mockedSpawn.mock.calls[0]?.[1]).toEqual(expectedShortcutArgs);
+    expect(app.quit).toHaveBeenCalledTimes(1);
+    expect(updateElectronApp).not.toHaveBeenCalled();
+    expect(app.whenReady).not.toHaveBeenCalled();
+    expect(app.on).not.toHaveBeenCalled();
+    expect(BrowserWindow).not.toHaveBeenCalled();
+  });
+
+  it('creates Desktop and Start menu shortcuts during Squirrel update and stops startup', async () => {
+    await importMainFor(['CreditsTracker.exe', '--squirrel-updated']);
+
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(mockedSpawn.mock.calls[0]?.[0]).toBe(expectedUpdateExePath);
+    expect(mockedSpawn.mock.calls[0]?.[1]).toEqual(expectedShortcutArgs);
+    expect(app.quit).toHaveBeenCalledTimes(1);
+    expect(updateElectronApp).not.toHaveBeenCalled();
+    expect(app.whenReady).not.toHaveBeenCalled();
+    expect(app.on).not.toHaveBeenCalled();
+    expect(BrowserWindow).not.toHaveBeenCalled();
+  });
+
+  it('keeps ordinary launches on the normal startup path', async () => {
+    await importMainFor(['CreditsTracker.exe']);
+
+    expect(spawn).not.toHaveBeenCalled();
+    expect(app.quit).not.toHaveBeenCalled();
+    expect(updateElectronApp).toHaveBeenCalledWith({ repo: 'jm-parent/CreditsTracker' });
+    expect(app.whenReady).toHaveBeenCalledTimes(1);
+    expect(app.on).toHaveBeenCalledWith('window-all-closed', expect.any(Function));
+  });
+
+  it('ignores unhandled Squirrel events and keeps the normal startup path', async () => {
+    await importMainFor(['CreditsTracker.exe', '--squirrel-uninstall']);
+
+    expect(spawn).not.toHaveBeenCalled();
+    expect(app.quit).not.toHaveBeenCalled();
+    expect(updateElectronApp).toHaveBeenCalledWith({ repo: 'jm-parent/CreditsTracker' });
+    expect(app.whenReady).toHaveBeenCalledTimes(1);
+    expect(app.on).toHaveBeenCalledWith('window-all-closed', expect.any(Function));
+  });
+});

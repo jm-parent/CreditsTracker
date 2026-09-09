@@ -8,10 +8,12 @@ lateral navigation menu.
 
 ## Installer behavior
 
-`MakerSquirrel` will enable `createDesktopShortcut`. Squirrel.Windows will
-create the shortcut when the application is installed or updated through its
-installer. The existing Start menu shortcut, uninstall entry, and auto-update
-behavior remain unchanged.
+Before Electron initializes its application window, the main process will
+recognize Squirrel's install and update events. For either event it will invoke
+the adjacent `Update.exe` with `--createShortcut`, the packaged executable
+name, and `--shortcut-locations Desktop,StartMenu`. This explicitly creates
+the desktop and Start menu shortcuts when the application is installed or
+updated. The uninstall entry and auto-update behavior remain unchanged.
 
 ## Version data flow
 
@@ -31,9 +33,10 @@ and the version footer is omitted rather than displaying an incorrect value.
 
 ## Verification
 
-Targeted tests will assert the desktop-shortcut Squirrel configuration, the
-IPC/preload API contract, and the rendered sidebar version footer. The full
-existing test suite will run before the release commit.
+Targeted tests will assert the Squirrel install/update shortcut helper, its
+startup short-circuit behavior, the IPC/preload API contract, and the rendered
+sidebar version footer. The full existing test suite will run before the
+release commit.
 
 ## Release
 
