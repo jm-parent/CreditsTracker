@@ -1,8 +1,20 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
+import { updateElectronApp } from 'update-electron-app';
 import { registerIpcHandlers } from './main/ipc-handlers';
 import { resolveDefaultDbPath, DatabaseNotFoundError } from './main/db';
 import { resolveDefaultWorkspaceStorageDir } from './main/vscode-chat-store';
+
+// Checks GitHub Releases (via update.electronjs.org) for a newer Squirrel.
+// Windows installer on startup and every 10 minutes, downloading and
+// installing it silently in the background; the update takes effect on the
+// next app restart. Only meaningful for packaged Windows builds — `npm
+// start` runs unpackaged and has no Squirrel installer to update.
+if (app.isPackaged) {
+  updateElectronApp({
+    repo: 'jm-parent/CreditsTracker',
+  });
+}
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
