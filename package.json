@@ -1,6 +1,6 @@
 {
   "name": "credits-tracker",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "private": true,
   "description": "Local dashboard for GitHub Copilot CLI credit consumption",
   "author": "jm-parent",

@@ -1,3 +1,15 @@
+# [1.5.0](https://github.com/jm-parent/CreditsTracker/compare/v1.4.1...v1.5.0) (2026-09-09)
+
+
+### Bug Fixes
+
+* raise the Vitest timeouts so slow CI runners don't fail the build ([15f6422](https://github.com/jm-parent/CreditsTracker/commit/15f64227f15707158bba9aaca9c3a19158076519))
+
+
+### Features
+
+* add a Logs page and application-wide logging ([6e954d8](https://github.com/jm-parent/CreditsTracker/commit/6e954d8d962a0bb931659b4dd5f884d86ac26a7e))
+
 ## [1.4.1](https://github.com/jm-parent/CreditsTracker/compare/v1.4.0...v1.4.1) (2026-09-09)
 
 
