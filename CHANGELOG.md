@@ -1,3 +1,14 @@
+# [1.2.0](https://github.com/jm-parent/CreditsTracker/compare/v1.1.2...v1.2.0) (2026-09-09)
+
+
+### Features
+
+* add ActivityHeatmapPage weekday/hour heatmap component ([62bee23](https://github.com/jm-parent/CreditsTracker/commit/62bee23e97c677c69410e1765f8ca01ba5598e31))
+* add getWeeklyActivity query for weekday/hour credit aggregation ([9f910c2](https://github.com/jm-parent/CreditsTracker/commit/9f910c208e36b288ffd6cdc6574a2af16ec374a8))
+* add useWeeklyActivity renderer hook ([e1d38c6](https://github.com/jm-parent/CreditsTracker/commit/e1d38c6e0860546716b6257acaf0db3ac433cdf7))
+* add Weekly activity tab to the sidebar and dashboard ([0fc6359](https://github.com/jm-parent/CreditsTracker/commit/0fc63598288ea970c0439d3609f4d9a4be085ad2))
+* expose get-weekly-activity over IPC ([fa847b0](https://github.com/jm-parent/CreditsTracker/commit/fa847b048674e613824b3d851beb29c151a2da32))
+
 ## [1.1.2](https://github.com/jm-parent/CreditsTracker/compare/v1.1.1...v1.1.2) (2026-09-08)
 
 
