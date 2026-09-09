@@ -2,11 +2,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   HourlyDetailParams,
   HourlyPoint,
+  MonthlyActivityParams,
   ProjectDetailResult,
   RawTableParams,
   RawTablePage,
+  TimeSeriesPoint,
   UsageFilters,
-  WeeklyActivityPoint,
 } from './shared/types';
 
 contextBridge.exposeInMainWorld('api', {
@@ -18,6 +19,6 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-raw-table-page', params),
   getHourlyDetail: (params: HourlyDetailParams): Promise<HourlyPoint[]> =>
     ipcRenderer.invoke('get-hourly-detail', params),
-  getWeeklyActivity: (filters: UsageFilters): Promise<WeeklyActivityPoint[]> =>
-    ipcRenderer.invoke('get-weekly-activity', filters),
+  getMonthlyActivity: (params: MonthlyActivityParams): Promise<TimeSeriesPoint[]> =>
+    ipcRenderer.invoke('get-monthly-activity', params),
 });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUsageData } from './hooks/useUsageData';
 import { useHourlyDetail } from './hooks/useHourlyDetail';
-import { useWeeklyActivity } from './hooks/useWeeklyActivity';
+import { useMonthlyActivity } from './hooks/useMonthlyActivity';
 import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
 import { Sidebar, type DashboardTab } from './components/Sidebar';
@@ -17,6 +17,12 @@ import type { FilterOptions, UsageFilters } from '../shared/types';
 
 const EMPTY_OPTIONS: FilterOptions = { projects: [], models: [], minDate: null, maxDate: null };
 
+/** Shifts a { year, month } pair by `delta` months, wrapping the year as needed. */
+function shiftMonth({ year, month }: { year: number; month: number }, delta: number): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 };
+}
+
 export function App() {
   const [options, setOptions] = useState<FilterOptions>(EMPTY_OPTIONS);
   const [optionsError, setOptionsError] = useState<Error | null>(null);
@@ -24,9 +30,18 @@ export function App() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('daily');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [activityMonth, setActivityMonth] = useState<{ year: number; month: number }>(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  });
   const { data, loading, error } = useUsageData(filters);
   const hourlyDetail = useHourlyDetail(selectedDate, filters);
-  const weeklyActivity = useWeeklyActivity(filters);
+  const monthlyActivity = useMonthlyActivity({
+    year: activityMonth.year,
+    month: activityMonth.month,
+    project: filters.project,
+    model: filters.model,
+  });
 
   useEffect(() => {
     window.api
@@ -96,12 +111,16 @@ export function App() {
                 />
               </div>
             )}
-            {data && !selectedProject && activeTab === 'weekly' && (
+            {data && !selectedProject && activeTab === 'monthly' && (
               <div className="mt-6">
                 <ActivityHeatmapPage
-                  data={weeklyActivity.data ?? []}
-                  loading={weeklyActivity.loading}
-                  error={weeklyActivity.error}
+                  year={activityMonth.year}
+                  month={activityMonth.month}
+                  data={monthlyActivity.data ?? []}
+                  loading={monthlyActivity.loading}
+                  error={monthlyActivity.error}
+                  onPrevMonth={() => setActivityMonth((prev) => shiftMonth(prev, -1))}
+                  onNextMonth={() => setActivityMonth((prev) => shiftMonth(prev, 1))}
                 />
               </div>
             )}

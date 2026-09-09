@@ -60,7 +60,7 @@ beforeEach(() => {
       pageSize: 50,
     }),
     getHourlyDetail: vi.fn().mockResolvedValue([]),
-    getWeeklyActivity: vi.fn().mockResolvedValue([]),
+    getMonthlyActivity: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -74,15 +74,26 @@ describe('App', () => {
     expect(screen.getByRole('option', { name: 'org/repo-a' })).toBeInTheDocument();
   });
 
-  it('switches to the weekly activity heatmap when the sidebar entry is clicked', async () => {
-    window.api.getWeeklyActivity = vi.fn().mockResolvedValue([{ weekday: 1, hour: 14, aiuCredits: 2 }]);
+  it('switches to the monthly activity heatmap when the sidebar entry is clicked', async () => {
+    const now = new Date();
+    const day = 1;
+    const monthlyPoint = {
+      date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      aiuCredits: 2,
+    };
+    window.api.getMonthlyActivity = vi.fn().mockResolvedValue([monthlyPoint]);
+    const expectedLabel = new Date(now.getFullYear(), now.getMonth(), day).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
     const user = userEvent.setup();
     render(<App />);
     await screen.findByText('3.00');
 
-    await user.click(screen.getByRole('button', { name: 'Weekly activity' }));
+    await user.click(screen.getByRole('button', { name: 'Monthly activity' }));
 
-    expect(await screen.findByLabelText('Mon, 14:00: 2.00 credits')).toBeInTheDocument();
+    expect(await screen.findByLabelText(`${expectedLabel}: 2.00 credits`)).toBeInTheDocument();
   });
 
   it('re-fetches usage when a filter changes', async () => {
