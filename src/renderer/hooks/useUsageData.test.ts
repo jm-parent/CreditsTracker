@@ -17,6 +17,7 @@ beforeEach(() => {
     getProjectDetail: vi.fn(),
     getRawTablePage: vi.fn(),
     getHourlyDetail: vi.fn(),
+    getWeeklyActivity: vi.fn(),
   };
 });
 

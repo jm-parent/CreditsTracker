@@ -9,6 +9,7 @@ import {
   getProjectDetail,
   getRawTablePage,
   getHourlyDetail,
+  getWeeklyActivity,
 } from './db';
 import { loadVscodeUsage } from './vscode-chat-store';
 import type { HourlyDetailParams, RawTableParams, UsageFilters } from '../shared/types';
@@ -104,5 +105,9 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
 
   ipcMain.handle('get-hourly-detail', (_event, params: HourlyDetailParams) => {
     return getHourlyDetail(currentDb(), params);
+  });
+
+  ipcMain.handle('get-weekly-activity', (_event, filters: UsageFilters) => {
+    return getWeeklyActivity(currentDb(), filters ?? {});
   });
 }

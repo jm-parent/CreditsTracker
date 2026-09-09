@@ -29,6 +29,7 @@ beforeEach(() => {
       Promise.resolve(table === 'sessions' ? sessionsPage : eventsPage),
     ),
     getHourlyDetail: vi.fn(),
+    getWeeklyActivity: vi.fn(),
   };
 });
 

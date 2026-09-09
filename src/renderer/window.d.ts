@@ -7,6 +7,7 @@ import type {
   RawTablePage,
   UsageFilters,
   UsageResult,
+  WeeklyActivityPoint,
 } from '../shared/types';
 
 declare global {
@@ -17,6 +18,7 @@ declare global {
       getProjectDetail: (params: UsageFilters & { project: string }) => Promise<ProjectDetailResult>;
       getRawTablePage: (params: RawTableParams) => Promise<RawTablePage>;
       getHourlyDetail: (params: HourlyDetailParams) => Promise<HourlyPoint[]>;
+      getWeeklyActivity: (filters: UsageFilters) => Promise<WeeklyActivityPoint[]>;
     };
   }
 }

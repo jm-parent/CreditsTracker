@@ -6,6 +6,7 @@ import type {
   RawTableParams,
   RawTablePage,
   UsageFilters,
+  WeeklyActivityPoint,
 } from './shared/types';
 
 contextBridge.exposeInMainWorld('api', {
@@ -17,4 +18,6 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-raw-table-page', params),
   getHourlyDetail: (params: HourlyDetailParams): Promise<HourlyPoint[]> =>
     ipcRenderer.invoke('get-hourly-detail', params),
+  getWeeklyActivity: (filters: UsageFilters): Promise<WeeklyActivityPoint[]> =>
+    ipcRenderer.invoke('get-weekly-activity', filters),
 });
