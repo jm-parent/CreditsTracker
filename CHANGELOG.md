@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/jm-parent/CreditsTracker/compare/v1.3.0...v1.4.0) (2026-09-09)
+
+
+### Features
+
+* add auto-update for Windows via Squirrel installer ([0eb85af](https://github.com/jm-parent/CreditsTracker/commit/0eb85aff10623bdff8e4718973490757197ac140))
+
 # [1.3.0](https://github.com/jm-parent/CreditsTracker/compare/v1.2.0...v1.3.0) (2026-09-09)
 
 
