@@ -80,6 +80,54 @@ describe('ActivityHeatmapPage', () => {
     expect(screen.getAllByText('No activity')).toHaveLength(2);
   });
 
+  it('uses five readable blue/cyan intensity levels for the legend and day cells', () => {
+    render(
+      <ActivityHeatmapPage
+        year={2026}
+        month={9}
+        data={[
+          { date: '2026-09-01', aiuCredits: 0 },
+          { date: '2026-09-02', aiuCredits: 1 },
+          { date: '2026-09-03', aiuCredits: 2 },
+          { date: '2026-09-04', aiuCredits: 3 },
+          { date: '2026-09-05', aiuCredits: 4 },
+        ]}
+        loading={false}
+        error={null}
+        onPrevMonth={vi.fn()}
+        onNextMonth={vi.fn()}
+      />,
+    );
+
+    const legend = screen.getByLabelText('Intensity scale from no activity to highest activity');
+    const swatches = Array.from(legend.querySelectorAll('[data-intensity-level]'));
+
+    expect(swatches).toHaveLength(5);
+    expect(swatches.map((swatch) => swatch.getAttribute('data-intensity-level'))).toEqual([
+      '0',
+      '1',
+      '2',
+      '3',
+      '4',
+    ]);
+    expect(swatches.map((swatch) => swatch.getAttribute('data-intensity-color'))).toEqual([
+      'none',
+      'low',
+      'medium',
+      'high',
+      'highest',
+    ]);
+
+    expect(screen.getByRole('button', { name: 'September 1, 2026: 0.00 credits' })).toHaveAttribute(
+      'data-intensity-color',
+      'none',
+    );
+    expect(screen.getByRole('button', { name: 'September 5, 2026: 4.00 credits' })).toHaveAttribute(
+      'data-intensity-color',
+      'highest',
+    );
+  });
+
   it('calls onPrevMonth and onNextMonth when navigation buttons are clicked', async () => {
     const user = userEvent.setup();
     const onPrevMonth = vi.fn();

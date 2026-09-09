@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { Card, CardContent } from './ui/card';
 import type { TimeSeriesPoint } from '../../shared/types';
 
@@ -29,6 +30,38 @@ const MONTH_NAMES = [
 ];
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const INTENSITY_LEVELS = 4;
+const HEATMAP_LEVEL_STYLES = [
+  {
+    name: 'none',
+    backgroundColor: '#111827',
+    foregroundColor: '#e5e9f0',
+    borderColor: '#263242',
+  },
+  {
+    name: 'low',
+    backgroundColor: '#12304a',
+    foregroundColor: '#f8fafc',
+    borderColor: '#1d4f73',
+  },
+  {
+    name: 'medium',
+    backgroundColor: '#145f7f',
+    foregroundColor: '#f8fafc',
+    borderColor: '#1d8fb3',
+  },
+  {
+    name: 'high',
+    backgroundColor: '#0f8fb0',
+    foregroundColor: '#071015',
+    borderColor: '#22d3ee',
+  },
+  {
+    name: 'highest',
+    backgroundColor: '#22d3ee',
+    foregroundColor: '#071015',
+    borderColor: '#67e8f9',
+  },
+] as const;
 
 interface DayCell {
   day: number;
@@ -67,10 +100,17 @@ function intensityLevel(credits: number, maxCredits: number): number {
   return Math.max(1, Math.min(INTENSITY_LEVELS, Math.ceil(ratio * INTENSITY_LEVELS)));
 }
 
-function cellColor(level: number): string {
-  return level === 0
-    ? 'var(--color-muted)'
-    : `color-mix(in srgb, var(--color-accent) ${level * 20 + 20}%, var(--color-primary))`;
+function cellStyle(level: number): CSSProperties {
+  const style = HEATMAP_LEVEL_STYLES[level] ?? HEATMAP_LEVEL_STYLES[0];
+  return {
+    backgroundColor: style.backgroundColor,
+    color: style.foregroundColor,
+    borderColor: style.borderColor,
+  };
+}
+
+function intensityColorName(level: number): string {
+  return HEATMAP_LEVEL_STYLES[level]?.name ?? HEATMAP_LEVEL_STYLES[0].name;
 }
 
 function formatDayLabel(year: number, month: number, day: number): string {
@@ -182,22 +222,26 @@ export function ActivityHeatmapPage({
                 {label}
               </div>
             ))}
-            {cells.map((cell, index) =>
-              cell ? (
+            {cells.map((cell, index) => {
+              if (cell) {
+                const level = intensityLevel(cell.aiuCredits, maxCredits);
+                return (
                 <button
                   key={cell.date}
                   type="button"
-                  className="activity-heatmap-cell h-8 w-full rounded-sm text-xs text-foreground"
-                  style={{ backgroundColor: cellColor(intensityLevel(cell.aiuCredits, maxCredits)) }}
+                  className="activity-heatmap-cell h-8 w-full rounded-sm border text-xs font-medium"
+                  style={cellStyle(level)}
+                  data-intensity-level={level}
+                  data-intensity-color={intensityColorName(level)}
                   aria-label={cellLabel(year, month, cell)}
                   title={cellLabel(year, month, cell)}
                 >
                   {cell.day}
                 </button>
-              ) : (
-                <div key={`blank-${index}`} aria-hidden="true" />
-              ),
-            )}
+                );
+              }
+              return <div key={`blank-${index}`} aria-hidden="true" />;
+            })}
           </div>
 
           <div
@@ -208,8 +252,10 @@ export function ActivityHeatmapPage({
             {Array.from({ length: INTENSITY_LEVELS + 1 }, (_, level) => (
               <span
                 key={`legend-${level}`}
-                className="h-3 w-3 rounded-sm"
-                style={{ backgroundColor: cellColor(level) }}
+                className="h-3 w-3 rounded-sm border"
+                style={cellStyle(level)}
+                data-intensity-level={level}
+                data-intensity-color={intensityColorName(level)}
                 aria-hidden="true"
               />
             ))}
