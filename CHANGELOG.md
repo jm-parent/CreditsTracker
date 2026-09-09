@@ -1,3 +1,13 @@
+## [1.4.1](https://github.com/jm-parent/CreditsTracker/compare/v1.4.0...v1.4.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* create desktop shortcut during Squirrel install ([a1d3a3c](https://github.com/jm-parent/CreditsTracker/commit/a1d3a3c6e99d78ed115b7d023bf2a81d6fb06b6f))
+* enable desktop shortcuts in Squirrel installer ([41a34eb](https://github.com/jm-parent/CreditsTracker/commit/41a34ebf8ad1f078d989ddd2193842ea1f4961ae))
+* expose installed app version ([159a10c](https://github.com/jm-parent/CreditsTracker/commit/159a10cc3694394af44c1a2158a4b13f09ad803b))
+* show installed version in sidebar ([f5e14c0](https://github.com/jm-parent/CreditsTracker/commit/f5e14c0bed0d44d9017c798b6bf43733694cd19e))
+
 # [1.4.0](https://github.com/jm-parent/CreditsTracker/compare/v1.3.0...v1.4.0) (2026-09-09)
 
 
