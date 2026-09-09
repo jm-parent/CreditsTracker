@@ -20,6 +20,7 @@ declare global {
       getRawTablePage: (params: RawTableParams) => Promise<RawTablePage>;
       getHourlyDetail: (params: HourlyDetailParams) => Promise<HourlyPoint[]>;
       getMonthlyActivity: (params: MonthlyActivityParams) => Promise<TimeSeriesPoint[]>;
+      getAppVersion: () => Promise<string>;
     };
   }
 }

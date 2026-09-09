@@ -21,4 +21,5 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-hourly-detail', params),
   getMonthlyActivity: (params: MonthlyActivityParams): Promise<TimeSeriesPoint[]> =>
     ipcRenderer.invoke('get-monthly-activity', params),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
 });

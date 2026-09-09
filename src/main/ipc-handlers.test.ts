@@ -1,11 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ipcMain } from 'electron';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { app, ipcMain } from 'electron';
 import Database from 'better-sqlite3';
 import { registerIpcHandlers } from './ipc-handlers';
 
 vi.mock('electron', () => {
   const handlers = new Map<string, (...args: unknown[]) => unknown>();
   return {
+    app: {
+      getVersion: vi.fn(),
+    },
     ipcMain: {
       handle: vi.fn((channel: string, listener: (...args: unknown[]) => unknown) => {
         handlers.set(channel, listener);
@@ -58,6 +61,16 @@ describe('registerIpcHandlers', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('get-project-detail', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-raw-table-page', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-hourly-detail', expect.any(Function));
+  });
+
+  it('returns Electron application version through get-app-version', () => {
+    (app.getVersion as Mock).mockReturnValue('1.4.1');
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+
+    expect(handlers.get('get-app-version')!({})).toBe('1.4.1');
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {

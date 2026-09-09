@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import Database from 'better-sqlite3';
 import {
   openDatabase,
@@ -110,4 +110,6 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
   ipcMain.handle('get-monthly-activity', (_event, params: MonthlyActivityParams) => {
     return getMonthlyActivity(currentDb(), params);
   });
+
+  ipcMain.handle('get-app-version', () => app.getVersion());
 }
