@@ -46,6 +46,41 @@ bonne version).
 
     npm run release:dry-run
 
+## Push GitHub depuis les sessions Copilot
+
+Quand un `git push` vers `jm-parent/CreditsTracker` échoue avec un `403`
+pour `jeanmarie-parent_exakisc`, ne pas enregistrer de token dans l'URL du
+remote ou la configuration Git. Même après `gh auth switch`, Git Credential
+Manager peut continuer a choisir cet identifiant non autorise.
+
+Utiliser le compte `jm-parent` deja enregistre dans GitHub CLI, puis verifier
+que la branche cible est toujours au commit de base attendu :
+
+```powershell
+$env:GH_TOKEN = $null
+gh auth switch --hostname github.com --user jm-parent
+gh api repos/jm-parent/CreditsTracker/git/ref/heads/master --jq .object.sha
+```
+
+Comparer le SHA affiche avec le commit de base attendu avant de poursuivre.
+S'il differe, s'arreter : ne jamais utiliser de push force.
+
+Pour pousser sans persister le token, l'utiliser uniquement en memoire dans un
+en-tete HTTP Basic temporaire :
+
+```powershell
+$token = gh auth token --hostname github.com
+$bytes = [Text.Encoding]::UTF8.GetBytes("x-access-token:$token")
+$authorization = [Convert]::ToBase64String($bytes)
+rtk git -c "http.extraheader=AUTHORIZATION: Basic $authorization" push origin HEAD:master
+$pushExit = $LASTEXITCODE
+Remove-Variable token, bytes, authorization
+exit $pushExit
+```
+
+Si le compte `jm-parent` est absent, si `gh auth token` echoue, ou si le push
+est refuse, s'arreter et demander a l'utilisateur de reauthentifier ce compte.
+
 ## Autres commandes utiles
 
     npm start            # app en mode dev
