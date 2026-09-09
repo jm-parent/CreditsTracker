@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, shell } from 'electron';
 import Database from 'better-sqlite3';
 import {
   openDatabase,
@@ -12,7 +12,24 @@ import {
   getMonthlyActivity,
 } from './db';
 import { loadVscodeUsage } from './vscode-chat-store';
-import type { HourlyDetailParams, MonthlyActivityParams, RawTableParams, UsageFilters } from '../shared/types';
+import {
+  clearLogs,
+  getLogEntries,
+  getLogFilePath,
+  logError,
+  logInfo,
+  logOnce,
+  logWarn,
+  recordRendererLog,
+} from './logger';
+import type {
+  HourlyDetailParams,
+  LogsSnapshot,
+  MonthlyActivityParams,
+  RawTableParams,
+  RendererLogInput,
+  UsageFilters,
+} from '../shared/types';
 import type { VscodeUsageData } from './vscode-chat-store';
 
 /**
@@ -45,8 +62,10 @@ function buildMergedDatabaseFromSources(
     cliDb = openDatabase(dbPath);
   } catch (error) {
     if (!(error instanceof DatabaseNotFoundError)) {
+      logError('db', 'Failed to open the Copilot CLI database', error);
       throw error;
     }
+    logOnce('db-missing', 'warn', 'db', 'Copilot CLI database not found, falling back to an empty schema', dbPath);
     cliDb = new Database(':memory:');
     cliDb.exec(`
       CREATE TABLE sessions (id TEXT PRIMARY KEY, cwd TEXT, repository TEXT, summary TEXT, created_at TEXT);
@@ -67,14 +86,70 @@ function buildMergedDatabaseFromSources(
     try {
       vscodeData = loadVscodeUsage(workspaceStorageDir);
     } catch (error) {
-      console.error('Failed to load VS Code Copilot Chat usage:', error);
+      logError('vscode-chat', 'Failed to load VS Code Copilot Chat usage', error);
     }
   }
 
-  return buildMergedDatabase(cliDb, vscodeData);
+  const merged = buildMergedDatabase(cliDb, vscodeData);
+  // The database is rebuilt every few seconds, so this is only logged when
+  // the source contents actually change — otherwise the log would fill up
+  // with identical lines.
+  logOnce(
+    `db-built:${vscodeData.sessions.length}:${vscodeData.events.length}`,
+    'info',
+    'db',
+    'Merged database rebuilt',
+    {
+      dbPath,
+      vscodeSessions: vscodeData.sessions.length,
+      vscodeEvents: vscodeData.events.length,
+    },
+  );
+  return merged;
+}
+
+/**
+ * Channels excluded from the per-call debug trace: they are driven by the Logs
+ * page polling itself, so tracing them would grow the log file indefinitely
+ * with entries about reading the logs. Errors are still logged.
+ */
+const UNTRACED_CHANNELS = new Set(['get-logs', 'clear-logs', 'log-message']);
+
+/**
+ * The renderer polls several channels every few seconds, so only unusually
+ * slow calls are traced. Anything faster stays out of the log to keep it
+ * readable; failures are always logged.
+ */
+const SLOW_CALL_MS = 250;
+
+/**
+ * Wraps an IPC handler so slow calls are traced and any thrown error lands in
+ * the Logs page with its stack, instead of only rejecting in the renderer
+ * where it usually surfaced as a blank screen.
+ */
+function handle(channel: string, listener: (...args: never[]) => unknown): void {
+  ipcMain.handle(channel, (...args: unknown[]) => {
+    const startedAt = Date.now();
+    try {
+      const result = (listener as (...inner: unknown[]) => unknown)(...args);
+      const elapsed = Date.now() - startedAt;
+      if (elapsed >= SLOW_CALL_MS && !UNTRACED_CHANNELS.has(channel)) {
+        logWarn('ipc', `${channel} took ${elapsed}ms`);
+      }
+      return result;
+    } catch (error) {
+      logError('ipc', `${channel} failed after ${Date.now() - startedAt}ms`, error);
+      throw error;
+    }
+  });
+}
+
+function snapshot(): LogsSnapshot {
+  return { entries: getLogEntries(), filePath: getLogFilePath() };
 }
 
 export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string): void {
+  logInfo('startup', 'Registering IPC handlers', { dbPath, workspaceStorageDir });
   let db = buildMergedDatabaseFromSources(dbPath, workspaceStorageDir);
   let lastBuiltAt = Date.now();
 
@@ -87,29 +162,51 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
     return db;
   }
 
-  ipcMain.handle('get-filter-options', () => {
+  handle('get-filter-options', () => {
     return getFilterOptions(currentDb());
   });
 
-  ipcMain.handle('get-usage', (_event, filters: UsageFilters) => {
+  handle('get-usage', (_event: unknown, filters: UsageFilters) => {
     return getUsage(currentDb(), filters ?? {});
   });
 
-  ipcMain.handle('get-project-detail', (_event, params: UsageFilters & { project: string }) => {
+  handle('get-project-detail', (_event: unknown, params: UsageFilters & { project: string }) => {
     return getProjectDetail(currentDb(), params);
   });
 
-  ipcMain.handle('get-raw-table-page', (_event, params: RawTableParams) => {
+  handle('get-raw-table-page', (_event: unknown, params: RawTableParams) => {
     return getRawTablePage(currentDb(), params.table, params.page, params.pageSize);
   });
 
-  ipcMain.handle('get-hourly-detail', (_event, params: HourlyDetailParams) => {
+  handle('get-hourly-detail', (_event: unknown, params: HourlyDetailParams) => {
     return getHourlyDetail(currentDb(), params);
   });
 
-  ipcMain.handle('get-monthly-activity', (_event, params: MonthlyActivityParams) => {
+  handle('get-monthly-activity', (_event: unknown, params: MonthlyActivityParams) => {
     return getMonthlyActivity(currentDb(), params);
   });
 
-  ipcMain.handle('get-app-version', () => app.getVersion());
+  handle('get-app-version', () => app.getVersion());
+
+  handle('get-logs', () => snapshot());
+
+  handle('clear-logs', () => {
+    clearLogs();
+    logInfo('logs', 'Log buffer cleared from the Logs page');
+    return snapshot();
+  });
+
+  handle('open-log-file', () => {
+    const filePath = getLogFilePath();
+    if (filePath) {
+      shell.showItemInFolder(filePath);
+    } else {
+      logWarn('logs', 'No log file configured, cannot reveal it in the file explorer');
+    }
+    return filePath;
+  });
+
+  handle('log-message', (_event: unknown, entry: RendererLogInput) => {
+    recordRendererLog(entry ?? { level: 'info', scope: 'renderer', message: '(empty message)' });
+  });
 }

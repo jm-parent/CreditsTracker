@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { logError } from '../lib/logger';
 import type { RawTableName, RawTablePage } from '../../shared/types';
 
 interface UseRawTableResult {
@@ -26,6 +27,7 @@ export function useRawTable(table: RawTableName, page: number): UseRawTableResul
           setError(null);
         }
       } catch (err) {
+        logError('useRawTable', `getRawTablePage failed for ${table} (page ${page})`, err);
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error(String(err)));
         }

@@ -1,6 +1,6 @@
-import { Activity, CalendarDays, Cpu, Database, FolderKanban } from 'lucide-react';
+import { Activity, CalendarDays, Cpu, Database, FolderKanban, ScrollText } from 'lucide-react';
 
-export type DashboardTab = 'daily' | 'monthly' | 'projects' | 'models' | 'raw';
+export type DashboardTab = 'daily' | 'monthly' | 'projects' | 'models' | 'raw' | 'logs';
 
 interface SidebarProps {
   activeTab: DashboardTab;
@@ -14,6 +14,7 @@ const ENTRIES: Array<{ id: DashboardTab; label: string; icon: typeof CalendarDay
   { id: 'projects', label: 'By project', icon: FolderKanban },
   { id: 'models', label: 'By model', icon: Cpu },
   { id: 'raw', label: 'Raw data', icon: Database },
+  { id: 'logs', label: 'Logs', icon: ScrollText },
 ];
 
 export function Sidebar({ activeTab, onTabChange, appVersion }: SidebarProps) {

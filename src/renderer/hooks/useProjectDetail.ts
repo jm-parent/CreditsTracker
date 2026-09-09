@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { logError } from '../lib/logger';
 import type { ProjectDetailResult, UsageFilters } from '../../shared/types';
 
 interface UseProjectDetailResult {
@@ -26,6 +27,7 @@ export function useProjectDetail(project: string, filters: UsageFilters): UsePro
           setError(null);
         }
       } catch (err) {
+        logError('useProjectDetail', `getProjectDetail failed for ${project}`, err);
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error(String(err)));
         }

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
+import { resetLogDedupeForTests } from './lib/logger';
 import type { FilterOptions, ProjectDetailResult, UsageResult } from '../shared/types';
 
 vi.mock('recharts', async () => {
@@ -48,6 +49,7 @@ const projectDetail: ProjectDetailResult = {
 };
 
 beforeEach(() => {
+  resetLogDedupeForTests();
   window.api = {
     getFilterOptions: vi.fn().mockResolvedValue(options),
     getUsage: vi.fn().mockResolvedValue(usage),
@@ -62,6 +64,10 @@ beforeEach(() => {
     getHourlyDetail: vi.fn().mockResolvedValue([]),
     getMonthlyActivity: vi.fn().mockResolvedValue([]),
     getAppVersion: vi.fn().mockResolvedValue('1.4.1'),
+    getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
+    clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
+    openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),
+    log: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -124,6 +130,49 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByText("Couldn't load Copilot CLI usage data.")).toBeInTheDocument();
+  });
+
+  it('keeps the Logs page reachable when the database is unreachable', async () => {
+    window.api.getFilterOptions = vi.fn().mockRejectedValue(new Error('db not found'));
+    window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
+    window.api.getLogs = vi.fn().mockResolvedValue({
+      entries: [
+        {
+          id: 1,
+          timestamp: '2026-09-09T10:00:00.000Z',
+          level: 'error',
+          scope: 'db',
+          message: 'db not found',
+          source: 'main',
+        },
+      ],
+      filePath: 'C:\\logs\\app.log',
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Couldn't load Copilot CLI usage data.");
+
+    await user.click(screen.getByRole('button', { name: 'Logs' }));
+
+    expect(await screen.findByRole('heading', { name: 'Application logs' })).toBeInTheDocument();
+    expect(screen.getByText('db not found')).toBeInTheDocument();
+  });
+
+  it('logs failures and tab navigation through the bridge', async () => {
+    window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'By model' }));
+
+    expect(window.api.log).toHaveBeenCalledWith(
+      expect.objectContaining({ level: 'info', scope: 'App', message: 'Navigating to the "models" tab' }),
+    );
+    expect(window.api.log).toHaveBeenCalledWith(
+      expect.objectContaining({ level: 'error', scope: 'useUsageData' }),
+    );
   });
 
   it('keeps showing the last successful data and a non-blocking notice when a later refresh fails', async () => {
