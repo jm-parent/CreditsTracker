@@ -7,13 +7,13 @@ import type {
   FilterOptions,
   HourlyDetailParams,
   HourlyPoint,
+  MonthlyActivityParams,
   ProjectDetailResult,
   RawTableName,
   RawTablePage,
   TimeSeriesPoint,
   UsageFilters,
   UsageResult,
-  WeeklyActivityPoint,
 } from '../shared/types';
 import type { VscodeUsageData } from './vscode-chat-store';
 
@@ -208,24 +208,26 @@ export function getHourlyDetail(
     .map(([hour, entry]) => ({ hour, aiuCredits: entry.aiuCredits, byProject: entry.byProject }));
 }
 
-export function getWeeklyActivity(
+export function getMonthlyActivity(
   db: Database.Database,
-  filters: UsageFilters,
-): WeeklyActivityPoint[] {
-  const { sql: whereSql, params } = buildWhereClause(filters);
-  const baseFrom = `FROM assistant_usage_events e JOIN sessions s ON s.id = e.session_id ${whereSql}`;
+  params: MonthlyActivityParams,
+): TimeSeriesPoint[] {
+  const { year, month, ...filters } = params;
+  const { sql: whereSql, params: whereParams } = buildWhereClause(filters);
+  const monthCondition = whereSql
+    ? `${whereSql} AND strftime('%Y-%m', e.created_at) = @month`
+    : `WHERE strftime('%Y-%m', e.created_at) = @month`;
+  const baseFrom = `FROM assistant_usage_events e JOIN sessions s ON s.id = e.session_id ${monthCondition}`;
+  const queryParams = { ...whereParams, month: `${year}-${String(month).padStart(2, '0')}` };
 
   const rows = db
     .prepare(
-      `SELECT
-         CAST(strftime('%w', e.created_at, 'localtime') AS INTEGER) AS weekday,
-         CAST(strftime('%H', e.created_at, 'localtime') AS INTEGER) AS hour,
-         SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT date(e.created_at) AS date, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
        ${baseFrom}
-       GROUP BY weekday, hour
-       ORDER BY weekday, hour`,
+       GROUP BY date(e.created_at)
+       ORDER BY date(e.created_at)`,
     )
-    .all(params) as WeeklyActivityPoint[];
+    .all(queryParams) as TimeSeriesPoint[];
 
   return rows;
 }

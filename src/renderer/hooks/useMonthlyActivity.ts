@@ -1,28 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import type { UsageFilters, WeeklyActivityPoint } from '../../shared/types';
+import type { MonthlyActivityParams, TimeSeriesPoint } from '../../shared/types';
 
 const POLL_INTERVAL_MS = 5_000;
 
-interface UseWeeklyActivityResult {
-  data: WeeklyActivityPoint[] | null;
+interface UseMonthlyActivityResult {
+  data: TimeSeriesPoint[] | null;
   loading: boolean;
   error: Error | null;
 }
 
-export function useWeeklyActivity(filters: UsageFilters): UseWeeklyActivityResult {
-  const [data, setData] = useState<WeeklyActivityPoint[] | null>(null);
+export function useMonthlyActivity(params: MonthlyActivityParams): UseMonthlyActivityResult {
+  const [data, setData] = useState<TimeSeriesPoint[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
-  const filtersRef = useRef(filters);
-  filtersRef.current = filters;
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchWeeklyActivity(): Promise<void> {
+    async function fetchMonthlyActivity(): Promise<void> {
       setLoading(true);
       try {
-        const result = await window.api.getWeeklyActivity(filtersRef.current);
+        const result = await window.api.getMonthlyActivity(paramsRef.current);
         if (!cancelled) {
           setData(result);
           setError(null);
@@ -38,14 +38,14 @@ export function useWeeklyActivity(filters: UsageFilters): UseWeeklyActivityResul
       }
     }
 
-    fetchWeeklyActivity();
-    const intervalId = setInterval(fetchWeeklyActivity, POLL_INTERVAL_MS);
+    fetchMonthlyActivity();
+    const intervalId = setInterval(fetchMonthlyActivity, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [filters.project, filters.model, filters.from, filters.to]);
+  }, [params.year, params.month, params.project, params.model]);
 
   return { data, loading, error };
 }
