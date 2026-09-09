@@ -30,6 +30,17 @@ jobs:
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
           npm ci --ignore-scripts
 
+      # electron-winstaller (used by @electron-forge/maker-squirrel to build
+      # the Windows Setup.exe auto-updater installer) ships its 7z.exe/7z.dll
+      # binaries as arch-specific variants and normally copies the right one
+      # into vendor/ via its own "install" npm script. That script is
+      # skipped by --ignore-scripts above (needed to avoid the better-sqlite3
+      # node-gyp/Visual Studio detection failure), so it must be run
+      # explicitly here or squirrel packaging fails with "file not found".
+      - name: Prepare electron-winstaller 7-Zip binaries
+        run: node script/select-7z-arch.js
+        working-directory: node_modules/electron-winstaller
+
       - name: Run tests
         run: npm test
 

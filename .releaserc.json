@@ -35,6 +35,16 @@
           {
             "path": "out/make/zip/win32/x64/*.zip",
             "label": "CreditsTracker-${nextRelease.version}-win32-x64.zip"
+          },
+          {
+            "path": "out/make/squirrel.windows/x64/*.exe",
+            "label": "CreditsTracker-${nextRelease.version}-win32-x64-Setup.exe"
+          },
+          {
+            "path": "out/make/squirrel.windows/x64/*.nupkg"
+          },
+          {
+            "path": "out/make/squirrel.windows/x64/RELEASES"
           }
         ]
       }
