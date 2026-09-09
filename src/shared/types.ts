@@ -83,3 +83,11 @@ export interface RawTableParams {
   page: number;
   pageSize: number;
 }
+
+export interface WeeklyActivityPoint {
+  /** Day of week, 0 = Sunday .. 6 = Saturday (matches SQLite strftime('%w')). */
+  weekday: number;
+  /** Hour of day, 0-23. */
+  hour: number;
+  aiuCredits: number;
+}

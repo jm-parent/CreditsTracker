@@ -10,6 +10,7 @@ import {
   getFilterOptions,
   getUsage,
   getHourlyDetail,
+  getWeeklyActivity,
   getProjectDetail,
   getRawTablePage,
   buildMergedDatabase,
@@ -236,6 +237,79 @@ describe('getHourlyDetail', () => {
     expect(result).toEqual([
       { hour: localHourLabel('2026-09-01 11:00:00'), aiuCredits: 0.5, byProject: { 'org/repo-a': 0.5 } },
     ]);
+
+    db.close();
+  });
+});
+
+// getWeeklyActivity converts stored UTC timestamps to the machine's local
+// weekday/hour, so tests compute the expected bucket dynamically instead of
+// hardcoding a timezone.
+function localWeekdayAndHour(utcNaiveDateTime: string): { weekday: number; hour: number } {
+  const local = new Date(`${utcNaiveDateTime.replace(' ', 'T')}Z`);
+  return { weekday: local.getDay(), hour: local.getHours() };
+}
+
+describe('getWeeklyActivity', () => {
+  it('buckets credits by local weekday and hour, unfiltered', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+    // seedSchemaAndFixtures has org/repo-a at 2026-09-01 10:00:05 (3 credits)
+    // and C:/repo-b at 2026-09-03 11:00:00 (1 credit)
+
+    const result = getWeeklyActivity(db, {});
+
+    const first = localWeekdayAndHour('2026-09-01 10:00:05');
+    const second = localWeekdayAndHour('2026-09-03 11:00:00');
+    const expectedPoints = [
+      { ...first, aiuCredits: 3 },
+      { ...second, aiuCredits: 1 },
+    ].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour);
+
+    expect(result).toEqual(expectedPoints);
+
+    db.close();
+  });
+
+  it('sums multiple events falling into the same weekday/hour bucket', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+    db.prepare(
+      `INSERT INTO assistant_usage_events (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('s1', 'claude-sonnet-5', 2_000_000_000, 100, 20, '2026-09-01 10:30:00');
+
+    const result = getWeeklyActivity(db, {});
+    const bucket = localWeekdayAndHour('2026-09-01 10:00:05');
+
+    expect(result).toContainEqual({ ...bucket, aiuCredits: 5 });
+
+    db.close();
+  });
+
+  it('filters by project, model, and date range', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const byProject = getWeeklyActivity(db, { project: 'org/repo-a' });
+    expect(byProject).toEqual([{ ...localWeekdayAndHour('2026-09-01 10:00:05'), aiuCredits: 3 }]);
+
+    const byModel = getWeeklyActivity(db, { model: 'gpt-5.4' });
+    expect(byModel).toEqual([{ ...localWeekdayAndHour('2026-09-03 11:00:00'), aiuCredits: 1 }]);
+
+    const byDate = getWeeklyActivity(db, { from: '2026-09-02', to: '2026-09-03' });
+    expect(byDate).toEqual([{ ...localWeekdayAndHour('2026-09-03 11:00:00'), aiuCredits: 1 }]);
+
+    db.close();
+  });
+
+  it('returns an empty array for a database with no usage events', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const result = getWeeklyActivity(db, { project: 'nonexistent' });
+
+    expect(result).toEqual([]);
 
     db.close();
   });

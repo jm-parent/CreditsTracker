@@ -13,6 +13,7 @@ import type {
   TimeSeriesPoint,
   UsageFilters,
   UsageResult,
+  WeeklyActivityPoint,
 } from '../shared/types';
 import type { VscodeUsageData } from './vscode-chat-store';
 
@@ -205,6 +206,28 @@ export function getHourlyDetail(
   return Array.from(byHour.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([hour, entry]) => ({ hour, aiuCredits: entry.aiuCredits, byProject: entry.byProject }));
+}
+
+export function getWeeklyActivity(
+  db: Database.Database,
+  filters: UsageFilters,
+): WeeklyActivityPoint[] {
+  const { sql: whereSql, params } = buildWhereClause(filters);
+  const baseFrom = `FROM assistant_usage_events e JOIN sessions s ON s.id = e.session_id ${whereSql}`;
+
+  const rows = db
+    .prepare(
+      `SELECT
+         CAST(strftime('%w', e.created_at, 'localtime') AS INTEGER) AS weekday,
+         CAST(strftime('%H', e.created_at, 'localtime') AS INTEGER) AS hour,
+         SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+       ${baseFrom}
+       GROUP BY weekday, hour
+       ORDER BY weekday, hour`,
+    )
+    .all(params) as WeeklyActivityPoint[];
+
+  return rows;
 }
 
 export function getProjectDetail(
