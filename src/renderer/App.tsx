@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useUsageData } from './hooks/useUsageData';
 import { useHourlyDetail } from './hooks/useHourlyDetail';
+import { useWeeklyActivity } from './hooks/useWeeklyActivity';
 import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
 import { Sidebar, type DashboardTab } from './components/Sidebar';
 import { DailyConsumptionPage } from './components/DailyConsumptionPage';
+import { ActivityHeatmapPage } from './components/ActivityHeatmapPage';
 import { ProjectsPage } from './components/ProjectsPage';
 import { ModelsPage } from './components/ModelsPage';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
@@ -24,6 +26,7 @@ export function App() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const { data, loading, error } = useUsageData(filters);
   const hourlyDetail = useHourlyDetail(selectedDate, filters);
+  const weeklyActivity = useWeeklyActivity(filters);
 
   useEffect(() => {
     window.api
@@ -90,6 +93,15 @@ export function App() {
                   totals={data.totals}
                   timeSeries={data.timeSeries}
                   onDayClick={setSelectedDate}
+                />
+              </div>
+            )}
+            {data && !selectedProject && activeTab === 'weekly' && (
+              <div className="mt-6">
+                <ActivityHeatmapPage
+                  data={weeklyActivity.data ?? []}
+                  loading={weeklyActivity.loading}
+                  error={weeklyActivity.error}
                 />
               </div>
             )}

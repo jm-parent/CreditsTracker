@@ -60,6 +60,7 @@ beforeEach(() => {
       pageSize: 50,
     }),
     getHourlyDetail: vi.fn().mockResolvedValue([]),
+    getWeeklyActivity: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -71,6 +72,17 @@ describe('App', () => {
     const summaryCards = container.querySelector('.summary-cards') as HTMLElement;
     expect(within(summaryCards).getByText('AIU credits')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'org/repo-a' })).toBeInTheDocument();
+  });
+
+  it('switches to the weekly activity heatmap when the sidebar entry is clicked', async () => {
+    window.api.getWeeklyActivity = vi.fn().mockResolvedValue([{ weekday: 1, hour: 14, aiuCredits: 2 }]);
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'Weekly activity' }));
+
+    expect(await screen.findByLabelText('Mon, 14:00: 2.00 credits')).toBeInTheDocument();
   });
 
   it('re-fetches usage when a filter changes', async () => {
