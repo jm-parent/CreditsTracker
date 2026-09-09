@@ -5,11 +5,13 @@ import { registerIpcHandlers } from './main/ipc-handlers';
 import { resolveDefaultDbPath, DatabaseNotFoundError } from './main/db';
 import { resolveDefaultWorkspaceStorageDir } from './main/vscode-chat-store';
 import { handleSquirrelEvent } from './main/squirrel-events';
+import { configureLogFile, logError, logInfo, logWarn } from './main/logger';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
 function createWindow(): void {
+  logInfo('window', 'Creating the main window');
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -20,6 +22,18 @@ function createWindow(): void {
     webPreferences: {
       preload: path.join(__dirname, 'preload/preload.js'),
     },
+  });
+
+  // Renderer crashes and failed loads are the usual cause of a blank window,
+  // so they are logged explicitly rather than left to the devtools console.
+  win.webContents.on('render-process-gone', (_event, details) => {
+    logError('window', 'Renderer process gone', details);
+  });
+  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    logError('window', 'Renderer failed to load', { errorCode, errorDescription, validatedURL });
+  });
+  win.webContents.on('preload-error', (_event, preloadPath, error) => {
+    logError('window', `Preload script failed: ${preloadPath}`, error);
   });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -41,7 +55,28 @@ if (!handleSquirrelEvent()) {
     });
   }
 
+  process.on('uncaughtException', (error) => {
+    logError('process', 'Uncaught exception in the main process', error);
+  });
+  process.on('unhandledRejection', (reason) => {
+    logError('process', 'Unhandled promise rejection in the main process', reason);
+  });
+
   app.whenReady().then(() => {
+    try {
+      configureLogFile(path.join(app.getPath('userData'), 'logs', 'app.log'));
+    } catch (error) {
+      // File logging is best-effort; the in-memory buffer still feeds the
+      // Logs page even when the userData folder isn't writable.
+      logWarn('logs', 'Failed to configure the log file, keeping logs in memory only', error);
+    }
+    logInfo('startup', `Credits Tracker ${app.getVersion()} starting`, {
+      electron: process.versions.electron,
+      node: process.versions.node,
+      platform: process.platform,
+      packaged: app.isPackaged,
+    });
+
     try {
       registerIpcHandlers(resolveDefaultDbPath(), resolveDefaultWorkspaceStorageDir());
     } catch (error) {
@@ -51,15 +86,16 @@ if (!handleSquirrelEvent()) {
       // IPC-call rejections. Only DatabaseNotFoundError gets a distinct log
       // message; everything else is logged generically but still non-fatal.
       if (error instanceof DatabaseNotFoundError) {
-        console.error(error.message);
+        logWarn('startup', error.message);
       } else {
-        console.error('Failed to initialize database access:', error);
+        logError('startup', 'Failed to initialize database access', error);
       }
     }
     createWindow();
   });
 
   app.on('window-all-closed', () => {
+    logInfo('shutdown', 'All windows closed');
     if (process.platform !== 'darwin') {
       app.quit();
     }

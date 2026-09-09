@@ -9,10 +9,13 @@ import { DailyConsumptionPage } from './components/DailyConsumptionPage';
 import { ActivityHeatmapPage } from './components/ActivityHeatmapPage';
 import { ProjectsPage } from './components/ProjectsPage';
 import { ModelsPage } from './components/ModelsPage';
+import { LogsPage } from './components/LogsPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
 import { HourlyDetailPanel } from './components/HourlyDetailPanel';
 import { Skeleton } from './components/ui/skeleton';
+import { logError, logInfo } from './lib/logger';
 import type { FilterOptions, UsageFilters } from '../shared/types';
 
 const EMPTY_OPTIONS: FilterOptions = { projects: [], models: [], minDate: null, maxDate: null };
@@ -48,40 +51,55 @@ export function App() {
     window.api
       .getFilterOptions()
       .then(setOptions)
-      .catch((err) => setOptionsError(err instanceof Error ? err : new Error(String(err))));
+      .catch((err) => {
+        logError('App', 'Failed to load filter options', err);
+        setOptionsError(err instanceof Error ? err : new Error(String(err)));
+      });
   }, []);
 
   useEffect(() => {
-    window.api.getAppVersion().then(setAppVersion).catch(() => undefined);
+    window.api
+      .getAppVersion()
+      .then(setAppVersion)
+      .catch((err) => {
+        logError('App', 'Failed to read the application version', err);
+      });
   }, []);
 
+  useEffect(() => {
+    if (error) {
+      logError('App', 'Failed to load usage data', error);
+    }
+  }, [error]);
+
   function handleTabChange(tab: DashboardTab): void {
+    logInfo('App', `Navigating to the "${tab}" tab`);
     setActiveTab(tab);
     setSelectedProject(null);
     setSelectedDate(null);
   }
 
-  if ((optionsError || error) && !data) {
-    return (
-      <EmptyState
-        title="Couldn't load Copilot CLI usage data."
-        message="Make sure Copilot CLI has been used on this machine, then reopen the app."
-      />
-    );
-  }
-
+  const dataUnavailable = Boolean(optionsError || error) && !data;
   return (
     <div className="app flex h-screen bg-background">
       <Sidebar activeTab={activeTab} onTabChange={handleTabChange} appVersion={appVersion} />
       <div className="flex-1 overflow-y-auto px-6 py-8">
-        {!selectedProject && (
+        {!selectedProject && activeTab !== 'logs' && (
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-foreground">Credits Dashboard</h1>
           </div>
         )}
-        {activeTab === 'raw' && !selectedProject ? (
-          <RawDataPage onBack={() => setActiveTab('daily')} />
-        ) : (
+        <ErrorBoundary scope={`tab:${activeTab}`}>
+          {activeTab === 'logs' ? (
+            <LogsPage />
+          ) : dataUnavailable ? (
+            <EmptyState
+              title="Couldn't load Copilot CLI usage data."
+              message="Make sure Copilot CLI has been used on this machine, then reopen the app. The Logs page lists what failed."
+            />
+          ) : activeTab === 'raw' && !selectedProject ? (
+            <RawDataPage onBack={() => setActiveTab('daily')} />
+          ) : (
           <>
             {!selectedProject && <FilterBar options={options} filters={filters} onChange={setFilters} />}
             {error && data && (
@@ -140,7 +158,8 @@ export function App() {
               </div>
             )}
           </>
-        )}
+          )}
+        </ErrorBoundary>
       </div>
       {selectedDate && (
         <HourlyDetailPanel

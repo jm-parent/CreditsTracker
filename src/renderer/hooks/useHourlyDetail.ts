@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { logError } from '../lib/logger';
 import type { HourlyDetailParams, HourlyPoint, UsageFilters } from '../../shared/types';
 
 interface UseHourlyDetailResult {
@@ -34,6 +35,7 @@ export function useHourlyDetail(
           setError(null);
         }
       } catch (err) {
+        logError('useHourlyDetail', `getHourlyDetail failed for ${currentDate}`, err);
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error(String(err)));
         }

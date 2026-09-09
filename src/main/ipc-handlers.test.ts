@@ -9,6 +9,9 @@ vi.mock('electron', () => {
     app: {
       getVersion: vi.fn(),
     },
+    shell: {
+      showItemInFolder: vi.fn(),
+    },
     ipcMain: {
       handle: vi.fn((channel: string, listener: (...args: unknown[]) => unknown) => {
         handlers.set(channel, listener);

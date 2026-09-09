@@ -16,7 +16,7 @@ installation, no Node.js required.
 
 ## Features
 
-A sidebar lets you switch between four tabs, each scoped to the current
+A sidebar lets you switch between six tabs, each scoped to the current
 project/model/date filters:
 
 - **Daily consumption** — total AIU credits, tokens, and requests at a
@@ -31,6 +31,12 @@ project/model/date filters:
 - **Raw data** — a sortable table of every session with date, summary,
   model(s) used, AIU credits, tokens, and request count, for drilling into
   the underlying data.
+- **Logs** — the application's own diagnostic log (startup, database access,
+  failed IPC calls, and any renderer crash with its stack trace), filterable
+  by level and text. Logs are also written to
+  `%APPDATA%\credits-tracker\logs\app.log` (rotated at 2 MB), and the page
+  offers "Copy" and "Open log folder" so a broken screen can be reported with
+  the underlying error attached.
 - **Filtering** — filter all tabs' charts and stats by project and/or model.
 - **Live updates** — the dashboard refreshes itself automatically every few
   seconds, so credits from a Copilot CLI (or Copilot Chat) session you just

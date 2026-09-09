@@ -84,6 +84,38 @@ export interface RawTableParams {
   pageSize: number;
 }
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+/** Which process produced a log entry. */
+export type LogSource = 'main' | 'renderer';
+
+export interface LogEntry {
+  /** Monotonically increasing id, used as a stable React key and for polling diffs. */
+  id: number;
+  /** ISO 8601 timestamp. */
+  timestamp: string;
+  level: LogLevel;
+  /** Short subsystem name, e.g. 'db' or 'ModelsPage'. */
+  scope: string;
+  message: string;
+  /** Stack trace or serialized payload attached to the entry. */
+  detail?: string;
+  source: LogSource;
+}
+
+export interface LogsSnapshot {
+  entries: LogEntry[];
+  /** Absolute path of the log file, or null when file logging is unavailable. */
+  filePath: string | null;
+}
+
+export interface RendererLogInput {
+  level: LogLevel;
+  scope: string;
+  message: string;
+  detail?: unknown;
+}
+
 export interface MonthlyActivityParams {
   /** Full calendar year, e.g. 2026. */
   year: number;

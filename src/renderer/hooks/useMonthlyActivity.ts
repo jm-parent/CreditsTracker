@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { logError } from '../lib/logger';
 import type { MonthlyActivityParams, TimeSeriesPoint } from '../../shared/types';
 
 const POLL_INTERVAL_MS = 5_000;
@@ -28,6 +29,7 @@ export function useMonthlyActivity(params: MonthlyActivityParams): UseMonthlyAct
           setError(null);
         }
       } catch (err) {
+        logError('useMonthlyActivity', 'getMonthlyActivity failed', err);
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error(String(err)));
         }
