@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/jm-parent/CreditsTracker/compare/v1.2.0...v1.3.0) (2026-09-09)
+
+
+### Features
+
+* improve monthly heatmap gradient readability ([7c9639f](https://github.com/jm-parent/CreditsTracker/commit/7c9639fc1d12eafaaae716f5c17637af29e92d36))
+
 # [1.2.0](https://github.com/jm-parent/CreditsTracker/compare/v1.1.2...v1.2.0) (2026-09-09)
 
 
