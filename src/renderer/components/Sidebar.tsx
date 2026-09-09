@@ -5,6 +5,7 @@ export type DashboardTab = 'daily' | 'monthly' | 'projects' | 'models' | 'raw';
 interface SidebarProps {
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
+  appVersion?: string;
 }
 
 const ENTRIES: Array<{ id: DashboardTab; label: string; icon: typeof CalendarDays }> = [
@@ -15,7 +16,7 @@ const ENTRIES: Array<{ id: DashboardTab; label: string; icon: typeof CalendarDay
   { id: 'raw', label: 'Raw data', icon: Database },
 ];
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, appVersion }: SidebarProps) {
   return (
     <nav className="sidebar flex h-screen w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border p-4">
       {ENTRIES.map(({ id, label, icon: Icon }) => (
@@ -34,6 +35,9 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           {label}
         </button>
       ))}
+      {appVersion && (
+        <p className="mt-auto px-3 pt-4 text-xs text-muted-foreground">v{appVersion}</p>
+      )}
     </nav>
   );
 }

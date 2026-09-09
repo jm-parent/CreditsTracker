@@ -61,6 +61,7 @@ beforeEach(() => {
     }),
     getHourlyDetail: vi.fn().mockResolvedValue([]),
     getMonthlyActivity: vi.fn().mockResolvedValue([]),
+    getAppVersion: vi.fn().mockResolvedValue('1.4.1'),
   };
 });
 
@@ -69,9 +70,19 @@ describe('App', () => {
     const { container } = render(<App />);
 
     expect(await screen.findByText('3.00')).toBeInTheDocument();
+    expect(await screen.findByText('v1.4.1')).toBeInTheDocument();
     const summaryCards = container.querySelector('.summary-cards') as HTMLElement;
     expect(within(summaryCards).getByText('AIU credits')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'org/repo-a' })).toBeInTheDocument();
+  });
+
+  it('keeps the dashboard usable when version lookup fails', async () => {
+    window.api.getAppVersion = vi.fn().mockRejectedValue(new Error('IPC unavailable'));
+
+    render(<App />);
+
+    expect(await screen.findByText('3.00')).toBeInTheDocument();
+    expect(screen.queryByText(/^v/)).not.toBeInTheDocument();
   });
 
   it('switches to the monthly activity heatmap when the sidebar entry is clicked', async () => {

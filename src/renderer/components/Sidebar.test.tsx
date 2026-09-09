@@ -30,4 +30,10 @@ describe('Sidebar', () => {
 
     expect(onTabChange).toHaveBeenCalledWith('models');
   });
+
+  it('renders the packaged version footer when provided', () => {
+    render(<Sidebar activeTab="daily" onTabChange={vi.fn()} appVersion="1.4.1" />);
+
+    expect(screen.getByText('v1.4.1')).toBeInTheDocument();
+  });
 });

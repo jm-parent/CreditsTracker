@@ -26,6 +26,7 @@ function shiftMonth({ year, month }: { year: number; month: number }, delta: num
 export function App() {
   const [options, setOptions] = useState<FilterOptions>(EMPTY_OPTIONS);
   const [optionsError, setOptionsError] = useState<Error | null>(null);
+  const [appVersion, setAppVersion] = useState<string | undefined>();
   const [filters, setFilters] = useState<UsageFilters>({});
   const [activeTab, setActiveTab] = useState<DashboardTab>('daily');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -50,6 +51,10 @@ export function App() {
       .catch((err) => setOptionsError(err instanceof Error ? err : new Error(String(err))));
   }, []);
 
+  useEffect(() => {
+    window.api.getAppVersion().then(setAppVersion).catch(() => undefined);
+  }, []);
+
   function handleTabChange(tab: DashboardTab): void {
     setActiveTab(tab);
     setSelectedProject(null);
@@ -67,7 +72,7 @@ export function App() {
 
   return (
     <div className="app flex h-screen bg-background">
-      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} appVersion={appVersion} />
       <div className="flex-1 overflow-y-auto px-6 py-8">
         {!selectedProject && (
           <div className="mb-6 flex items-center justify-between">
