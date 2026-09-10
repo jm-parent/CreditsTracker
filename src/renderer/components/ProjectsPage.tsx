@@ -26,6 +26,7 @@ export function ProjectsPage({ byProject, onProjectClick, updateContextKey }: Pr
         topKey={topProject?.key ?? ''}
         topCredits={topProject?.aiuCredits ?? 0}
         updateContextKey={updateContextKey}
+        dataSnapshot={byProject}
       />
       <BreakdownChart
         title="Credits by project"

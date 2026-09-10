@@ -38,7 +38,7 @@ export function App() {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   });
-  const { data, loading, error } = useUsageData(filters);
+  const { data, loading, error, dataFilters } = useUsageData(filters);
   const hourlyDetail = useHourlyDetail(selectedDate, filters);
   const monthlyActivity = useMonthlyActivity({
     year: activityMonth.year,
@@ -46,11 +46,15 @@ export function App() {
     project: filters.project,
     model: filters.model,
   });
+  // Derived from the filters the displayed data was fetched with, not the
+  // currently selected ones: a tracker mounted while a filtered request is
+  // still pending must not baseline the previous filters' data under the new
+  // context and then animate the difference between the two.
   const usageUpdateContextKey = JSON.stringify({
-    project: filters.project ?? null,
-    model: filters.model ?? null,
-    from: filters.from ?? null,
-    to: filters.to ?? null,
+    project: dataFilters?.project ?? null,
+    model: dataFilters?.model ?? null,
+    from: dataFilters?.from ?? null,
+    to: dataFilters?.to ?? null,
   });
   const monthlyUpdateContextKey = JSON.stringify({
     year: activityMonth.year,
@@ -152,7 +156,7 @@ export function App() {
                 <ActivityHeatmapPage
                   year={activityMonth.year}
                   month={activityMonth.month}
-                  data={monthlyActivity.data ?? []}
+                  data={monthlyActivity.data}
                   loading={monthlyActivity.loading}
                   error={monthlyActivity.error}
                   onPrevMonth={() => setActivityMonth((prev) => shiftMonth(prev, -1))}

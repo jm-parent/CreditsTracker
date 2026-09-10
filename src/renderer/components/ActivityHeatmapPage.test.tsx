@@ -239,6 +239,87 @@ describe('ActivityHeatmapPage', () => {
       expect(screen.queryByText('+1.50')).not.toBeInTheDocument();
     });
 
+    it('does not mark any cell when the first successful month response arrives', () => {
+      const { container, rerender } = render(
+        <ActivityHeatmapPage
+          year={2026}
+          month={9}
+          data={null}
+          loading
+          error={null}
+          onPrevMonth={vi.fn()}
+          onNextMonth={vi.fn()}
+          updateContextKey="2026-09"
+        />,
+      );
+
+      act(() => {
+        rerender(
+          <ActivityHeatmapPage
+            year={2026}
+            month={9}
+            data={septemberInitial}
+            loading={false}
+            error={null}
+            onPrevMonth={vi.fn()}
+            onNextMonth={vi.fn()}
+            updateContextKey="2026-09"
+          />,
+        );
+      });
+
+      expect(container.querySelectorAll('[data-credit-updated="true"]')).toHaveLength(0);
+      expect(container.querySelector('.credit-delta')).toBeNull();
+    });
+
+    it('highlights a day that receives its first consumption of the month', () => {
+      const before: TimeSeriesPoint[] = [{ date: '2026-09-01', aiuCredits: 12.3 }];
+      const after: TimeSeriesPoint[] = [
+        { date: '2026-09-01', aiuCredits: 12.3 },
+        { date: '2026-09-15', aiuCredits: 2 },
+      ];
+
+      const { rerender } = render(
+        <ActivityHeatmapPage
+          year={2026}
+          month={9}
+          data={before}
+          loading={false}
+          error={null}
+          onPrevMonth={vi.fn()}
+          onNextMonth={vi.fn()}
+          updateContextKey="2026-09"
+        />,
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'September 15, 2026: 0.00 credits' }),
+      ).not.toHaveAttribute('data-credit-updated');
+
+      act(() => {
+        rerender(
+          <ActivityHeatmapPage
+            year={2026}
+            month={9}
+            data={after}
+            loading={false}
+            error={null}
+            onPrevMonth={vi.fn()}
+            onNextMonth={vi.fn()}
+            updateContextKey="2026-09"
+          />,
+        );
+      });
+
+      expect(
+        screen.getByRole('button', { name: 'September 15, 2026: 2.00 credits' }),
+      ).toHaveAttribute('data-credit-updated', 'true');
+      expect(
+        screen.getByRole('button', { name: 'September 1, 2026: 12.30 credits' }),
+      ).not.toHaveAttribute('data-credit-updated');
+      expect(screen.getByText('+2.00')).toBeInTheDocument();
+    });
+
     it('does not mark any October cell or summary value after navigating away from September', () => {
       const { container, rerender } = render(
         <ActivityHeatmapPage

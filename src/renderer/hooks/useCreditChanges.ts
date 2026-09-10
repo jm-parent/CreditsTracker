@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface CreditDatum {
   key: string;
@@ -10,12 +10,21 @@ export interface CreditChange {
   animationKey: number;
 }
 
+const NO_CHANGES: ReadonlyMap<string, CreditChange> = new Map();
+
 function toValueMap(values: readonly CreditDatum[]): ReadonlyMap<string, number> {
   return new Map(values.map(({ key, value }) => [key, value] as const));
 }
 
+/**
+ * Tracks keyed numeric changes between successful snapshots.
+ *
+ * `snapshot` must be the identity of the successful response that produced
+ * `values`, or `null` while no successful response has been rendered yet in
+ * the current context.
+ */
 export function useCreditChanges(
-  snapshot: object,
+  snapshot: object | null,
   values: readonly CreditDatum[],
   resetKey: string,
   durationMs: number,
@@ -26,46 +35,68 @@ export function useCreditChanges(
   const awaitingFreshSnapshotRef = useRef(false);
   const animationKeyRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [changes, setChanges] = useState<ReadonlyMap<string, CreditChange>>(new Map());
+  const [changes, setChanges] = useState<ReadonlyMap<string, CreditChange>>(NO_CHANGES);
+
+  const clearTimer = useCallback((): void => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  // Only unmounting cancels a pending expiration. The comparison effect below
+  // deliberately returns no cleanup: a snapshot that arrives while a marker is
+  // displayed must not silently cancel the timer that removes it.
+  useEffect(() => clearTimer, [clearTimer]);
 
   useEffect(() => {
-    const clearTimer = (): void => {
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-
     const nextValues = toValueMap(values);
 
     if (resetKeyRef.current !== resetKey) {
       resetKeyRef.current = resetKey;
-      awaitingFreshSnapshotRef.current = true;
-      previousSnapshotRef.current = snapshot;
-      previousValuesRef.current = null;
       clearTimer();
-      setChanges(new Map());
-      return clearTimer;
+      setChanges(NO_CHANGES);
+
+      if (snapshot !== null && previousSnapshotRef.current === snapshot) {
+        // The rendered snapshot still belongs to the previous context, so wait
+        // for the first successful response of the new one before comparing.
+        awaitingFreshSnapshotRef.current = true;
+        previousValuesRef.current = null;
+        return;
+      }
+
+      // A different response arrived with the new context: baseline it without
+      // animating.
+      previousSnapshotRef.current = snapshot;
+      previousValuesRef.current = snapshot === null ? null : nextValues;
+      awaitingFreshSnapshotRef.current = false;
+      return;
+    }
+
+    if (snapshot === null) {
+      // Nothing has loaded successfully yet, so there is no baseline to keep.
+      return;
     }
 
     if (previousSnapshotRef.current === null) {
       previousSnapshotRef.current = snapshot;
       previousValuesRef.current = nextValues;
       awaitingFreshSnapshotRef.current = false;
-      return clearTimer;
+      return;
+    }
+
+    if (previousSnapshotRef.current === snapshot) {
+      // The same successful response re-rendered; keep any pending expiration.
+      return;
     }
 
     if (awaitingFreshSnapshotRef.current) {
-      if (previousSnapshotRef.current === snapshot) {
-        return clearTimer;
-      }
-
       previousSnapshotRef.current = snapshot;
       previousValuesRef.current = nextValues;
       awaitingFreshSnapshotRef.current = false;
       clearTimer();
-      setChanges(new Map());
-      return clearTimer;
+      setChanges(NO_CHANGES);
+      return;
     }
 
     const previousValues = previousValuesRef.current;
@@ -73,7 +104,7 @@ export function useCreditChanges(
     previousValuesRef.current = nextValues;
 
     if (previousValues === null) {
-      return clearTimer;
+      return;
     }
 
     const nextAnimationKey = animationKeyRef.current + 1;
@@ -97,7 +128,9 @@ export function useCreditChanges(
     }
 
     if (nextChanges.size === 0) {
-      return clearTimer;
+      // An unchanged refresh is not an update: leave the currently displayed
+      // markers and their pending expiration untouched.
+      return;
     }
 
     animationKeyRef.current = nextAnimationKey;
@@ -105,11 +138,9 @@ export function useCreditChanges(
     setChanges(nextChanges);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
-      setChanges(new Map());
+      setChanges(NO_CHANGES);
     }, durationMs);
-
-    return clearTimer;
-  }, [snapshot, resetKey, durationMs]);
+  }, [snapshot, resetKey, durationMs, clearTimer]);
 
   return changes;
 }

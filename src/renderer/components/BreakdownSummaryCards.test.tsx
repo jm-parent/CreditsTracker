@@ -142,6 +142,109 @@ describe('BreakdownSummaryCards', () => {
     }
   });
 
+  it('still animates a later refresh when the first response of a new context repeats the aggregates', () => {
+    const allProjects = [{ key: 'org/repo-a', aiuCredits: 3 }];
+    const workspaceFirst = [{ key: 'org/repo-a', aiuCredits: 3 }];
+    const workspaceSecond = [{ key: 'org/repo-a', aiuCredits: 4 }];
+
+    const { rerender } = render(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="all"
+        dataSnapshot={allProjects}
+      />,
+    );
+
+    // The filter changed but the pending request has not resolved yet, so the
+    // previous context's response is still on screen.
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="workspace"
+        dataSnapshot={allProjects}
+      />,
+    );
+
+    // The first successful response of the new context happens to carry the
+    // same aggregates.
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="workspace"
+        dataSnapshot={workspaceFirst}
+      />,
+    );
+
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={6}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={4}
+        updateContextKey="workspace"
+        dataSnapshot={workspaceSecond}
+      />,
+    );
+
+    expect(screen.getByText('+2.00')).toBeInTheDocument();
+    expect(screen.getByText('+1.00')).toBeInTheDocument();
+  });
+
+  it('keeps aggregate and entity deltas independent when the top entry is named "total"', () => {
+    const first = [{ key: 'total', aiuCredits: 3 }];
+    const second = [{ key: 'total', aiuCredits: 3.5 }];
+
+    const { container, rerender } = render(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="total"
+        topCredits={3}
+        updateContextKey="all"
+        dataSnapshot={first}
+      />,
+    );
+
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={6}
+        topLabel="Top project"
+        topKey="total"
+        topCredits={3.5}
+        updateContextKey="all"
+        dataSnapshot={second}
+      />,
+    );
+
+    const cards = container.querySelectorAll('.summary-card');
+    const totalCard = cards[1] as HTMLElement;
+    const topCard = cards[2] as HTMLElement;
+
+    expect(within(totalCard).getByText('+2.00')).toBeInTheDocument();
+    expect(within(topCard).getByText('+0.50')).toBeInTheDocument();
+  });
+
   it('clears deltas when the update context key changes', () => {
     const { rerender } = render(
       <BreakdownSummaryCards

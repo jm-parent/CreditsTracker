@@ -93,6 +93,45 @@ describe('useCreditChanges', () => {
     expect(result.current.get('a')?.delta).toBe(1);
   });
 
+  it('keeps the pending expiration running when an unchanged snapshot arrives', () => {
+    vi.useFakeTimers();
+
+    const initial = { rows: [{ key: 'a', value: 10 }] };
+    const { result, rerender } = renderHook(
+      ({ snapshot, values, resetKey }) => useCreditChanges(snapshot, values, resetKey, 1_500),
+      {
+        initialProps: {
+          snapshot: initial,
+          values: initial.rows,
+          resetKey: 'all-projects',
+        },
+      },
+    );
+
+    const increased = { rows: [{ key: 'a', value: 12 }] };
+    rerender({
+      snapshot: increased,
+      values: increased.rows,
+      resetKey: 'all-projects',
+    });
+    expect(result.current.get('a')?.delta).toBe(2);
+
+    act(() => vi.advanceTimersByTime(1_000));
+
+    // A poll that returns the same value must neither restart nor cancel the
+    // running expiration.
+    const unchangedRefresh = { rows: [{ key: 'a', value: 12 }] };
+    rerender({
+      snapshot: unchangedRefresh,
+      values: unchangedRefresh.rows,
+      resetKey: 'all-projects',
+    });
+    expect(result.current.get('a')?.delta).toBe(2);
+
+    act(() => vi.advanceTimersByTime(500));
+    expect(result.current.size).toBe(0);
+  });
+
   it('replaces the displayed delta on successive updates and increments animationKey', () => {
     vi.useFakeTimers();
 

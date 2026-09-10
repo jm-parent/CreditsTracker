@@ -10,13 +10,16 @@ export interface ActivityHeatmapPageProps {
   year: number;
   /** Month number, 1-12. */
   month: number;
-  data: TimeSeriesPoint[];
+  /** Days returned by the last successful fetch, or null before the first one. */
+  data: TimeSeriesPoint[] | null;
   loading: boolean;
   error: Error | null;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   updateContextKey: string;
 }
+
+const NO_POINTS: TimeSeriesPoint[] = [];
 
 const MONTH_NAMES = [
   'January',
@@ -142,8 +145,9 @@ export function ActivityHeatmapPage({
   onNextMonth,
   updateContextKey,
 }: ActivityHeatmapPageProps) {
-  const cells = buildCalendar(year, month, data);
-  const activeDays = data.filter((point) => point.aiuCredits > 0);
+  const points = data ?? NO_POINTS;
+  const cells = buildCalendar(year, month, points);
+  const activeDays = points.filter((point) => point.aiuCredits > 0);
   const maxCredits = activeDays.reduce((max, point) => Math.max(max, point.aiuCredits), 0);
   const isEmpty = activeDays.length === 0;
 
@@ -156,7 +160,12 @@ export function ActivityHeatmapPage({
     null,
   );
 
-  const dayValues = data.map((point) => ({ key: point.date, value: point.aiuCredits }));
+  // Track every rendered day, not just the sparse dates the query returned, so
+  // a visible zero day that receives its first consumption is a change rather
+  // than a brand-new key.
+  const dayValues = cells
+    .filter((cell): cell is DayCell => cell !== null)
+    .map((cell) => ({ key: cell.date, value: cell.aiuCredits }));
   const cellChanges = useCreditChanges(data, dayValues, updateContextKey, CELL_HIGHLIGHT_DURATION_MS);
   const numericChanges = useCreditChanges(data, dayValues, updateContextKey, CREDIT_DELTA_DURATION_MS);
 
