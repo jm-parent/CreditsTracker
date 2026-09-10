@@ -103,34 +103,6 @@ body {
   animation: credit-chart-highlight 1000ms ease-out both;
 }
 
-@keyframes credit-heatmap-highlight {
-  0%,
-  100% {
-    box-shadow: 0 0 0 transparent;
-  }
-
-  25%,
-  70% {
-    box-shadow: 0 0 0 2px #4ade80, 0 0 10px #4ade8080;
-  }
-}
-
-@keyframes credit-heatmap-highlight-reduced {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  25%,
-  70% {
-    opacity: 0.55;
-  }
-}
-
-.credit-heatmap-updated {
-  animation: credit-heatmap-highlight 1000ms ease-out both;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .credit-delta {
     animation-name: credit-delta-in-out-reduced;
@@ -140,12 +112,6 @@ body {
     /* No filter/geometry animation under reduced motion — a brief opacity
        dip is enough emphasis without a moving glow. */
     animation-name: credit-chart-highlight-reduced;
-  }
-
-  .credit-heatmap-updated {
-    /* No box-shadow/geometry animation under reduced motion — a brief
-       opacity dip is enough emphasis without a moving glow. */
-    animation-name: credit-heatmap-highlight-reduced;
   }
 }
 

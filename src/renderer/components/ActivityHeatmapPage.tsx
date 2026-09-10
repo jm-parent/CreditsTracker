@@ -1,25 +1,18 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Card, CardContent } from './ui/card';
-import { CreditValue } from './CreditValue';
-import { useCreditChanges } from '../hooks/useCreditChanges';
-import { cn } from '../lib/utils';
 import type { TimeSeriesPoint } from '../../shared/types';
 
 export interface ActivityHeatmapPageProps {
   year: number;
   /** Month number, 1-12. */
   month: number;
-  /** Days returned by the last successful fetch, or null before the first one. */
-  data: TimeSeriesPoint[] | null;
+  data: TimeSeriesPoint[];
   loading: boolean;
   error: Error | null;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  updateContextKey: string;
 }
-
-const NO_POINTS: TimeSeriesPoint[] = [];
 
 const MONTH_NAMES = [
   'January',
@@ -132,9 +125,6 @@ function cellLabel(year: number, month: number, cell: DayCell): string {
   return `${formatDayLabel(year, month, cell.day)}: ${cell.aiuCredits.toFixed(2)} credits`;
 }
 
-const CELL_HIGHLIGHT_DURATION_MS = 1_000;
-const CREDIT_DELTA_DURATION_MS = 1_500;
-
 export function ActivityHeatmapPage({
   year,
   month,
@@ -143,11 +133,9 @@ export function ActivityHeatmapPage({
   error,
   onPrevMonth,
   onNextMonth,
-  updateContextKey,
 }: ActivityHeatmapPageProps) {
-  const points = data ?? NO_POINTS;
-  const cells = buildCalendar(year, month, points);
-  const activeDays = points.filter((point) => point.aiuCredits > 0);
+  const cells = buildCalendar(year, month, data);
+  const activeDays = data.filter((point) => point.aiuCredits > 0);
   const maxCredits = activeDays.reduce((max, point) => Math.max(max, point.aiuCredits), 0);
   const isEmpty = activeDays.length === 0;
 
@@ -160,15 +148,6 @@ export function ActivityHeatmapPage({
     null,
   );
 
-  // Track every rendered day, not just the sparse dates the query returned, so
-  // a visible zero day that receives its first consumption is a change rather
-  // than a brand-new key.
-  const dayValues = cells
-    .filter((cell): cell is DayCell => cell !== null)
-    .map((cell) => ({ key: cell.date, value: cell.aiuCredits }));
-  const cellChanges = useCreditChanges(data, dayValues, updateContextKey, CELL_HIGHLIGHT_DURATION_MS);
-  const numericChanges = useCreditChanges(data, dayValues, updateContextKey, CREDIT_DELTA_DURATION_MS);
-
   return (
     <div className="activity-heatmap-page flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -180,11 +159,7 @@ export function ActivityHeatmapPage({
             <span className="summary-label text-sm text-muted-foreground">Busiest day</span>
             {busiest && (
               <span className="summary-label text-sm text-muted-foreground">
-                <CreditValue
-                  value={busiest.aiuCredits}
-                  change={numericChanges.get(busiest.date)}
-                  suffix=" credits"
-                />
+                {busiest.aiuCredits.toFixed(2)} credits
               </span>
             )}
           </CardContent>
@@ -197,11 +172,7 @@ export function ActivityHeatmapPage({
             <span className="summary-label text-sm text-muted-foreground">Quietest active day</span>
             {quietest && (
               <span className="summary-label text-sm text-muted-foreground">
-                <CreditValue
-                  value={quietest.aiuCredits}
-                  change={numericChanges.get(quietest.date)}
-                  suffix=" credits"
-                />
+                {quietest.aiuCredits.toFixed(2)} credits
               </span>
             )}
           </CardContent>
@@ -254,19 +225,14 @@ export function ActivityHeatmapPage({
             {cells.map((cell, index) => {
               if (cell) {
                 const level = intensityLevel(cell.aiuCredits, maxCredits);
-                const isUpdated = cellChanges.has(cell.date);
                 return (
                 <button
                   key={cell.date}
                   type="button"
-                  className={cn(
-                    'activity-heatmap-cell h-8 w-full rounded-sm border text-xs font-medium',
-                    isUpdated && 'credit-heatmap-updated',
-                  )}
+                  className="activity-heatmap-cell h-8 w-full rounded-sm border text-xs font-medium"
                   style={cellStyle(level)}
                   data-intensity-level={level}
                   data-intensity-color={intensityColorName(level)}
-                  {...(isUpdated ? { 'data-credit-updated': 'true' } : {})}
                   aria-label={cellLabel(year, month, cell)}
                   title={cellLabel(year, month, cell)}
                 >

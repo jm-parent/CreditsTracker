@@ -56,12 +56,6 @@ export function App() {
     from: dataFilters?.from ?? null,
     to: dataFilters?.to ?? null,
   });
-  const monthlyUpdateContextKey = JSON.stringify({
-    year: activityMonth.year,
-    month: activityMonth.month,
-    project: filters.project ?? null,
-    model: filters.model ?? null,
-  });
 
   useEffect(() => {
     window.api
@@ -156,12 +150,11 @@ export function App() {
                 <ActivityHeatmapPage
                   year={activityMonth.year}
                   month={activityMonth.month}
-                  data={monthlyActivity.data}
+                  data={monthlyActivity.data ?? []}
                   loading={monthlyActivity.loading}
                   error={monthlyActivity.error}
                   onPrevMonth={() => setActivityMonth((prev) => shiftMonth(prev, -1))}
                   onNextMonth={() => setActivityMonth((prev) => shiftMonth(prev, 1))}
-                  updateContextKey={monthlyUpdateContextKey}
                 />
               </div>
             )}

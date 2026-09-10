@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActivityHeatmapPage } from './ActivityHeatmapPage';
@@ -20,7 +20,6 @@ describe('ActivityHeatmapPage', () => {
         error={null}
         onPrevMonth={vi.fn()}
         onNextMonth={vi.fn()}
-        updateContextKey="2026-09"
       />,
     );
 
@@ -39,7 +38,6 @@ describe('ActivityHeatmapPage', () => {
         error={null}
         onPrevMonth={vi.fn()}
         onNextMonth={vi.fn()}
-        updateContextKey="2026-09"
       />,
     );
 
@@ -56,7 +54,6 @@ describe('ActivityHeatmapPage', () => {
         error={null}
         onPrevMonth={vi.fn()}
         onNextMonth={vi.fn()}
-        updateContextKey="2026-09"
       />,
     );
 
@@ -64,6 +61,23 @@ describe('ActivityHeatmapPage', () => {
     expect(screen.getByText('Sep 1')).toBeInTheDocument();
     expect(screen.getByText('Quietest active day')).toBeInTheDocument();
     expect(screen.getByText('Sep 15')).toBeInTheDocument();
+  });
+
+  it('shows the busiest and quietest credit values as plain numeric text', () => {
+    render(
+      <ActivityHeatmapPage
+        year={2026}
+        month={9}
+        data={fixture}
+        loading={false}
+        error={null}
+        onPrevMonth={vi.fn()}
+        onNextMonth={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('12.30 credits')).toBeInTheDocument();
+    expect(screen.getByText('0.50 credits')).toBeInTheDocument();
   });
 
   it('shows an empty-state message when no day in the month has activity', () => {
@@ -76,7 +90,6 @@ describe('ActivityHeatmapPage', () => {
         error={null}
         onPrevMonth={vi.fn()}
         onNextMonth={vi.fn()}
-        updateContextKey="2026-09"
       />,
     );
 
@@ -100,7 +113,6 @@ describe('ActivityHeatmapPage', () => {
         error={null}
         onPrevMonth={vi.fn()}
         onNextMonth={vi.fn()}
-        updateContextKey="2026-09"
       />,
     );
 
@@ -146,7 +158,6 @@ describe('ActivityHeatmapPage', () => {
         error={null}
         onPrevMonth={onPrevMonth}
         onNextMonth={onNextMonth}
-        updateContextKey="2026-09"
       />,
     );
 
@@ -157,7 +168,13 @@ describe('ActivityHeatmapPage', () => {
     expect(onNextMonth).toHaveBeenCalledTimes(1);
   });
 
-  describe('credit-update highlighting', () => {
+  describe('no live update feedback', () => {
+    // The monthly heatmap intentionally has no update-indicator tracker: it
+    // must never grow a `data-credit-updated` attribute, a
+    // `credit-heatmap-updated` glow class, or a `+X`/`−X` CreditValue delta
+    // when its data changes across a rerender, regardless of whether the day
+    // in question already had activity, is gaining its first activity, or is
+    // the busiest/quietest summary day.
     const septemberInitial: TimeSeriesPoint[] = [
       { date: '2026-09-01', aiuCredits: 12.3 },
       { date: '2026-09-15', aiuCredits: 0.5 },
@@ -166,18 +183,9 @@ describe('ActivityHeatmapPage', () => {
       { date: '2026-09-01', aiuCredits: 12.3 },
       { date: '2026-09-15', aiuCredits: 2 },
     ];
-    const october: TimeSeriesPoint[] = [{ date: '2026-10-01', aiuCredits: 5 }];
 
-    beforeEach(() => {
-      vi.useFakeTimers();
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it('marks only the changed day cell and shows a matching numeric delta for the affected summary card', () => {
-      const { rerender } = render(
+    it('never marks a changed day cell with data-credit-updated or a glow class', () => {
+      const { container, rerender } = render(
         <ActivityHeatmapPage
           year={2026}
           month={9}
@@ -186,13 +194,8 @@ describe('ActivityHeatmapPage', () => {
           error={null}
           onPrevMonth={vi.fn()}
           onNextMonth={vi.fn()}
-          updateContextKey="2026-09"
         />,
       );
-
-      expect(
-        screen.getByRole('button', { name: 'September 15, 2026: 0.50 credits' }),
-      ).not.toHaveAttribute('data-credit-updated');
 
       act(() => {
         rerender(
@@ -204,52 +207,27 @@ describe('ActivityHeatmapPage', () => {
             error={null}
             onPrevMonth={vi.fn()}
             onNextMonth={vi.fn()}
-            updateContextKey="2026-09"
           />,
         );
       });
 
-      expect(
-        screen.getByRole('button', { name: 'September 15, 2026: 2.00 credits' }),
-      ).toHaveAttribute('data-credit-updated', 'true');
-      expect(
-        screen.getByRole('button', { name: 'September 1, 2026: 12.30 credits' }),
-      ).not.toHaveAttribute('data-credit-updated');
-
-      // September 15 is the quietest active day both before and after the
-      // change, so its own numeric delta (+1.50) must show on that summary
-      // card via CreditValue.
-      expect(screen.getByText('+1.50')).toBeInTheDocument();
-
-      act(() => {
-        vi.advanceTimersByTime(1_000);
-      });
-
-      expect(
-        screen.getByRole('button', { name: 'September 15, 2026: 2.00 credits' }),
-      ).not.toHaveAttribute('data-credit-updated');
-      // The numeric delta lasts longer (1,500 ms) than the cell marker
-      // (1,000 ms), so it must still be visible here.
-      expect(screen.getByText('+1.50')).toBeInTheDocument();
-
-      act(() => {
-        vi.advanceTimersByTime(500);
-      });
-
-      expect(screen.queryByText('+1.50')).not.toBeInTheDocument();
+      const updatedCell = screen.getByRole('button', { name: 'September 15, 2026: 2.00 credits' });
+      expect(updatedCell).not.toHaveAttribute('data-credit-updated');
+      expect(updatedCell.className).not.toMatch(/credit-heatmap-updated/);
+      expect(container.querySelectorAll('[data-credit-updated]')).toHaveLength(0);
+      expect(container.querySelectorAll('.credit-heatmap-updated')).toHaveLength(0);
     });
 
-    it('does not mark any cell when the first successful month response arrives', () => {
-      const { container, rerender } = render(
+    it('never shows a +X/−X CreditValue delta on the busiest or quietest summary card', () => {
+      const { rerender } = render(
         <ActivityHeatmapPage
           year={2026}
           month={9}
-          data={null}
-          loading
+          data={septemberInitial}
+          loading={false}
           error={null}
           onPrevMonth={vi.fn()}
           onNextMonth={vi.fn()}
-          updateContextKey="2026-09"
         />,
       );
 
@@ -258,28 +236,30 @@ describe('ActivityHeatmapPage', () => {
           <ActivityHeatmapPage
             year={2026}
             month={9}
-            data={septemberInitial}
+            data={septemberUpdated}
             loading={false}
             error={null}
             onPrevMonth={vi.fn()}
             onNextMonth={vi.fn()}
-            updateContextKey="2026-09"
           />,
         );
       });
 
-      expect(container.querySelectorAll('[data-credit-updated="true"]')).toHaveLength(0);
-      expect(container.querySelector('.credit-delta')).toBeNull();
+      // September 15 (the quietest active day) changed from 0.50 to 2.00
+      // credits — a +1.50 delta must never appear.
+      expect(screen.queryByText('+1.50')).not.toBeInTheDocument();
+      expect(screen.queryByText('−1.50')).not.toBeInTheDocument();
+      expect(screen.getByText('2.00 credits')).toBeInTheDocument();
     });
 
-    it('highlights a day that receives its first consumption of the month', () => {
+    it('never highlights a day that receives its first consumption of the month', () => {
       const before: TimeSeriesPoint[] = [{ date: '2026-09-01', aiuCredits: 12.3 }];
       const after: TimeSeriesPoint[] = [
         { date: '2026-09-01', aiuCredits: 12.3 },
         { date: '2026-09-15', aiuCredits: 2 },
       ];
 
-      const { rerender } = render(
+      const { container, rerender } = render(
         <ActivityHeatmapPage
           year={2026}
           month={9}
@@ -288,13 +268,8 @@ describe('ActivityHeatmapPage', () => {
           error={null}
           onPrevMonth={vi.fn()}
           onNextMonth={vi.fn()}
-          updateContextKey="2026-09"
         />,
       );
-
-      expect(
-        screen.getByRole('button', { name: 'September 15, 2026: 0.00 credits' }),
-      ).not.toHaveAttribute('data-credit-updated');
 
       act(() => {
         rerender(
@@ -306,52 +281,31 @@ describe('ActivityHeatmapPage', () => {
             error={null}
             onPrevMonth={vi.fn()}
             onNextMonth={vi.fn()}
-            updateContextKey="2026-09"
           />,
         );
       });
 
       expect(
         screen.getByRole('button', { name: 'September 15, 2026: 2.00 credits' }),
-      ).toHaveAttribute('data-credit-updated', 'true');
-      expect(
-        screen.getByRole('button', { name: 'September 1, 2026: 12.30 credits' }),
       ).not.toHaveAttribute('data-credit-updated');
-      expect(screen.getByText('+2.00')).toBeInTheDocument();
+      expect(container.querySelectorAll('[data-credit-updated]')).toHaveLength(0);
+      expect(screen.queryByText('+2.00')).not.toBeInTheDocument();
     });
 
-    it('does not mark any October cell or summary value after navigating away from September', () => {
+    it('never marks anything after navigating between months', () => {
+      const october: TimeSeriesPoint[] = [{ date: '2026-10-01', aiuCredits: 5 }];
+
       const { container, rerender } = render(
         <ActivityHeatmapPage
           year={2026}
           month={9}
-          data={septemberInitial}
+          data={septemberUpdated}
           loading={false}
           error={null}
           onPrevMonth={vi.fn()}
           onNextMonth={vi.fn()}
-          updateContextKey="2026-09"
         />,
       );
-
-      act(() => {
-        rerender(
-          <ActivityHeatmapPage
-            year={2026}
-            month={9}
-            data={septemberUpdated}
-            loading={false}
-            error={null}
-            onPrevMonth={vi.fn()}
-            onNextMonth={vi.fn()}
-            updateContextKey="2026-09"
-          />,
-        );
-      });
-
-      expect(
-        screen.getByRole('button', { name: 'September 15, 2026: 2.00 credits' }),
-      ).toHaveAttribute('data-credit-updated', 'true');
 
       act(() => {
         rerender(
@@ -363,13 +317,13 @@ describe('ActivityHeatmapPage', () => {
             error={null}
             onPrevMonth={vi.fn()}
             onNextMonth={vi.fn()}
-            updateContextKey="2026-10"
           />,
         );
       });
 
       expect(screen.queryByText('+1.50')).not.toBeInTheDocument();
-      expect(container.querySelectorAll('[data-credit-updated="true"]')).toHaveLength(0);
+      expect(container.querySelectorAll('[data-credit-updated]')).toHaveLength(0);
+      expect(container.querySelectorAll('.credit-heatmap-updated')).toHaveLength(0);
     });
   });
 });

@@ -2,6 +2,10 @@
 
 **Status:** Approved
 **Date:** 2026-09-10
+**Amended:** 2026-09-10 — the monthly activity heatmap is explicitly out of
+scope for live update feedback. See "Scope Amendment" below; every other
+mention of heatmap highlighting in this document describes the original,
+now-superseded design and is retained only for history.
 
 ## Context
 
@@ -37,11 +41,12 @@ IPC, polling frequency, filtering, sorting, or the shared data format.
 
 ### Charts
 
-- Compare chart points by stable semantic key: date for time-series and heatmap
-  data, and project or model key for breakdown data.
+- Compare chart points by stable semantic key: date for time-series data, and
+  project or model key for breakdown data.
 - A changed bar receives a soft cyan/green glow and a small brightness increase
   for one second.
-- A changed monthly heatmap cell receives the same targeted glow.
+- The monthly activity heatmap is excluded from this behavior; see "Scope
+  Amendment" below.
 - Preserve Recharts' normal bar-size transition so the new magnitude remains
   understandable.
 - Do not flash the complete chart or display a global update notification.
@@ -92,9 +97,10 @@ sorting moves a row after an update.
 
 Add a keyed comparison helper for chart datasets. Each chart derives the set
 of changed keys from its previous data in the same context and passes a
-transient changed state to the relevant custom Recharts shape or heatmap cell.
-The chart keeps responsibility for rendering its own geometry; the comparison
-helper remains independent of Recharts.
+transient changed state to the relevant custom Recharts shape. The chart keeps
+responsibility for rendering its own geometry; the comparison helper remains
+independent of Recharts. The monthly activity heatmap does not use this
+helper; see "Scope Amendment" below.
 
 No database, Electron main-process, preload, IPC, or shared-type changes are
 required.
@@ -129,12 +135,16 @@ Add focused tests for:
 - replacement and restart on successive updates;
 - reset without animation after a context or filter change;
 - stable row association when sorting changes row order;
-- changed-key detection for time-series, breakdown, and heatmap data;
+- changed-key detection for time-series and breakdown data;
 - no indicator after a refresh error;
 - reduced-motion styling.
 
 Existing component and application tests must continue to pass unchanged unless
 a test needs an additional assertion for the new visual feedback.
+
+The monthly heatmap instead has focused tests asserting that a rerender with
+changed data never adds `data-credit-updated`, a glow class, or a CreditValue
+delta; see "Scope Amendment" below.
 
 ## Out of Scope
 
@@ -143,3 +153,36 @@ a test needs an additional assertion for the new visual feedback.
 - Changing the five-second polling interval.
 - Animating tokens, request counts, logs, or raw data.
 - Audio, desktop notifications, or attention-grabbing full-card flashes.
+- Live update feedback (highlighted cells, glow, or numeric deltas) on the
+  monthly activity heatmap page. See "Scope Amendment" below.
+
+## Scope Amendment (2026-09-10)
+
+The monthly activity heatmap page is explicitly **out of scope** for live
+update feedback. Every mention above of a "changed monthly heatmap cell,"
+heatmap glow, or heatmap changed-key tracking describes the original design as
+approved, before this amendment; that behavior was implemented (Task 5 of the
+implementation plan) and then removed the same day after review, because a
+calendar of glowing/re-numbering day cells was judged too busy for a
+month-at-a-glance view and not worth the added visual noise.
+
+The monthly heatmap page keeps everything else from this feature's rollout
+unaffected — data fetching, summaries, intensity colors, navigation, and
+loading/error handling are unchanged — but:
+
+- `ActivityHeatmapPage` no longer accepts an `updateContextKey` prop and does
+  not call `useCreditChanges`.
+- Day cells never receive `data-credit-updated` or the `credit-heatmap-updated`
+  glow class.
+- The busiest/quietest summary values render as plain `X.XX credits` text
+  again, with no `CreditValue`/delta.
+- `App` no longer derives a `monthlyUpdateContextKey`.
+- The heatmap-specific `credit-heatmap-highlight` keyframes and reduced-motion
+  override were removed from `index.css`. The generic `credit-delta` and
+  `credit-chart-updated` styles used by numeric, card, table, and bar-chart
+  indicators elsewhere are unaffected.
+
+This also makes the final-review concern about navigating to the Monthly tab
+during a pending usage-filter refresh moot for the heatmap specifically: with
+no indicator tracker mounted on that page, there is nothing there that could
+misattribute a cross-context delta in the first place.

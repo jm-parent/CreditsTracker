@@ -2,6 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Scope Amendment (2026-09-10):** Task 5 below ("Monthly Heatmap
+> Highlights") was completed as written and then explicitly reverted the same
+> day after review. The monthly activity heatmap is out of scope for live
+> update feedback; see the "Monthly Heatmap Highlights" task for the reverted
+> steps and the amendment note at its end for what shipped instead. Every
+> other task's heatmap-adjacent statements below (Goal, Architecture, Global
+> Constraints, File Structure) describe the plan as originally approved and
+> are historical for the heatmap specifically — they no longer describe the
+> current, shipped behavior of `ActivityHeatmapPage`.
+
 **Goal:** Show a transient `+X` or negative correction beside updated credit values and highlight only the chart bars or heatmap cells whose values changed.
 
 **Architecture:** A renderer-only hook compares keyed numeric snapshots and exposes transient changes without modifying polling or shared data types. A reusable `CreditValue` component renders numeric deltas, while Recharts cells and heatmap buttons consume the same keyed-change output for targeted highlights. Page-level context keys prevent filter, navigation, and month changes from looking like incoming usage.
@@ -40,7 +50,7 @@
 - Modify `src/renderer/components/ConversationsTable.tsx`: track conversations by session ID and use `CreditValue`.
 - Modify `src/renderer/components/TimeSeriesChart.tsx`: highlight changed date/project segments.
 - Modify `src/renderer/components/BreakdownChart.tsx`: highlight changed project or model bars.
-- Modify `src/renderer/components/ActivityHeatmapPage.tsx`: highlight changed day cells and reset by displayed month.
+- Modify `src/renderer/components/ActivityHeatmapPage.tsx`: highlight changed day cells and reset by displayed month. **Reverted 2026-09-10** — see the Scope Amendment note under Task 5.
 - Modify the matching component tests to cover integration and preserve existing behavior.
 
 ---
@@ -525,7 +535,7 @@ rtk git commit -m "feat: highlight updated chart bars" -m "Co-authored-by: Copil
 
 ---
 
-### Task 5: Monthly Heatmap Highlights
+### Task 5: Monthly Heatmap Highlights (completed, then reverted — see amendment)
 
 **Files:**
 - Modify: `src/renderer/components/ActivityHeatmapPage.tsx`
@@ -628,6 +638,44 @@ Expected: PASS.
 rtk git add src/renderer/components/ActivityHeatmapPage.tsx src/renderer/components/ActivityHeatmapPage.test.tsx src/renderer/index.css
 rtk git commit -m "feat: highlight updated heatmap days" -m "Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>"
 ```
+
+**Scope Amendment (2026-09-10):** Steps 1-6 above were completed exactly as
+written and committed as `feat: highlight updated heatmap days`. Later the
+same day, after further review, the user narrowed scope: the monthly heatmap
+page must have **no** live visual update feedback at all. That decision was
+implemented in a follow-up change (`refactor: remove live heatmap update
+indicators`), which:
+
+- Removed the `updateContextKey` prop from `ActivityHeatmapPageProps` and the
+  two `useCreditChanges` calls (cell and numeric) from `ActivityHeatmapPage`.
+- Removed the `credit-heatmap-updated` class and `data-credit-updated`
+  attribute from day-cell buttons; cells render with only their intensity
+  style, label, and title as before this task.
+- Replaced the `CreditValue`-based busiest/quietest summary values with plain
+  `{value.toFixed(2)} credits` text, restoring the pre-Task-5 presentation.
+- Removed the `credit-heatmap-highlight` / `credit-heatmap-highlight-reduced`
+  keyframes, the `.credit-heatmap-updated` rule, and its reduced-motion
+  override from `src/renderer/index.css`. The shared `.credit-delta` and
+  `.credit-chart-updated` rules used elsewhere were left untouched.
+- Removed `monthlyUpdateContextKey` from `App.tsx` and restored
+  `data={monthlyActivity.data ?? []}` (a non-nullable
+  `TimeSeriesPoint[]` prop contract), since the nullable-data guard existed
+  only to keep the first successful month response from being misread as an
+  all-zero baseline by the now-removed tracker.
+- Rewrote `ActivityHeatmapPage.test.tsx` to assert the opposite of Step 1's
+  tests: a rerender with changed monthly data must never add
+  `data-credit-updated`, a `credit-heatmap-updated` class, or a `+X`/`−X`
+  CreditValue delta, while the data, summaries, intensity colors, navigation,
+  and loading/error behavior asserted by the original (pre-Task-5) tests keep
+  passing.
+
+The steps above (1-6) are left as written to preserve an accurate record of
+what was built and reviewed for this task; they no longer describe the
+current behavior of `ActivityHeatmapPage`. This also renders moot the
+final-review concern (recorded in `.superpowers/sdd/2026-09-10-credit-update-indicators/final-fix-report.md`)
+about navigating to the Monthly tab while a usage-filter refresh is pending:
+with no indicator tracker mounted on that page, there is nothing there left
+to misattribute a cross-context delta.
 
 ---
 
