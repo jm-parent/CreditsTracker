@@ -32,6 +32,7 @@ beforeEach(() => {
     getLogs: vi.fn().mockResolvedValue(snapshot),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: snapshot.filePath }),
     openLogFile: vi.fn().mockResolvedValue(snapshot.filePath),
+    checkForUpdate: vi.fn().mockResolvedValue({ status: 'up-to-date', currentVersion: '1.6.0' }),
     log: vi.fn().mockResolvedValue(undefined),
   } as typeof window.api;
 });
@@ -94,6 +95,17 @@ describe('LogsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Open log folder' }));
 
     expect(window.api.openLogFile).toHaveBeenCalled();
+  });
+
+  it('checks for updates and refreshes logs when asked', async () => {
+    const user = userEvent.setup();
+    render(<LogsPage />);
+    await screen.findByText('Credits Tracker starting');
+
+    await user.click(screen.getByRole('button', { name: 'Check for updates' }));
+
+    expect(window.api.checkForUpdate).toHaveBeenCalled();
+    expect(window.api.getLogs).toHaveBeenCalledTimes(2);
   });
 
   it('surfaces a message when logs cannot be read', async () => {

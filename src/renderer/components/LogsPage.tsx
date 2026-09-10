@@ -83,11 +83,27 @@ export function LogsPage() {
     }
   }
 
+  async function handleCheckForUpdates(): Promise<void> {
+    try {
+      await window.api.checkForUpdate();
+      await refresh();
+    } catch (err) {
+      logError('LogsPage', 'Failed to check for updates from the Logs page', err);
+    }
+  }
+
   return (
     <div className="logs-page flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-foreground">Application logs</h2>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleCheckForUpdates}
+            className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted"
+          >
+            Check for updates
+          </button>
           <button
             type="button"
             onClick={() => refresh()}
