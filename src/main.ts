@@ -1,10 +1,10 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
-import { updateElectronApp } from 'update-electron-app';
 import { registerIpcHandlers } from './main/ipc-handlers';
 import { resolveDefaultDbPath, DatabaseNotFoundError } from './main/db';
 import { resolveDefaultWorkspaceStorageDir } from './main/vscode-chat-store';
 import { handleSquirrelEvent } from './main/squirrel-events';
+import { startUpdateChecks } from './main/updater';
 import { configureLogFile, logError, logInfo, logWarn } from './main/logger';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -44,17 +44,6 @@ function createWindow(): void {
 }
 
 if (!handleSquirrelEvent()) {
-  // Checks GitHub Releases (via update.electronjs.org) for a newer Squirrel.
-  // Windows installer on startup and every 10 minutes, downloading and
-  // installing it silently in the background; the update takes effect on the
-  // next app restart. Only meaningful for packaged Windows builds — `npm
-  // start` runs unpackaged and has no Squirrel installer to update.
-  if (app.isPackaged) {
-    updateElectronApp({
-      repo: 'jm-parent/CreditsTracker',
-    });
-  }
-
   process.on('uncaughtException', (error) => {
     logError('process', 'Uncaught exception in the main process', error);
   });
@@ -92,6 +81,10 @@ if (!handleSquirrelEvent()) {
       }
     }
     createWindow();
+    // Availability checks run on startup and periodically after that, but
+    // nothing is downloaded until the user accepts the update from the
+    // renderer's update dialog.
+    startUpdateChecks();
   });
 
   app.on('window-all-closed', () => {

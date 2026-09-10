@@ -37,4 +37,50 @@ describe('Sidebar', () => {
 
     expect(screen.getByText('v1.4.1')).toBeInTheDocument();
   });
+
+  it('hides the update badge when no update is actionable', () => {
+    render(
+      <Sidebar
+        activeTab="daily"
+        onTabChange={vi.fn()}
+        appVersion="1.4.1"
+        updateState={{ status: 'up-to-date', currentVersion: '1.4.1' }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /Update/ })).not.toBeInTheDocument();
+  });
+
+  it('opens the update dialog from the badge next to the version', async () => {
+    const user = userEvent.setup();
+    const onUpdateClick = vi.fn();
+    render(
+      <Sidebar
+        activeTab="daily"
+        onTabChange={vi.fn()}
+        appVersion="1.4.1"
+        updateState={{ status: 'available', currentVersion: '1.4.1', latestVersion: '1.6.0' }}
+        onUpdateClick={onUpdateClick}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Update available (v1.6.0)' }));
+
+    expect(onUpdateClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('labels the badge as ready to restart once the update is staged', () => {
+    render(
+      <Sidebar
+        activeTab="daily"
+        onTabChange={vi.fn()}
+        appVersion="1.4.1"
+        updateState={{ status: 'ready', currentVersion: '1.4.1', latestVersion: '1.6.0' }}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Update ready — restart to apply' }),
+    ).toBeInTheDocument();
+  });
 });

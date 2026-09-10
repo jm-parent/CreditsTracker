@@ -55,6 +55,22 @@ body {
   outline: none !important;
 }
 
+/* Squirrel reports no download percentage, so the update dialog uses an
+   indeterminate bar that sweeps across its track while the update is being
+   downloaded and staged. */
+@keyframes update-progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.update-progress {
+  animation: update-progress-sweep 1.2s ease-in-out infinite;
+}
+
 /* Click-and-drag across the chart (e.g. over the axis labels) triggers the
    browser's native text-selection highlight, which isn't useful on a chart.
    Disable text selection across the whole chart subtree. */

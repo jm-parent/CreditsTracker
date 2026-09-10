@@ -21,6 +21,13 @@ vi.mock('electron', () => {
   };
 });
 
+vi.mock('./updater', () => ({
+  getUpdateState: vi.fn(() => ({ status: 'up-to-date', currentVersion: '1.4.1' })),
+  checkForUpdate: vi.fn(),
+  downloadUpdate: vi.fn(() => ({ status: 'downloading', currentVersion: '1.4.1' })),
+  restartToUpdate: vi.fn(),
+}));
+
 vi.mock('./db', async () => {
   const actual = await vi.importActual<typeof import('./db')>('./db');
   return {
@@ -74,6 +81,24 @@ describe('registerIpcHandlers', () => {
     }).__handlers;
 
     expect(handlers.get('get-app-version')!({})).toBe('1.4.1');
+  });
+
+  it('exposes the user-driven update channels', () => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+
+    expect(handlers.get('get-update-state')!({})).toEqual({
+      status: 'up-to-date',
+      currentVersion: '1.4.1',
+    });
+    expect(handlers.get('download-update')!({})).toEqual({
+      status: 'downloading',
+      currentVersion: '1.4.1',
+    });
+    expect(ipcMain.handle).toHaveBeenCalledWith('check-for-update', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('restart-to-update', expect.any(Function));
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {

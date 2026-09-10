@@ -169,6 +169,32 @@ anything:
 npm run release:dry-run
 ```
 
+### App updates
+
+`src/main/updater.ts` owns the whole update flow, and it is **user-driven**:
+the app never downloads or installs anything on its own.
+
+- **Checking** — on startup and then every 4 hours, the main process issues a
+  single `GET` to `https://update.electronjs.org/jm-parent/CreditsTracker/<platform>-<arch>/<version>`.
+  A `204` means the running version is the latest; a JSON body means a newer
+  release exists. This endpoint only *reports* availability, which is why
+  `autoUpdater.checkForUpdates()` is deliberately not used for this step — it
+  would immediately download and stage whatever it finds.
+- **Notifying** — every state transition is pushed to the renderer over the
+  `update-state-changed` channel. `useAppUpdate` mirrors it, the sidebar shows
+  a badge next to the version number, and `UpdateDialog` renders the details.
+- **Downloading** — only when the user clicks "Download and install" does the
+  renderer call `download-update`, which points Electron's built-in
+  `autoUpdater` at the same feed and lets Squirrel fetch and stage the
+  installer. Squirrel reports no byte-level progress, so the dialog shows an
+  indeterminate progress bar rather than a percentage.
+- **Applying** — once Squirrel emits `update-downloaded`, the dialog offers
+  "Restart now", which calls `autoUpdater.quitAndInstall()`.
+
+Updates require a packaged Windows (or macOS) build with a Squirrel
+installer, so `npm start` reports the `unsupported` status and the sidebar
+badge never appears in development.
+
 ## Data source details
 
 The app reads `~/.copilot/session-store.db` read-only. If that file doesn't

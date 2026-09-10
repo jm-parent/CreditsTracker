@@ -116,6 +116,41 @@ export interface RendererLogInput {
   detail?: unknown;
 }
 
+/**
+ * Where the app currently stands in the user-driven update flow.
+ *
+ * - `unsupported`: unpackaged (`npm start`) or a platform without a Squirrel
+ *   installer, so no update can ever be applied.
+ * - `checking`: a background (or manual) availability check is in flight.
+ * - `up-to-date`: the last check found no newer release.
+ * - `available`: a newer release exists and is waiting for the user to accept.
+ * - `downloading`: the user accepted; Squirrel is fetching and staging it.
+ * - `ready`: the update is installed locally and applies on the next restart.
+ * - `error`: the last check or download failed; `error` holds the message.
+ */
+export type UpdateStatus =
+  | 'unsupported'
+  | 'checking'
+  | 'up-to-date'
+  | 'available'
+  | 'downloading'
+  | 'ready'
+  | 'error';
+
+export interface UpdateState {
+  status: UpdateStatus;
+  /** Version currently running, e.g. "1.5.0". */
+  currentVersion: string;
+  /** Version offered by the release feed, when one is available. */
+  latestVersion?: string;
+  /** Release notes markdown supplied by the feed, when available. */
+  releaseNotes?: string;
+  /** Message of the last failure, only set when `status` is `error`. */
+  error?: string;
+  /** ISO 8601 timestamp of the last completed availability check. */
+  lastCheckedAt?: string;
+}
+
 export interface MonthlyActivityParams {
   /** Full calendar year, e.g. 2026. */
   year: number;

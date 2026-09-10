@@ -44,6 +44,11 @@ project/model/date filters:
 - **Copilot Chat included** — usage from the GitHub Copilot Chat extension in
   VS Code is merged in alongside Copilot CLI usage, so you get one unified
   view of your Copilot credit consumption.
+- **Opt-in app updates** — the app checks GitHub Releases for a newer version
+  on startup and every few hours. When one is found, a small download icon
+  appears next to the version number in the sidebar; clicking it opens a
+  dialog with the release notes. Nothing is ever downloaded or installed
+  until you accept, and the new version is applied when you restart the app.
 
 ## Screenshots
 
