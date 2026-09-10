@@ -42,13 +42,23 @@ export function App() {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   });
-  const { data, loading, error } = useUsageData(filters);
+  const { data, loading, error, dataFilters } = useUsageData(filters);
   const hourlyDetail = useHourlyDetail(selectedDate, filters);
   const monthlyActivity = useMonthlyActivity({
     year: activityMonth.year,
     month: activityMonth.month,
     project: filters.project,
     model: filters.model,
+  });
+  // Derived from the filters the displayed data was fetched with, not the
+  // currently selected ones: a tracker mounted while a filtered request is
+  // still pending must not baseline the previous filters' data under the new
+  // context and then animate the difference between the two.
+  const usageUpdateContextKey = JSON.stringify({
+    project: dataFilters?.project ?? null,
+    model: dataFilters?.model ?? null,
+    from: dataFilters?.from ?? null,
+    to: dataFilters?.to ?? null,
   });
 
   useEffect(() => {
@@ -141,6 +151,7 @@ export function App() {
                   totals={data.totals}
                   timeSeries={data.timeSeries}
                   onDayClick={setSelectedDate}
+                  updateContextKey={usageUpdateContextKey}
                 />
               </div>
             )}
@@ -159,12 +170,16 @@ export function App() {
             )}
             {data && !selectedProject && activeTab === 'projects' && (
               <div className="mt-6">
-                <ProjectsPage byProject={data.byProject} onProjectClick={setSelectedProject} />
+                <ProjectsPage
+                  byProject={data.byProject}
+                  onProjectClick={setSelectedProject}
+                  updateContextKey={usageUpdateContextKey}
+                />
               </div>
             )}
             {data && !selectedProject && activeTab === 'models' && (
               <div className="mt-6">
-                <ModelsPage byModel={data.byModel} />
+                <ModelsPage byModel={data.byModel} updateContextKey={usageUpdateContextKey} />
               </div>
             )}
           </>

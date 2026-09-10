@@ -5,9 +5,10 @@ import type { BreakdownPoint } from '../../shared/types';
 
 export interface ModelsPageProps {
   byModel: BreakdownPoint[];
+  updateContextKey: string;
 }
 
-export function ModelsPage({ byModel }: ModelsPageProps) {
+export function ModelsPage({ byModel, updateContextKey }: ModelsPageProps) {
   const totalCredits = byModel.reduce((sum, m) => sum + m.aiuCredits, 0);
   const topModel = byModel.reduce<BreakdownPoint | null>(
     (top, m) => (!top || m.aiuCredits > top.aiuCredits ? m : top),
@@ -23,9 +24,16 @@ export function ModelsPage({ byModel }: ModelsPageProps) {
         topLabel="Top model"
         topKey={topModel?.key ?? ''}
         topCredits={topModel?.aiuCredits ?? 0}
+        updateContextKey={updateContextKey}
+        dataSnapshot={byModel}
       />
-      <BreakdownChart title="Credits by model" data={byModel} />
-      <ModelTable rows={byModel} />
+      <BreakdownChart
+        title="Credits by model"
+        data={byModel}
+        colorByKey
+        updateContextKey={updateContextKey}
+      />
+      <ModelTable rows={byModel} updateContextKey={updateContextKey} />
     </div>
   );
 }

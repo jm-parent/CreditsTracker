@@ -20,6 +20,126 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+@keyframes credit-delta-in-out {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  15%,
+  75% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes credit-delta-in-out-reduced {
+  0% {
+    opacity: 0;
+  }
+
+  15%,
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.credit-value {
+  position: relative;
+}
+
+.credit-delta {
+  animation: credit-delta-in-out 1500ms ease-out both;
+}
+
+.credit-delta-positive {
+  color: #4ade80;
+}
+
+.credit-delta-negative {
+  color: #fb923c;
+}
+
+@keyframes credit-drop-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) rotate(0deg) scale(1);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateY(-6px) rotate(0deg) scale(1);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translateY(4px) rotate(10deg) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(16px) rotate(14deg) scale(0.55);
+  }
+}
+
+@keyframes credit-drop-fade {
+  0%,
+  15% {
+    opacity: 0;
+    transform: none;
+  }
+
+  30%,
+  75% {
+    opacity: 1;
+    transform: none;
+  }
+
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+.credit-drop {
+  font-size: 14px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--color-card);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.credit-drop-positive {
+  animation: credit-drop-fall 1200ms cubic-bezier(0.2, 0.65, 0.4, 1) both;
+}
+
+.credit-drop-negative {
+  animation: credit-drop-fade 1200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credit-delta {
+    animation-name: credit-delta-in-out-reduced;
+  }
+
+  .credit-drop-positive,
+  .credit-drop-negative {
+    animation-name: credit-drop-fade;
+  }
+}
+
 /* Match the scrollbar to the app's dark theme instead of the OS default. */
 * {
   scrollbar-color: var(--color-border) var(--color-background);

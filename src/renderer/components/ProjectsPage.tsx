@@ -6,9 +6,10 @@ import type { BreakdownPoint } from '../../shared/types';
 export interface ProjectsPageProps {
   byProject: BreakdownPoint[];
   onProjectClick: (project: string) => void;
+  updateContextKey: string;
 }
 
-export function ProjectsPage({ byProject, onProjectClick }: ProjectsPageProps) {
+export function ProjectsPage({ byProject, onProjectClick, updateContextKey }: ProjectsPageProps) {
   const totalCredits = byProject.reduce((sum, p) => sum + p.aiuCredits, 0);
   const topProject = byProject.reduce<BreakdownPoint | null>(
     (top, p) => (!top || p.aiuCredits > top.aiuCredits ? p : top),
@@ -24,14 +25,17 @@ export function ProjectsPage({ byProject, onProjectClick }: ProjectsPageProps) {
         topLabel="Top project"
         topKey={topProject?.key ?? ''}
         topCredits={topProject?.aiuCredits ?? 0}
+        updateContextKey={updateContextKey}
+        dataSnapshot={byProject}
       />
       <BreakdownChart
         title="Credits by project"
         data={byProject}
         onBarClick={onProjectClick}
         colorByKey
+        updateContextKey={updateContextKey}
       />
-      <SessionsTable rows={byProject} />
+      <SessionsTable rows={byProject} updateContextKey={updateContextKey} />
     </div>
   );
 }

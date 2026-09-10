@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { resetLogDedupeForTests } from './lib/logger';
@@ -321,5 +321,62 @@ describe('App', () => {
 
     expect(screen.queryByRole('heading', { name: 'org/repo-a' })).not.toBeInTheDocument();
     expect(await screen.findByText('Credits over time')).toBeInTheDocument();
+  });
+
+  it('does not animate a credit delta when a filter change starts a new update context', async () => {
+    window.api.getUsage = vi
+      .fn()
+      .mockResolvedValueOnce(usage)
+      .mockResolvedValueOnce({
+        ...usage,
+        totals: { aiuCredits: 9, tokens: 300, requests: 5 },
+      });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.selectOptions(screen.getByLabelText('Project'), 'org/repo-a');
+
+    expect(await screen.findByText('9.00')).toBeInTheDocument();
+    expect(screen.queryByText('+6.00')).not.toBeInTheDocument();
+  });
+
+  it('does not animate deltas when a tab is opened before a filtered refresh resolves', async () => {
+    const filteredUsage: UsageResult = {
+      totals: { aiuCredits: 9, tokens: 300, requests: 5 },
+      timeSeries: [{ date: '2026-09-01', aiuCredits: 9 }],
+      byProject: [{ key: 'org/repo-a', aiuCredits: 4.5 }],
+      byModel: [{ key: 'claude-sonnet-5', aiuCredits: 4.5 }],
+    };
+    let resolveFiltered: (value: UsageResult) => void = () => {};
+    let callCount = 0;
+    window.api.getUsage = vi.fn().mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) {
+        return Promise.resolve(usage);
+      }
+      return new Promise<UsageResult>((resolve) => {
+        resolveFiltered = resolve;
+      });
+    });
+
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await screen.findByText('3.00');
+
+    await user.selectOptions(screen.getByLabelText('Project'), 'org/repo-a');
+    // The filtered request is still pending, so the by-project tab mounts on
+    // the unfiltered response that is still displayed.
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+    expect((await screen.findAllByText('1.50')).length).toBeGreaterThan(0);
+
+    await act(async () => {
+      resolveFiltered(filteredUsage);
+    });
+
+    expect((await screen.findAllByText('4.50')).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('+3.00')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-credit-updated="true"]')).toHaveLength(0);
   });
 });

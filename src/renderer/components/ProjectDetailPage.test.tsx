@@ -220,4 +220,39 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('210')).toBeInTheDocument();
     expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
   });
+
+  it('does not animate a credit delta when a filter change starts a new update context', async () => {
+    window.api.getProjectDetail = vi
+      .fn()
+      .mockResolvedValueOnce(detail)
+      .mockResolvedValueOnce({
+        ...detail,
+        totals: { aiuCredits: 9, tokens: 400, requests: 5 },
+      });
+
+    const { rerender } = render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('3.50')).toBeInTheDocument();
+
+    rerender(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{ model: 'gpt-5.4' }}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('9.00')).toBeInTheDocument();
+    expect(screen.queryByText('+5.50')).not.toBeInTheDocument();
+  });
 });

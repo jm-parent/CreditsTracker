@@ -22,6 +22,12 @@ export function ProjectDetailPage({
   onBack,
 }: ProjectDetailPageProps) {
   const { data, loading, error } = useProjectDetail(project, filters);
+  const updateContextKey = JSON.stringify({
+    project,
+    model: filters.model ?? null,
+    from: filters.from ?? null,
+    to: filters.to ?? null,
+  });
 
   return (
     <div className="project-detail-page flex flex-col gap-6">
@@ -58,9 +64,9 @@ export function ProjectDetailPage({
 
       {data && (
         <>
-          <SummaryCards totals={data.totals} />
-          <TimeSeriesChart data={data.timeSeries} />
-          <ConversationsTable conversations={data.conversations} />
+          <SummaryCards totals={data.totals} updateContextKey={updateContextKey} />
+          <TimeSeriesChart data={data.timeSeries} updateContextKey={updateContextKey} />
+          <ConversationsTable conversations={data.conversations} updateContextKey={updateContextKey} />
         </>
       )}
     </div>

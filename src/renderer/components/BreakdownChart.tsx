@@ -1,7 +1,9 @@
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { MouseHandlerDataParam } from 'recharts/types/synchronisation/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { CreditDropLabel } from './CreditDropLabel';
 import { getColorForKey } from '../lib/colors';
+import { useCreditChanges } from '../hooks/useCreditChanges';
 import type { BreakdownPoint } from '../../shared/types';
 
 interface BreakdownChartProps {
@@ -9,9 +11,25 @@ interface BreakdownChartProps {
   data: BreakdownPoint[];
   onBarClick?: (key: string) => void;
   colorByKey?: boolean;
+  updateContextKey: string;
 }
 
-export function BreakdownChart({ title, data, onBarClick, colorByKey = false }: BreakdownChartProps) {
+const CREDIT_CHART_ANIMATION_DURATION_MS = 1_200;
+
+export function BreakdownChart({
+  title,
+  data,
+  onBarClick,
+  colorByKey = false,
+  updateContextKey,
+}: BreakdownChartProps) {
+  const changes = useCreditChanges(
+    data,
+    data.map(({ key, aiuCredits }) => ({ key, value: aiuCredits })),
+    updateContextKey,
+    CREDIT_CHART_ANIMATION_DURATION_MS,
+  );
+
   function handleChartClick(state: MouseHandlerDataParam): void {
     if (onBarClick && typeof state?.activeLabel === 'string') {
       onBarClick(state.activeLabel);
@@ -29,7 +47,7 @@ export function BreakdownChart({ title, data, onBarClick, colorByKey = false }: 
         ) : (
           <div data-testid="breakdown-chart" style={{ width: '100%', height: 240 }}>
             <ResponsiveContainer>
-              <BarChart data={data} onClick={onBarClick ? handleChartClick : undefined}>
+              <BarChart data={data} onClick={onBarClick ? handleChartClick : undefined} margin={{ top: 28 }}>
                 <XAxis dataKey="key" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip
@@ -42,9 +60,30 @@ export function BreakdownChart({ title, data, onBarClick, colorByKey = false }: 
                   cursor={onBarClick ? 'pointer' : undefined}
                   onClick={onBarClick ? (entry: BreakdownPoint) => onBarClick(entry.key) : undefined}
                 >
-                  {colorByKey &&
-                    data.map((entry) => <Cell key={entry.key} fill={getColorForKey(entry.key)} />)}
+                  {data.map((entry) => (
+                    <Cell key={entry.key} {...(colorByKey ? { fill: getColorForKey(entry.key) } : {})} />
+                  ))}
                 </Bar>
+                {data.map((entry) => {
+                  const change = changes.get(entry.key);
+                  if (!change) return null;
+
+                  return (
+                    <ReferenceDot
+                      key={`${entry.key}-${change.animationKey}`}
+                      x={entry.key}
+                      y={entry.aiuCredits}
+                      r={0}
+                      ifOverflow="visible"
+                      shape={
+                        <CreditDropLabel
+                          change={change}
+                          color={getColorForKey(entry.key)}
+                        />
+                      }
+                    />
+                  );
+                })}
               </BarChart>
             </ResponsiveContainer>
           </div>

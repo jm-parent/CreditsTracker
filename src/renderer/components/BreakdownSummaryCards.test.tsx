@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import { BreakdownSummaryCards } from './BreakdownSummaryCards';
 
 describe('BreakdownSummaryCards', () => {
@@ -12,6 +12,7 @@ describe('BreakdownSummaryCards', () => {
         topLabel="Top project"
         topKey="org/repo-a"
         topCredits={7.25}
+        updateContextKey="all"
       />,
     );
 
@@ -33,9 +34,243 @@ describe('BreakdownSummaryCards', () => {
         topLabel="Top model"
         topKey=""
         topCredits={0}
+        updateContextKey="all"
       />,
     );
 
     expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('shows the total and top-credit deltas independently when values change', () => {
+    const { rerender } = render(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="all"
+      />,
+    );
+
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={6}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={4}
+        updateContextKey="all"
+      />,
+    );
+
+    expect(screen.getByText('+2.00')).toBeInTheDocument();
+    expect(screen.getByText('+1.00')).toBeInTheDocument();
+  });
+
+  it('establishes a fresh baseline for a newly promoted top entry instead of comparing unrelated entities', () => {
+    const { rerender, container } = render(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="all"
+      />,
+    );
+
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={9}
+        topLabel="Top project"
+        topKey="org/repo-b"
+        topCredits={5}
+        updateContextKey="all"
+      />,
+    );
+
+    const topCard = container.querySelectorAll('.summary-card')[2] as HTMLElement;
+    expect(within(topCard).getByText('org/repo-b')).toBeInTheDocument();
+    expect(within(topCard).getByText('5.00')).toBeInTheDocument();
+    expect(within(topCard).queryByText(/^[+−]/)).not.toBeInTheDocument();
+  });
+
+  it('clears the total and top-credit deltas 1,500 ms after they appear', () => {
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(
+        <BreakdownSummaryCards
+          countLabel="Projects"
+          count={2}
+          totalCredits={4}
+          topLabel="Top project"
+          topKey="org/repo-a"
+          topCredits={3}
+          updateContextKey="all"
+        />,
+      );
+
+      rerender(
+        <BreakdownSummaryCards
+          countLabel="Projects"
+          count={2}
+          totalCredits={6}
+          topLabel="Top project"
+          topKey="org/repo-a"
+          topCredits={4}
+          updateContextKey="all"
+        />,
+      );
+
+      expect(screen.getByText('+2.00')).toBeInTheDocument();
+      expect(screen.getByText('+1.00')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1_500);
+      });
+
+      expect(screen.queryByText('+2.00')).not.toBeInTheDocument();
+      expect(screen.queryByText('+1.00')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still animates a later refresh when the first response of a new context repeats the aggregates', () => {
+    const allProjects = [{ key: 'org/repo-a', aiuCredits: 3 }];
+    const workspaceFirst = [{ key: 'org/repo-a', aiuCredits: 3 }];
+    const workspaceSecond = [{ key: 'org/repo-a', aiuCredits: 4 }];
+
+    const { rerender } = render(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="all"
+        dataSnapshot={allProjects}
+      />,
+    );
+
+    // The filter changed but the pending request has not resolved yet, so the
+    // previous context's response is still on screen.
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="workspace"
+        dataSnapshot={allProjects}
+      />,
+    );
+
+    // The first successful response of the new context happens to carry the
+    // same aggregates.
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="workspace"
+        dataSnapshot={workspaceFirst}
+      />,
+    );
+
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={6}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={4}
+        updateContextKey="workspace"
+        dataSnapshot={workspaceSecond}
+      />,
+    );
+
+    expect(screen.getByText('+2.00')).toBeInTheDocument();
+    expect(screen.getByText('+1.00')).toBeInTheDocument();
+  });
+
+  it('keeps aggregate and entity deltas independent when the top entry is named "total"', () => {
+    const first = [{ key: 'total', aiuCredits: 3 }];
+    const second = [{ key: 'total', aiuCredits: 3.5 }];
+
+    const { container, rerender } = render(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="total"
+        topCredits={3}
+        updateContextKey="all"
+        dataSnapshot={first}
+      />,
+    );
+
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={6}
+        topLabel="Top project"
+        topKey="total"
+        topCredits={3.5}
+        updateContextKey="all"
+        dataSnapshot={second}
+      />,
+    );
+
+    const cards = container.querySelectorAll('.summary-card');
+    const totalCard = cards[1] as HTMLElement;
+    const topCard = cards[2] as HTMLElement;
+
+    expect(within(totalCard).getByText('+2.00')).toBeInTheDocument();
+    expect(within(topCard).getByText('+0.50')).toBeInTheDocument();
+  });
+
+  it('clears deltas when the update context key changes', () => {
+    const { rerender } = render(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={4}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={3}
+        updateContextKey="all"
+      />,
+    );
+
+    rerender(
+      <BreakdownSummaryCards
+        countLabel="Projects"
+        count={2}
+        totalCredits={9}
+        topLabel="Top project"
+        topKey="org/repo-a"
+        topCredits={5}
+        updateContextKey="workspace"
+      />,
+    );
+
+    expect(screen.queryByText('+5.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('+2.00')).not.toBeInTheDocument();
   });
 });

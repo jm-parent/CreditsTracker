@@ -22,6 +22,7 @@ describe('DailyConsumptionPage', () => {
         totals={{ aiuCredits: 3, tokens: 120, requests: 1 }}
         timeSeries={[{ date: '2026-09-01', aiuCredits: 3 }]}
         onDayClick={vi.fn()}
+        updateContextKey="all"
       />,
     );
 

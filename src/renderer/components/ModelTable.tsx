@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { CreditValue } from './CreditValue';
+import { useCreditChanges } from '../hooks/useCreditChanges';
 import { getColorForKey } from '../lib/colors';
 import type { BreakdownPoint } from '../../shared/types';
 
 export interface ModelTableProps {
   rows: BreakdownPoint[];
+  updateContextKey: string;
 }
 
 // Three-state cycle instead of a plain boolean toggle: starting in 'default'
@@ -15,6 +18,8 @@ export interface ModelTableProps {
 // to ascending. From then on it behaves as a normal desc/asc toggle.
 type SortDirection = 'default' | 'desc' | 'asc';
 
+const CREDIT_DELTA_DURATION_MS = 1_500;
+
 function nextSortDirection(current: SortDirection): SortDirection {
   if (current === 'asc') {
     return 'desc';
@@ -22,8 +27,14 @@ function nextSortDirection(current: SortDirection): SortDirection {
   return current === 'default' ? 'desc' : 'asc';
 }
 
-export function ModelTable({ rows }: ModelTableProps) {
+export function ModelTable({ rows, updateContextKey }: ModelTableProps) {
   const [sort, setSort] = useState<SortDirection>('default');
+  const changes = useCreditChanges(
+    rows,
+    rows.map((row) => ({ key: row.key, value: row.aiuCredits })),
+    updateContextKey,
+    CREDIT_DELTA_DURATION_MS,
+  );
 
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No models for this selection.</p>;
@@ -67,7 +78,9 @@ export function ModelTable({ rows }: ModelTableProps) {
                     {row.key}
                   </span>
                 </TableCell>
-                <TableCell>{row.aiuCredits.toFixed(2)}</TableCell>
+                <TableCell>
+                  <CreditValue value={row.aiuCredits} change={changes.get(row.key)} />
+                </TableCell>
                 <TableCell>
                   {totalCredits > 0 ? `${((row.aiuCredits / totalCredits) * 100).toFixed(1)}%` : '0.0%'}
                 </TableCell>
