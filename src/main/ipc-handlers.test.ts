@@ -28,6 +28,12 @@ vi.mock('./updater', () => ({
   restartToUpdate: vi.fn(),
 }));
 
+vi.mock('./shortcut', () => ({
+  shouldPromptForDesktopShortcut: vi.fn(() => true),
+  createDesktopShortcut: vi.fn(() => true),
+  dismissDesktopShortcutPrompt: vi.fn(),
+}));
+
 vi.mock('./db', async () => {
   const actual = await vi.importActual<typeof import('./db')>('./db');
   return {
@@ -99,6 +105,22 @@ describe('registerIpcHandlers', () => {
     });
     expect(ipcMain.handle).toHaveBeenCalledWith('check-for-update', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('restart-to-update', expect.any(Function));
+  });
+
+  it('exposes the desktop shortcut prompt channels', async () => {
+    const shortcut = await import('./shortcut');
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+
+    expect(handlers.get('should-prompt-desktop-shortcut')!({})).toBe(true);
+    expect(handlers.get('create-desktop-shortcut')!({})).toBe(true);
+    handlers.get('dismiss-desktop-shortcut-prompt')!({});
+
+    expect(shortcut.shouldPromptForDesktopShortcut).toHaveBeenCalled();
+    expect(shortcut.createDesktopShortcut).toHaveBeenCalled();
+    expect(shortcut.dismissDesktopShortcutPrompt).toHaveBeenCalled();
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {

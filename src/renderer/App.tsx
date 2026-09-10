@@ -16,8 +16,10 @@ import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
 import { HourlyDetailPanel } from './components/HourlyDetailPanel';
 import { UpdateDialog } from './components/UpdateDialog';
+import { DesktopShortcutDialog } from './components/DesktopShortcutDialog';
 import { Skeleton } from './components/ui/skeleton';
 import { logError, logInfo } from './lib/logger';
+import { useDesktopShortcutPrompt } from './hooks/useDesktopShortcutPrompt';
 import type { FilterOptions, UsageFilters } from '../shared/types';
 
 const EMPTY_OPTIONS: FilterOptions = { projects: [], models: [], minDate: null, maxDate: null };
@@ -38,6 +40,7 @@ export function App() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const update = useAppUpdate();
+  const shortcutPrompt = useDesktopShortcutPrompt();
   const [activityMonth, setActivityMonth] = useState<{ year: number; month: number }>(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
@@ -201,6 +204,13 @@ export function App() {
           onDownload={update.download}
           onRestart={update.restart}
           onClose={() => setUpdateDialogOpen(false)}
+        />
+      )}
+      {shortcutPrompt.open && (
+        <DesktopShortcutDialog
+          creating={shortcutPrompt.creating}
+          onCreate={shortcutPrompt.create}
+          onDismiss={shortcutPrompt.dismiss}
         />
       )}
     </div>
