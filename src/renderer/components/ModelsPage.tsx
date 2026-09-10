@@ -27,7 +27,12 @@ export function ModelsPage({ byModel, updateContextKey }: ModelsPageProps) {
         updateContextKey={updateContextKey}
         dataSnapshot={byModel}
       />
-      <BreakdownChart title="Credits by model" data={byModel} updateContextKey={updateContextKey} />
+      <BreakdownChart
+        title="Credits by model"
+        data={byModel}
+        colorByKey
+        updateContextKey={updateContextKey}
+      />
       <ModelTable rows={byModel} updateContextKey={updateContextKey} />
     </div>
   );

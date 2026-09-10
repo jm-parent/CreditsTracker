@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { BreakdownChart } from './BreakdownChart';
+import { getColorForKey } from '../lib/colors';
 
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
@@ -111,7 +112,26 @@ describe('BreakdownChart', () => {
     expect(screen.getByTestId('breakdown-chart')).toBeInTheDocument();
   });
 
-  describe('credit-update highlighting', () => {
+  it('colors each rectangle by its own stable key for a By Model chart when colorByKey is set', () => {
+    const { container } = render(
+      <BreakdownChart
+        title="Credits by model"
+        data={[
+          { key: 'claude-sonnet-5', aiuCredits: 3 },
+          { key: 'gpt-5.4', aiuCredits: 1 },
+        ]}
+        colorByKey
+        updateContextKey="all"
+      />,
+    );
+
+    const rectangles = container.querySelectorAll('.recharts-rectangle');
+    expect(rectangles).toHaveLength(2);
+    expect(rectangles[0]).toHaveAttribute('fill', getColorForKey('claude-sonnet-5'));
+    expect(rectangles[1]).toHaveAttribute('fill', getColorForKey('gpt-5.4'));
+  });
+
+  describe('credit drop labels', () => {
     beforeEach(() => {
       vi.useFakeTimers();
     });
@@ -120,11 +140,11 @@ describe('BreakdownChart', () => {
       vi.useRealTimers();
     });
 
-    function markedCells(container: HTMLElement): Element[] {
-      return Array.from(container.querySelectorAll('[data-credit-updated="true"]'));
+    function dropLabels(container: HTMLElement): Element[] {
+      return Array.from(container.querySelectorAll('[data-credit-drop="true"]'));
     }
 
-    it('does not mark any bar on initial render', () => {
+    it('does not render a credit-drop label on initial render', () => {
       const { container } = render(
         <BreakdownChart
           title="Credits by project"
@@ -132,44 +152,73 @@ describe('BreakdownChart', () => {
             { key: 'org/repo-a', aiuCredits: 3 },
             { key: 'org/repo-b', aiuCredits: 1 },
           ]}
+          colorByKey
           updateContextKey="all"
         />,
       );
 
-      expect(markedCells(container)).toHaveLength(0);
+      expect(dropLabels(container)).toHaveLength(0);
     });
 
-    it('marks only the bar whose keyed value changed when data is rerendered with a new array reference', () => {
+    it('renders a credit-drop label with the keyed color for the project whose credits increased', () => {
       const initial = [
         { key: 'org/repo-a', aiuCredits: 3 },
         { key: 'org/repo-b', aiuCredits: 1 },
       ];
       const { container, rerender } = render(
-        <BreakdownChart title="Credits by project" data={initial} updateContextKey="all" />,
+        <BreakdownChart title="Credits by project" data={initial} colorByKey updateContextKey="all" />,
       );
 
-      expect(markedCells(container)).toHaveLength(0);
+      expect(dropLabels(container)).toHaveLength(0);
 
       const next = [
         { key: 'org/repo-a', aiuCredits: 5 },
         { key: 'org/repo-b', aiuCredits: 1 },
       ];
       act(() => {
-        rerender(<BreakdownChart title="Credits by project" data={next} updateContextKey="all" />);
+        rerender(
+          <BreakdownChart title="Credits by project" data={next} colorByKey updateContextKey="all" />,
+        );
       });
 
-      const marked = markedCells(container);
-      expect(marked).toHaveLength(1);
-      expect(marked[0].getAttribute('class')).toContain('credit-chart-updated');
+      const drop = container.querySelector('[data-credit-drop="true"]');
+      expect(drop).toHaveTextContent('+2.00');
+      expect(drop).toHaveAttribute('fill', getColorForKey('org/repo-a'));
+      expect(container.querySelector('.credit-chart-updated')).toBeNull();
     });
 
-    it('removes the update marker 1,000 ms after it appears', () => {
+    it('renders an orange credit-drop label for a negative correction', () => {
       const initial = [
         { key: 'org/repo-a', aiuCredits: 3 },
         { key: 'org/repo-b', aiuCredits: 1 },
       ];
       const { container, rerender } = render(
-        <BreakdownChart title="Credits by project" data={initial} updateContextKey="all" />,
+        <BreakdownChart title="Credits by project" data={initial} colorByKey updateContextKey="all" />,
+      );
+
+      const next = [
+        { key: 'org/repo-a', aiuCredits: 2 },
+        { key: 'org/repo-b', aiuCredits: 1 },
+      ];
+      act(() => {
+        rerender(
+          <BreakdownChart title="Credits by project" data={next} colorByKey updateContextKey="all" />,
+        );
+      });
+
+      const drop = container.querySelector('[data-credit-drop="true"]');
+      expect(drop).toHaveTextContent('−1.00');
+      expect(drop).toHaveAttribute('fill', '#fb923c');
+      expect(drop).toHaveClass('credit-drop-negative');
+    });
+
+    it('removes the credit-drop label 1,200 ms after it appears', () => {
+      const initial = [
+        { key: 'org/repo-a', aiuCredits: 3 },
+        { key: 'org/repo-b', aiuCredits: 1 },
+      ];
+      const { container, rerender } = render(
+        <BreakdownChart title="Credits by project" data={initial} colorByKey updateContextKey="all" />,
       );
 
       const next = [
@@ -177,25 +226,38 @@ describe('BreakdownChart', () => {
         { key: 'org/repo-b', aiuCredits: 1 },
       ];
       act(() => {
-        rerender(<BreakdownChart title="Credits by project" data={next} updateContextKey="all" />);
+        rerender(
+          <BreakdownChart title="Credits by project" data={next} colorByKey updateContextKey="all" />,
+        );
       });
 
-      expect(markedCells(container)).toHaveLength(1);
+      expect(dropLabels(container)).toHaveLength(1);
 
       act(() => {
-        vi.advanceTimersByTime(1_000);
+        vi.advanceTimersByTime(1_199);
       });
 
-      expect(markedCells(container)).toHaveLength(0);
+      expect(dropLabels(container)).toHaveLength(1);
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+
+      expect(dropLabels(container)).toHaveLength(0);
     });
 
-    it('does not mark any bar when updateContextKey changes even if the values differ', () => {
+    it('does not render a credit-drop label when updateContextKey changes even if the values differ', () => {
       const initial = [
         { key: 'org/repo-a', aiuCredits: 3 },
         { key: 'org/repo-b', aiuCredits: 1 },
       ];
       const { container, rerender } = render(
-        <BreakdownChart title="Credits by project" data={initial} updateContextKey="context-1" />,
+        <BreakdownChart
+          title="Credits by project"
+          data={initial}
+          colorByKey
+          updateContextKey="context-1"
+        />,
       );
 
       const next = [
@@ -204,11 +266,16 @@ describe('BreakdownChart', () => {
       ];
       act(() => {
         rerender(
-          <BreakdownChart title="Credits by project" data={next} updateContextKey="context-2" />,
+          <BreakdownChart
+            title="Credits by project"
+            data={next}
+            colorByKey
+            updateContextKey="context-2"
+          />,
         );
       });
 
-      expect(markedCells(container)).toHaveLength(0);
+      expect(dropLabels(container)).toHaveLength(0);
     });
   });
 });

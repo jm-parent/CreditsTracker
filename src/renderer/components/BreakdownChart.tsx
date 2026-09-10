@@ -1,6 +1,7 @@
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { MouseHandlerDataParam } from 'recharts/types/synchronisation/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { CreditDropLabel } from './CreditDropLabel';
 import { getColorForKey } from '../lib/colors';
 import { useCreditChanges } from '../hooks/useCreditChanges';
 import type { BreakdownPoint } from '../../shared/types';
@@ -13,7 +14,7 @@ interface BreakdownChartProps {
   updateContextKey: string;
 }
 
-const CREDIT_CHART_ANIMATION_DURATION_MS = 1_000;
+const CREDIT_CHART_ANIMATION_DURATION_MS = 1_200;
 
 export function BreakdownChart({
   title,
@@ -46,7 +47,7 @@ export function BreakdownChart({
         ) : (
           <div data-testid="breakdown-chart" style={{ width: '100%', height: 240 }}>
             <ResponsiveContainer>
-              <BarChart data={data} onClick={onBarClick ? handleChartClick : undefined}>
+              <BarChart data={data} onClick={onBarClick ? handleChartClick : undefined} margin={{ top: 28 }}>
                 <XAxis dataKey="key" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip
@@ -59,18 +60,24 @@ export function BreakdownChart({
                   cursor={onBarClick ? 'pointer' : undefined}
                   onClick={onBarClick ? (entry: BreakdownPoint) => onBarClick(entry.key) : undefined}
                 >
-                  {data.map((entry) => {
-                    const isUpdated = changes.has(entry.key);
-                    return (
-                      <Cell
-                        key={entry.key}
-                        {...(colorByKey ? { fill: getColorForKey(entry.key) } : {})}
-                        {...(isUpdated
-                          ? { className: 'credit-chart-updated', 'data-credit-updated': 'true' }
-                          : {})}
-                      />
-                    );
-                  })}
+                  {data.map((entry) => (
+                    <Cell key={entry.key} {...(colorByKey ? { fill: getColorForKey(entry.key) } : {})} />
+                  ))}
+                  <LabelList
+                    dataKey="aiuCredits"
+                    content={(labelProps) => {
+                      const index = Number(labelProps.index);
+                      const entry = data[index];
+                      if (!entry) return null;
+                      return (
+                        <CreditDropLabel
+                          {...labelProps}
+                          change={changes.get(entry.key)}
+                          color={getColorForKey(entry.key)}
+                        />
+                      );
+                    }}
+                  />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
