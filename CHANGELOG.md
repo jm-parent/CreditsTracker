@@ -1,3 +1,26 @@
+# [1.7.0](https://github.com/jm-parent/CreditsTracker/compare/v1.6.0...v1.7.0) (2026-09-10)
+
+
+### Bug Fixes
+
+* correct credit update indicator tracking edge cases ([83e7ce7](https://github.com/jm-parent/CreditsTracker/commit/83e7ce7da44eba7ff737d4122c113ee0b2d868f6))
+* improve chart credit drop visibility ([20e84c3](https://github.com/jm-parent/CreditsTracker/commit/20e84c34299cf0d0252a3c2a37b2f4177acb86a1))
+* keep chart credit drops aligned ([02dc3f0](https://github.com/jm-parent/CreditsTracker/commit/02dc3f034fefa61a1a4ef73353974eaa6dd3b7ff))
+* keep credit deltas visible beside values ([76376ad](https://github.com/jm-parent/CreditsTracker/commit/76376ad6cc3f355cf2316070125e96c9680b60eb))
+* stabilize BreakdownSummaryCards credit-delta snapshot and add context-reset coverage ([dd5479c](https://github.com/jm-parent/CreditsTracker/commit/dd5479c5feb811fc2d3dfe83d92e3d28c084ef6e))
+
+
+### Features
+
+* add falling chart credit labels ([dc43d23](https://github.com/jm-parent/CreditsTracker/commit/dc43d231754d94e85f964e904535be4ece7058f6))
+* animate daily stacked credit additions ([d682bae](https://github.com/jm-parent/CreditsTracker/commit/d682baec4282554d3c98fb1d91004136d50c279b))
+* animate project and model credit additions ([e187e68](https://github.com/jm-parent/CreditsTracker/commit/e187e68a48a0a3011b001420a350f4e50237676f))
+* display transient credit deltas ([43fbd71](https://github.com/jm-parent/CreditsTracker/commit/43fbd716a58efe7d72f0bb20d5a00c5e9096e272))
+* highlight updated chart bars ([27e49a5](https://github.com/jm-parent/CreditsTracker/commit/27e49a578ea4b197480e00e9d8c389c29f8b4fb8))
+* highlight updated heatmap days ([e7b070a](https://github.com/jm-parent/CreditsTracker/commit/e7b070a2478dcf334360c9840dfc156df9f10cfb))
+* show credit deltas across dashboard values ([c6e9223](https://github.com/jm-parent/CreditsTracker/commit/c6e9223b512bb77a65181b5fc2eee9bfdebc375f))
+* track transient credit changes ([7b2ac9f](https://github.com/jm-parent/CreditsTracker/commit/7b2ac9f4cbb68cf740ad646fd9fb81085759898c))
+
 # [1.6.0](https://github.com/jm-parent/CreditsTracker/compare/v1.5.0...v1.6.0) (2026-09-10)
 
 
