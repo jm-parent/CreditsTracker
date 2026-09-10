@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUsageData } from './hooks/useUsageData';
 import { useHourlyDetail } from './hooks/useHourlyDetail';
 import { useMonthlyActivity } from './hooks/useMonthlyActivity';
+import { useAppUpdate } from './hooks/useAppUpdate';
 import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
 import { Sidebar, type DashboardTab } from './components/Sidebar';
@@ -14,6 +15,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
 import { HourlyDetailPanel } from './components/HourlyDetailPanel';
+import { UpdateDialog } from './components/UpdateDialog';
 import { Skeleton } from './components/ui/skeleton';
 import { logError, logInfo } from './lib/logger';
 import type { FilterOptions, UsageFilters } from '../shared/types';
@@ -34,6 +36,8 @@ export function App() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('daily');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const update = useAppUpdate();
   const [activityMonth, setActivityMonth] = useState<{ year: number; month: number }>(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
@@ -82,7 +86,13 @@ export function App() {
   const dataUnavailable = Boolean(optionsError || error) && !data;
   return (
     <div className="app flex h-screen bg-background">
-      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} appVersion={appVersion} />
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        appVersion={appVersion}
+        updateState={update.state}
+        onUpdateClick={() => setUpdateDialogOpen(true)}
+      />
       <div className="flex-1 overflow-y-auto px-6 py-8">
         {!selectedProject && activeTab !== 'logs' && (
           <div className="mb-6 flex items-center justify-between">
@@ -168,6 +178,14 @@ export function App() {
           loading={hourlyDetail.loading}
           error={hourlyDetail.error}
           onClose={() => setSelectedDate(null)}
+        />
+      )}
+      {updateDialogOpen && update.state && (
+        <UpdateDialog
+          state={update.state}
+          onDownload={update.download}
+          onRestart={update.restart}
+          onClose={() => setUpdateDialogOpen(false)}
         />
       )}
     </div>

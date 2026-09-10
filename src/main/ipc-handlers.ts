@@ -12,6 +12,7 @@ import {
   getMonthlyActivity,
 } from './db';
 import { loadVscodeUsage } from './vscode-chat-store';
+import { checkForUpdate, downloadUpdate, getUpdateState, restartToUpdate } from './updater';
 import {
   clearLogs,
   getLogEntries,
@@ -187,6 +188,14 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
   });
 
   handle('get-app-version', () => app.getVersion());
+
+  handle('get-update-state', () => getUpdateState());
+
+  handle('check-for-update', () => checkForUpdate());
+
+  handle('download-update', () => downloadUpdate());
+
+  handle('restart-to-update', () => restartToUpdate());
 
   handle('get-logs', () => snapshot());
 

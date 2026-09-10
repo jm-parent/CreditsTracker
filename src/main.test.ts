@@ -2,7 +2,7 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, BrowserWindow } from 'electron';
 import { spawn } from 'node:child_process';
-import { updateElectronApp } from 'update-electron-app';
+import { startUpdateChecks } from './main/updater';
 
 const mockedWhenReadyThen = vi.hoisted(() => vi.fn());
 const mockedSpawn = vi.hoisted(() => vi.fn(() => ({ unref: vi.fn() })));
@@ -23,12 +23,12 @@ vi.mock('node:child_process', () => ({
   spawn: mockedSpawn,
 }));
 
-vi.mock('update-electron-app', () => ({
-  updateElectronApp: vi.fn(),
-}));
-
 vi.mock('./main/ipc-handlers', () => ({
   registerIpcHandlers: vi.fn(),
+}));
+
+vi.mock('./main/updater', () => ({
+  startUpdateChecks: vi.fn(),
 }));
 
 vi.mock('./main/db', () => ({
@@ -79,7 +79,7 @@ describe('main process startup', () => {
     expect(mockedSpawn.mock.calls[0]?.[0]).toBe(expectedUpdateExePath);
     expect(mockedSpawn.mock.calls[0]?.[1]).toEqual(expectedShortcutArgs);
     expect(app.quit).toHaveBeenCalledTimes(1);
-    expect(updateElectronApp).not.toHaveBeenCalled();
+    expect(startUpdateChecks).not.toHaveBeenCalled();
     expect(app.whenReady).not.toHaveBeenCalled();
     expect(app.on).not.toHaveBeenCalled();
     expect(BrowserWindow).not.toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('main process startup', () => {
     expect(mockedSpawn.mock.calls[0]?.[0]).toBe(expectedUpdateExePath);
     expect(mockedSpawn.mock.calls[0]?.[1]).toEqual(expectedShortcutArgs);
     expect(app.quit).toHaveBeenCalledTimes(1);
-    expect(updateElectronApp).not.toHaveBeenCalled();
+    expect(startUpdateChecks).not.toHaveBeenCalled();
     expect(app.whenReady).not.toHaveBeenCalled();
     expect(app.on).not.toHaveBeenCalled();
     expect(BrowserWindow).not.toHaveBeenCalled();
@@ -103,7 +103,6 @@ describe('main process startup', () => {
 
     expect(spawn).not.toHaveBeenCalled();
     expect(app.quit).not.toHaveBeenCalled();
-    expect(updateElectronApp).toHaveBeenCalledWith({ repo: 'jm-parent/CreditsTracker' });
     expect(app.whenReady).toHaveBeenCalledTimes(1);
     expect(app.on).toHaveBeenCalledWith('window-all-closed', expect.any(Function));
   });
@@ -113,7 +112,6 @@ describe('main process startup', () => {
 
     expect(spawn).not.toHaveBeenCalled();
     expect(app.quit).not.toHaveBeenCalled();
-    expect(updateElectronApp).toHaveBeenCalledWith({ repo: 'jm-parent/CreditsTracker' });
     expect(app.whenReady).toHaveBeenCalledTimes(1);
     expect(app.on).toHaveBeenCalledWith('window-all-closed', expect.any(Function));
   });

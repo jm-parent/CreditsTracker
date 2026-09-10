@@ -9,6 +9,7 @@ import type {
   RawTablePage,
   RendererLogInput,
   TimeSeriesPoint,
+  UpdateState,
   UsageFilters,
   UsageResult,
 } from '../shared/types';
@@ -23,6 +24,11 @@ declare global {
       getHourlyDetail: (params: HourlyDetailParams) => Promise<HourlyPoint[]>;
       getMonthlyActivity: (params: MonthlyActivityParams) => Promise<TimeSeriesPoint[]>;
       getAppVersion: () => Promise<string>;
+      getUpdateState: () => Promise<UpdateState>;
+      checkForUpdate: () => Promise<UpdateState>;
+      downloadUpdate: () => Promise<UpdateState>;
+      restartToUpdate: () => Promise<void>;
+      onUpdateStateChange: (listener: (state: UpdateState) => void) => () => void;
       getLogs: () => Promise<LogsSnapshot>;
       clearLogs: () => Promise<LogsSnapshot>;
       openLogFile: () => Promise<string | null>;

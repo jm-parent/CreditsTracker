@@ -9,6 +9,7 @@ import type {
   RawTablePage,
   RendererLogInput,
   TimeSeriesPoint,
+  UpdateState,
   UsageFilters,
 } from './shared/types';
 
@@ -41,6 +42,19 @@ contextBridge.exposeInMainWorld('api', {
   getMonthlyActivity: (params: MonthlyActivityParams): Promise<TimeSeriesPoint[]> =>
     ipcRenderer.invoke('get-monthly-activity', params),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
+  getUpdateState: (): Promise<UpdateState> => ipcRenderer.invoke('get-update-state'),
+  checkForUpdate: (): Promise<UpdateState> => ipcRenderer.invoke('check-for-update'),
+  downloadUpdate: (): Promise<UpdateState> => ipcRenderer.invoke('download-update'),
+  restartToUpdate: (): Promise<void> => ipcRenderer.invoke('restart-to-update'),
+  // Returns an unsubscribe function so React effects can detach the listener
+  // on unmount instead of leaking one per mount.
+  onUpdateStateChange: (listener: (state: UpdateState) => void): (() => void) => {
+    const handler = (_event: unknown, state: UpdateState) => listener(state);
+    ipcRenderer.on('update-state-changed', handler);
+    return () => {
+      ipcRenderer.removeListener('update-state-changed', handler);
+    };
+  },
   getLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('get-logs'),
   clearLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('clear-logs'),
   openLogFile: (): Promise<string | null> => ipcRenderer.invoke('open-log-file'),

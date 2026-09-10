@@ -43,9 +43,9 @@ const config: ForgeConfig = {
   makers: [
     new MakerZIP({}, ['win32', 'darwin', 'linux']),
     // Squirrel.Windows installer (Setup.exe + .nupkg + RELEASES) is what
-    // Electron's built-in autoUpdater (driven by update-electron-app, see
-    // src/main.ts) expects to find attached to a GitHub Release in order to
-    // silently check for and install updates on Windows.
+    // Electron's built-in autoUpdater (driven by src/main/updater.ts) expects
+    // to find attached to a GitHub Release in order to check for and install
+    // updates on Windows.
     new MakerSquirrel({
       authors: 'jm-parent',
       setupIcon: './assets/icon.ico',
