@@ -26,7 +26,7 @@ export function ModelsPage({ byModel, updateContextKey }: ModelsPageProps) {
         topCredits={topModel?.aiuCredits ?? 0}
         updateContextKey={updateContextKey}
       />
-      <BreakdownChart title="Credits by model" data={byModel} />
+      <BreakdownChart title="Credits by model" data={byModel} updateContextKey={updateContextKey} />
       <ModelTable rows={byModel} updateContextKey={updateContextKey} />
     </div>
   );

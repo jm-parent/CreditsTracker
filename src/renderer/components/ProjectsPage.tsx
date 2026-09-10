@@ -32,6 +32,7 @@ export function ProjectsPage({ byProject, onProjectClick, updateContextKey }: Pr
         data={byProject}
         onBarClick={onProjectClick}
         colorByKey
+        updateContextKey={updateContextKey}
       />
       <SessionsTable rows={byProject} updateContextKey={updateContextKey} />
     </div>

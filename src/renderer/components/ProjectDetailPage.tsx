@@ -65,7 +65,7 @@ export function ProjectDetailPage({
       {data && (
         <>
           <SummaryCards totals={data.totals} updateContextKey={updateContextKey} />
-          <TimeSeriesChart data={data.timeSeries} />
+          <TimeSeriesChart data={data.timeSeries} updateContextKey={updateContextKey} />
           <ConversationsTable conversations={data.conversations} updateContextKey={updateContextKey} />
         </>
       )}

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { TimeSeriesChart } from './TimeSeriesChart';
 
 vi.mock('recharts', async () => {
@@ -12,12 +12,19 @@ vi.mock('recharts', async () => {
         {children}
       </actual.ResponsiveContainer>
     ),
+    // jsdom does not implement SVGPathElement.getTotalLength, which Recharts'
+    // default bar entrance animation relies on, so animated bars never mount
+    // a <path> in tests. Disabling animation here only affects the test
+    // environment; production continues to use Recharts' default animation.
+    Bar: (props: React.ComponentProps<typeof actual.Bar>) => (
+      <actual.Bar isAnimationActive={false} {...props} />
+    ),
   };
 });
 
 describe('TimeSeriesChart', () => {
   it('renders a chart title and an empty state when there is no data', () => {
-    render(<TimeSeriesChart data={[]} />);
+    render(<TimeSeriesChart data={[]} updateContextKey="all" />);
 
     expect(screen.getByText('Credits over time')).toBeInTheDocument();
     expect(screen.getByText('No data for this selection.')).toBeInTheDocument();
@@ -30,6 +37,7 @@ describe('TimeSeriesChart', () => {
           { date: '2026-09-01', aiuCredits: 1 },
           { date: '2026-09-02', aiuCredits: 2 },
         ]}
+        updateContextKey="all"
       />,
     );
 
@@ -53,6 +61,7 @@ describe('TimeSeriesChart', () => {
             byProject: { 'org/repo-a': 2 },
           },
         ]}
+        updateContextKey="all"
       />,
     );
 
@@ -68,6 +77,7 @@ describe('TimeSeriesChart', () => {
           { date: '2026-09-02', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
         ]}
         onDayClick={onDayClick}
+        updateContextKey="all"
       />,
     );
 
@@ -88,6 +98,7 @@ describe('TimeSeriesChart', () => {
           { date: '2026-09-02', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
         ]}
         onDayClick={onDayClick}
+        updateContextKey="all"
       />,
     );
 
@@ -113,7 +124,9 @@ describe('TimeSeriesChart', () => {
       { date: '2026-09-02', aiuCredits: 5, byProject: { 'org/repo-b': 5 } },
       { date: '2026-09-03', aiuCredits: 1, byProject: { 'org/repo-c': 1 } },
     ];
-    const { container } = render(<TimeSeriesChart data={data} onDayClick={onDayClick} />);
+    const { container } = render(
+      <TimeSeriesChart data={data} onDayClick={onDayClick} updateContextKey="all" />,
+    );
 
     const backgrounds = Array.from(
       container.querySelectorAll('.recharts-bar-background-rectangle'),
@@ -130,9 +143,139 @@ describe('TimeSeriesChart', () => {
 
   it('does not attach a click handler when onDayClick is omitted', () => {
     render(
-      <TimeSeriesChart data={[{ date: '2026-09-01', aiuCredits: 1 }]} />,
+      <TimeSeriesChart data={[{ date: '2026-09-01', aiuCredits: 1 }]} updateContextKey="all" />,
     );
 
     expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
+  });
+
+  describe('credit-update highlighting', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function markedCells(container: HTMLElement): Element[] {
+      // Recharts' stacked Bar reuses each data entry's props to build both the
+      // visible segment and its invisible full-column background click
+      // target (via `background={{ fill: 'transparent' }}`), so our
+      // `data-credit-updated` attribute unavoidably leaks onto that
+      // background rectangle too. It never gets the `credit-chart-updated`
+      // class though (Recharts always overrides className on the background
+      // rect), so it stays transparent and never animates. Requiring both
+      // the attribute and the class scopes this query to the actually
+      // highlighted segment.
+      return Array.from(
+        container.querySelectorAll('.credit-chart-updated[data-credit-updated="true"]'),
+      );
+    }
+
+    it('does not mark any bar on initial render', () => {
+      const { container } = render(
+        <TimeSeriesChart
+          data={[
+            {
+              date: '2026-09-01',
+              aiuCredits: 3,
+              byProject: { 'org/repo-a': 1, 'org/repo-b': 2 },
+            },
+          ]}
+          updateContextKey="all"
+        />,
+      );
+
+      expect(markedCells(container)).toHaveLength(0);
+    });
+
+    it('marks only the segment whose project contribution changed on a given date', () => {
+      const initial = [
+        {
+          date: '2026-09-01',
+          aiuCredits: 3,
+          byProject: { 'org/repo-a': 1, 'org/repo-b': 2 },
+        },
+      ];
+      const { container, rerender } = render(
+        <TimeSeriesChart data={initial} updateContextKey="all" />,
+      );
+
+      expect(markedCells(container)).toHaveLength(0);
+
+      const next = [
+        {
+          date: '2026-09-01',
+          aiuCredits: 4,
+          byProject: { 'org/repo-a': 2, 'org/repo-b': 2 },
+        },
+      ];
+      act(() => {
+        rerender(<TimeSeriesChart data={next} updateContextKey="all" />);
+      });
+
+      const marked = markedCells(container);
+      expect(marked).toHaveLength(1);
+      expect(marked[0].getAttribute('class')).toContain('credit-chart-updated');
+    });
+
+    it('removes all update markers 1,000 ms after they appear', () => {
+      const initial = [
+        {
+          date: '2026-09-01',
+          aiuCredits: 3,
+          byProject: { 'org/repo-a': 1, 'org/repo-b': 2 },
+        },
+      ];
+      const { container, rerender } = render(
+        <TimeSeriesChart data={initial} updateContextKey="all" />,
+      );
+
+      const next = [
+        {
+          date: '2026-09-01',
+          aiuCredits: 4,
+          byProject: { 'org/repo-a': 2, 'org/repo-b': 2 },
+        },
+      ];
+      act(() => {
+        rerender(<TimeSeriesChart data={next} updateContextKey="all" />);
+      });
+
+      expect(markedCells(container)).toHaveLength(1);
+
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+
+      expect(markedCells(container)).toHaveLength(0);
+    });
+
+    it('does not mark any segment when updateContextKey changes even if the values differ', () => {
+      const initial = [
+        {
+          date: '2026-09-01',
+          aiuCredits: 3,
+          byProject: { 'org/repo-a': 1, 'org/repo-b': 2 },
+        },
+      ];
+      const { container, rerender } = render(
+        <TimeSeriesChart data={initial} updateContextKey="context-1" />,
+      );
+
+      const next = [
+        {
+          date: '2026-09-01',
+          aiuCredits: 9,
+          byProject: { 'org/repo-a': 7, 'org/repo-b': 2 },
+        },
+      ];
+      act(() => {
+        rerender(<TimeSeriesChart data={next} updateContextKey="context-2" />);
+      });
+
+      expect(markedCells(container)).toHaveLength(0);
+    });
   });
 });

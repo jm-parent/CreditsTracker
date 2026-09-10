@@ -13,7 +13,7 @@ export function DailyConsumptionPage({ totals, timeSeries, onDayClick, updateCon
   return (
     <div className="daily-consumption-page flex flex-col gap-6">
       <SummaryCards totals={totals} updateContextKey={updateContextKey} />
-      <TimeSeriesChart data={timeSeries} onDayClick={onDayClick} />
+      <TimeSeriesChart data={timeSeries} onDayClick={onDayClick} updateContextKey={updateContextKey} />
     </div>
   );
 }

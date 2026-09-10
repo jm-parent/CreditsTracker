@@ -69,9 +69,49 @@ body {
   color: #fb923c;
 }
 
+@keyframes credit-chart-highlight {
+  0% {
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+
+  25%,
+  70% {
+    filter: brightness(1.3) drop-shadow(0 0 6px #4ade80);
+  }
+
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+}
+
+@keyframes credit-chart-highlight-reduced {
+  0% {
+    opacity: 1;
+  }
+
+  25%,
+  70% {
+    opacity: 0.55;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.credit-chart-updated {
+  animation: credit-chart-highlight 1000ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .credit-delta {
     animation-name: credit-delta-in-out-reduced;
+  }
+
+  .credit-chart-updated {
+    /* No filter/geometry animation under reduced motion — a brief opacity
+       dip is enough emphasis without a moving glow. */
+    animation-name: credit-chart-highlight-reduced;
   }
 }
 

@@ -1,6 +1,7 @@
 import {
   Bar,
   BarChart,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -10,11 +11,22 @@ import type { TooltipContentProps } from 'recharts/types/component/Tooltip';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { getColorForKey } from '../lib/colors';
+import { useCreditChanges } from '../hooks/useCreditChanges';
 import type { TimeSeriesPoint } from '../../shared/types';
 
 interface TimeSeriesChartProps {
   data: TimeSeriesPoint[];
   onDayClick?: (date: string) => void;
+  updateContextKey: string;
+}
+
+const CREDIT_CHART_ANIMATION_DURATION_MS = 1_000;
+
+// Segment keys combine the date and project with a NUL separator so a
+// project name that happens to contain other punctuation can't collide with
+// the date portion of another point's key.
+function projectSegmentKey(date: string, projectKey: string): string {
+  return `${date}\u0000${projectKey}`;
 }
 
 function StackedTooltip({ active, payload, label }: TooltipContentProps<ValueType, NameType>) {
@@ -46,12 +58,28 @@ function StackedTooltip({ active, payload, label }: TooltipContentProps<ValueTyp
   );
 }
 
-export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
+export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeriesChartProps) {
   // Collect every project key seen across the whole range so each gets a
   // stable stacked-bar series, even on days it had no activity.
   const projectKeys = Array.from(
     new Set(data.flatMap((point) => Object.keys(point.byProject ?? {}))),
   ).sort();
+
+  const changeValues =
+    projectKeys.length > 0
+      ? data.flatMap((point) =>
+          projectKeys.map((projectKey) => ({
+            key: projectSegmentKey(point.date, projectKey),
+            value: point.byProject?.[projectKey] ?? 0,
+          })),
+        )
+      : data.map((point) => ({ key: point.date, value: point.aiuCredits }));
+  const changes = useCreditChanges(
+    data,
+    changeValues,
+    updateContextKey,
+    CREDIT_CHART_ANIMATION_DURATION_MS,
+  );
 
   const handleBarClick = onDayClick
     ? (entry: TimeSeriesPoint) => onDayClick(entry.date)
@@ -93,7 +121,20 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
                       // series contributed 0 — only whichever series is
                       // non-zero that day ends up producing it.
                       background={{ fill: 'transparent' }}
-                    />
+                    >
+                      {data.map((point) => {
+                        const segmentKey = projectSegmentKey(point.date, key);
+                        const isUpdated = changes.has(segmentKey);
+                        return (
+                          <Cell
+                            key={segmentKey}
+                            {...(isUpdated
+                              ? { className: 'credit-chart-updated', 'data-credit-updated': 'true' }
+                              : {})}
+                          />
+                        );
+                      })}
+                    </Bar>
                   ))
                 ) : (
                   <Bar
@@ -102,7 +143,19 @@ export function TimeSeriesChart({ data, onDayClick }: TimeSeriesChartProps) {
                     cursor={onDayClick ? 'pointer' : undefined}
                     onClick={handleBarClick}
                     background={{ fill: 'transparent' }}
-                  />
+                  >
+                    {data.map((point) => {
+                      const isUpdated = changes.has(point.date);
+                      return (
+                        <Cell
+                          key={point.date}
+                          {...(isUpdated
+                            ? { className: 'credit-chart-updated', 'data-credit-updated': 'true' }
+                            : {})}
+                        />
+                      );
+                    })}
+                  </Bar>
                 )}
               </BarChart>
             </ResponsiveContainer>
