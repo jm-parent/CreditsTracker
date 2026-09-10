@@ -176,7 +176,7 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
                               <CreditDropLabel
                                 change={change}
                                 color={getColorForKey(key)}
-                                offsetX={(projectIndex - (projectKeys.length - 1) / 2) * 6}
+                                offsetX={(projectIndex - (projectKeys.length - 1) / 2) * 3}
                               />
                             }
                           />

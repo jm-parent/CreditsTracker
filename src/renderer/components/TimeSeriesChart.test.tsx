@@ -229,8 +229,8 @@ describe('TimeSeriesChart', () => {
       expect(colors).toContain(getColorForKey('org/repo-a'));
       expect(colors).toContain(getColorForKey('org/repo-b'));
 
-      const xPositions = drops.map((drop) => drop.getAttribute('x'));
-      expect(new Set(xPositions).size).toBe(2);
+      const xPositions = drops.map((drop) => Number(drop.getAttribute('x')));
+      expect(Math.abs(xPositions[1] - xPositions[0])).toBe(3);
 
       expect(container.querySelector('.credit-chart-updated')).toBeNull();
     });

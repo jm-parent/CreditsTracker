@@ -111,7 +111,7 @@ body {
 }
 
 .credit-drop {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   paint-order: stroke;
   stroke: var(--color-card);

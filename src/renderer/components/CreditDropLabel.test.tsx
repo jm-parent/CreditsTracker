@@ -1,6 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { CreditDropLabel } from './CreditDropLabel';
+
+const rendererStyles = readFileSync(resolve('src', 'renderer', 'index.css'), 'utf8');
 
 describe('CreditDropLabel', () => {
   it('renders a positive delta label with the expected geometry and accessibility attrs', () => {
@@ -46,6 +50,23 @@ describe('CreditDropLabel', () => {
     expect(renderedNegative).toHaveTextContent('−1.50');
     expect(renderedNegative).toHaveAttribute('fill', '#fb923c');
     expect(renderedNegative).toHaveClass('credit-drop-negative');
+  });
+
+  it('uses the approved 14 px chart-drop typography', () => {
+    const { container } = render(
+      <svg>
+        <CreditDropLabel
+          x={20}
+          y={40}
+          width={30}
+          change={{ delta: 2.5, animationKey: 4 }}
+          color="#f97316"
+        />
+      </svg>,
+    );
+
+    expect(container.querySelector('[data-credit-drop="true"]')).not.toBeNull();
+    expect(rendererStyles).toMatch(/\.credit-drop\s*\{[^}]*font-size:\s*14px;/);
   });
 
   it('returns null when no change is available', () => {
