@@ -29,6 +29,9 @@ declare global {
       downloadUpdate: () => Promise<UpdateState>;
       restartToUpdate: () => Promise<void>;
       onUpdateStateChange: (listener: (state: UpdateState) => void) => () => void;
+      shouldPromptDesktopShortcut: () => Promise<boolean>;
+      createDesktopShortcut: () => Promise<boolean>;
+      dismissDesktopShortcutPrompt: () => Promise<void>;
       getLogs: () => Promise<LogsSnapshot>;
       clearLogs: () => Promise<LogsSnapshot>;
       openLogFile: () => Promise<string | null>;
