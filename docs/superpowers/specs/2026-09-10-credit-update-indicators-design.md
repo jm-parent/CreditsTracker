@@ -1,0 +1,145 @@
+# Credit Update Indicators
+
+**Status:** Approved
+**Date:** 2026-09-10
+
+## Context
+
+The dashboard refreshes usage data every five seconds, but updated values replace
+their predecessors without any visual feedback. Users can therefore miss new
+usage, especially in dense tables and charts.
+
+## Goal
+
+Add visible but unobtrusive feedback that identifies both where credit data
+changed and, for numeric values, by how much.
+
+This is a renderer-only comfort improvement. It must not change persistence,
+IPC, polling frequency, filtering, sorting, or the shared data format.
+
+## Interaction Design
+
+### Numeric credit values
+
+- Replace a displayed credit value immediately when fresh data arrives.
+- When the value differs from the previous successful refresh, show a compact
+  delta beside it.
+- A positive delta uses a soft green treatment and a leading plus sign, such as
+  `+12.40`.
+- A negative correction uses a soft orange treatment and a minus sign. Red is
+  avoided because a corrected value is not necessarily an application error.
+- The delta fades in with a slight upward movement, remains readable briefly,
+  and fades out 1.5 seconds after the change.
+- Reserve or overlay the delta space so its appearance does not shift nearby
+  content.
+- Apply the behavior to visible AIU credit amounts in summary cards and table
+  cells. Non-credit counts, token values, and request values are out of scope.
+
+### Charts
+
+- Compare chart points by stable semantic key: date for time-series and heatmap
+  data, and project or model key for breakdown data.
+- A changed bar receives a soft cyan/green glow and a small brightness increase
+  for one second.
+- A changed monthly heatmap cell receives the same targeted glow.
+- Preserve Recharts' normal bar-size transition so the new magnitude remains
+  understandable.
+- Do not flash the complete chart or display a global update notification.
+
+### Baselines and resets
+
+The first successful result establishes a baseline and does not animate.
+Changing a filter, page, selected project, date range, model, or displayed
+month also establishes a new baseline. These user-driven context changes must
+not be presented as incoming data.
+
+Only a later successful refresh in the same context can produce indicators.
+If a refresh fails, the last known data remains visible and no update animation
+runs.
+
+When another change arrives while an indicator is active, replace the displayed
+delta with the newest difference and restart the effect.
+
+## Architecture
+
+### Change tracking
+
+Introduce a small renderer hook that:
+
+1. Accepts a current numeric value, a stable identity, and a reset identity
+   representing the active data context.
+2. Stores the previous successfully rendered value for that identity.
+3. Returns the current delta and an animation instance identifier when the
+   value changes.
+4. Clears transient indicator state after the configured display duration.
+5. Resets without emitting a delta when the data context changes.
+
+The hook owns comparison and timing only. It does not fetch data and does not
+alter `useUsageData`.
+
+### Numeric presentation
+
+Add a focused credit-value component that renders the formatted current value
+and, when supplied by the change tracker, the transient delta. Summary cards
+and credit table cells reuse this component so formatting, timing, and
+accessibility behavior remain consistent.
+
+Rows must be tracked by their project or model key rather than their current
+array position. This preserves the correct association when credit-based
+sorting moves a row after an update.
+
+### Chart presentation
+
+Add a keyed comparison helper for chart datasets. Each chart derives the set
+of changed keys from its previous data in the same context and passes a
+transient changed state to the relevant custom Recharts shape or heatmap cell.
+The chart keeps responsibility for rendering its own geometry; the comparison
+helper remains independent of Recharts.
+
+No database, Electron main-process, preload, IPC, or shared-type changes are
+required.
+
+## Accessibility
+
+- Respect `prefers-reduced-motion: reduce`. In reduced-motion mode, remove
+  translation and resizing flourishes and use only a brief color emphasis.
+- Treat transient deltas and glows as supplementary visual feedback. Hide them
+  from accessibility APIs so screen readers are not interrupted every five
+  seconds.
+- Keep the final numeric value available as normal text and preserve existing
+  labels, roles, keyboard behavior, and chart interactions.
+- Do not rely on color alone for numeric changes: the explicit `+` or minus
+  sign communicates direction.
+
+## Error Handling
+
+- Do not create indicators for failed refreshes.
+- Do not discard the previous successful baseline on a transient error.
+- Cancel pending timers when a component unmounts or its context resets.
+- Handle added or removed chart keys without treating the first appearance in
+  a newly selected context as a change.
+
+## Testing
+
+Add focused tests for:
+
+- no delta or glow on initial render;
+- positive and negative numeric deltas;
+- indicator removal after its duration;
+- replacement and restart on successive updates;
+- reset without animation after a context or filter change;
+- stable row association when sorting changes row order;
+- changed-key detection for time-series, breakdown, and heatmap data;
+- no indicator after a refresh error;
+- reduced-motion styling.
+
+Existing component and application tests must continue to pass unchanged unless
+a test needs an additional assertion for the new visual feedback.
+
+## Out of Scope
+
+- A global "Data updated" toast or badge.
+- Persisting update history.
+- Changing the five-second polling interval.
+- Animating tokens, request counts, logs, or raw data.
+- Audio, desktop notifications, or attention-grabbing full-card flashes.
