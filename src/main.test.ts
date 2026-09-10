@@ -1,11 +1,11 @@
 import path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, BrowserWindow } from 'electron';
 import { spawn } from 'node:child_process';
 import { startUpdateChecks } from './main/updater';
 
 const mockedWhenReadyThen = vi.hoisted(() => vi.fn());
-const mockedSpawn = vi.hoisted(() => vi.fn(() => ({ unref: vi.fn() })));
+const mockedSpawn = vi.hoisted(() => vi.fn(() => ({ unref: vi.fn(), on: vi.fn() })));
 
 vi.mock('electron', () => ({
   app: {
@@ -45,12 +45,7 @@ describe('main process startup', () => {
   const originalExecPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
   const installedExePath = 'C:\\Users\\jm-parent\\AppData\\Local\\CreditsTracker\\app-1.4.1\\CreditsTracker.exe';
   const expectedUpdateExePath = path.win32.resolve(path.win32.dirname(installedExePath), '..', 'Update.exe');
-  const expectedShortcutArgs = [
-    '--createShortcut',
-    'CreditsTracker.exe',
-    '--shortcut-locations',
-    'Desktop,StartMenu',
-  ];
+  const expectedShortcutArgs = ['--createShortcut', 'CreditsTracker.exe'];
 
   async function importMainFor(argv: string[]): Promise<void> {
     process.argv = argv;
@@ -65,11 +60,16 @@ describe('main process startup', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    vi.useFakeTimers();
     mockedWhenReadyThen.mockReset();
     process.argv = originalArgv.slice();
     if (originalExecPathDescriptor) {
       Object.defineProperty(process, 'execPath', originalExecPathDescriptor);
     }
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('creates Desktop and Start menu shortcuts during Squirrel install and stops startup', async () => {
@@ -78,6 +78,9 @@ describe('main process startup', () => {
     expect(spawn).toHaveBeenCalledTimes(1);
     expect(mockedSpawn.mock.calls[0]?.[0]).toBe(expectedUpdateExePath);
     expect(mockedSpawn.mock.calls[0]?.[1]).toEqual(expectedShortcutArgs);
+    // Squirrel quits after a short delay (not immediately) so Update.exe has
+    // time to finish writing the shortcuts before the app process exits.
+    vi.advanceTimersByTime(1_000);
     expect(app.quit).toHaveBeenCalledTimes(1);
     expect(startUpdateChecks).not.toHaveBeenCalled();
     expect(app.whenReady).not.toHaveBeenCalled();
@@ -91,6 +94,7 @@ describe('main process startup', () => {
     expect(spawn).toHaveBeenCalledTimes(1);
     expect(mockedSpawn.mock.calls[0]?.[0]).toBe(expectedUpdateExePath);
     expect(mockedSpawn.mock.calls[0]?.[1]).toEqual(expectedShortcutArgs);
+    vi.advanceTimersByTime(1_000);
     expect(app.quit).toHaveBeenCalledTimes(1);
     expect(startUpdateChecks).not.toHaveBeenCalled();
     expect(app.whenReady).not.toHaveBeenCalled();
