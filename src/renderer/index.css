@@ -20,6 +20,61 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+@keyframes credit-delta-in-out {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  15%,
+  75% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes credit-delta-in-out-reduced {
+  0% {
+    opacity: 0;
+  }
+
+  15%,
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.credit-value {
+  position: relative;
+}
+
+.credit-delta {
+  animation: credit-delta-in-out 1500ms ease-out both;
+}
+
+.credit-delta-positive {
+  color: #4ade80;
+}
+
+.credit-delta-negative {
+  color: #fb923c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credit-delta {
+    animation-name: credit-delta-in-out-reduced;
+  }
+}
+
 /* Match the scrollbar to the app's dark theme instead of the OS default. */
 * {
   scrollbar-color: var(--color-border) var(--color-background);
