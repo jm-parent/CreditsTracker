@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/jm-parent/CreditsTracker/compare/v1.5.0...v1.6.0) (2026-09-10)
+
+
+### Features
+
+* let the user decide when to install app updates ([b9658fe](https://github.com/jm-parent/CreditsTracker/commit/b9658fef867596af9add151f9e26fe93ae5f1738))
+
 # [1.5.0](https://github.com/jm-parent/CreditsTracker/compare/v1.4.1...v1.5.0) (2026-09-09)
 
 
