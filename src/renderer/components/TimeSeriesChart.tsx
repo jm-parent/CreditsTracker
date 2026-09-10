@@ -2,7 +2,7 @@ import {
   Bar,
   BarChart,
   Cell,
-  LabelList,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import type { TooltipContentProps } from 'recharts/types/component/Tooltip';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+import { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { CreditDropLabel } from './CreditDropLabel';
 import { getColorForKey } from '../lib/colors';
@@ -63,9 +64,18 @@ function StackedTooltip({ active, payload, label }: TooltipContentProps<ValueTyp
 export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeriesChartProps) {
   // Collect every project key seen across the whole range so each gets a
   // stable stacked-bar series, even on days it had no activity.
-  const projectKeys = Array.from(
+  const currentProjectKeys = Array.from(
     new Set(data.flatMap((point) => Object.keys(point.byProject ?? {}))),
   ).sort();
+  const projectOrderRef = useRef<string[]>([]);
+  const currentProjectSet = new Set(currentProjectKeys);
+  const projectKeys = projectOrderRef.current.filter((key) => currentProjectSet.has(key));
+  currentProjectKeys.forEach((key) => {
+    if (!projectKeys.includes(key)) {
+      projectKeys.push(key);
+    }
+  });
+  projectOrderRef.current = projectKeys;
 
   const changeValues =
     projectKeys.length > 0
@@ -127,22 +137,6 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
                       {data.map((point) => (
                         <Cell key={projectSegmentKey(point.date, key)} />
                       ))}
-                      <LabelList
-                        dataKey={(point: TimeSeriesPoint) => point.byProject?.[key] ?? 0}
-                        content={(labelProps) => {
-                          const index = Number(labelProps.index);
-                          const point = data[index];
-                          if (!point) return null;
-                          return (
-                            <CreditDropLabel
-                              {...labelProps}
-                              change={changes.get(projectSegmentKey(point.date, key))}
-                              color={getColorForKey(key)}
-                              offsetX={(projectIndex - (projectKeys.length - 1) / 2) * 6}
-                            />
-                          );
-                        }}
-                      />
                     </Bar>
                   ))
                 ) : (
@@ -156,24 +150,54 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
                     {data.map((point) => (
                       <Cell key={point.date} />
                     ))}
-                    <LabelList
-                      dataKey="aiuCredits"
-                      content={(labelProps) => {
-                        const index = Number(labelProps.index);
-                        const point = data[index];
-                        if (!point) return null;
-                        return (
-                          <CreditDropLabel
-                            {...labelProps}
-                            change={changes.get(point.date)}
-                            color="#22d3ee"
-                            offsetX={0}
-                          />
-                        );
-                      }}
-                    />
                   </Bar>
                 )}
+                {projectKeys.length > 0
+                  ? projectKeys.flatMap((key, projectIndex) =>
+                      data.map((point) => {
+                        const change = changes.get(projectSegmentKey(point.date, key));
+                        if (!change) return null;
+
+                        const stackTop = projectKeys
+                          .slice(0, projectIndex + 1)
+                          .reduce(
+                            (total, projectKey) =>
+                              total + (point.byProject?.[projectKey] ?? 0),
+                            0,
+                          );
+                        return (
+                          <ReferenceDot
+                            key={`${projectSegmentKey(point.date, key)}-${change.animationKey}`}
+                            x={point.date}
+                            y={stackTop}
+                            r={0}
+                            ifOverflow="visible"
+                            shape={
+                              <CreditDropLabel
+                                change={change}
+                                color={getColorForKey(key)}
+                                offsetX={(projectIndex - (projectKeys.length - 1) / 2) * 6}
+                              />
+                            }
+                          />
+                        );
+                      }),
+                    )
+                  : data.map((point) => {
+                      const change = changes.get(point.date);
+                      if (!change) return null;
+
+                      return (
+                        <ReferenceDot
+                          key={`${point.date}-${change.animationKey}`}
+                          x={point.date}
+                          y={point.aiuCredits}
+                          r={0}
+                          ifOverflow="visible"
+                          shape={<CreditDropLabel change={change} color="#22d3ee" />}
+                        />
+                      );
+                    })}
               </BarChart>
             </ResponsiveContainer>
           </div>

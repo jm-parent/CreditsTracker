@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { Children, isValidElement } from 'react';
 import { TimeSeriesChart } from './TimeSeriesChart';
 import { getColorForKey } from '../lib/colors';
+
+const barAnimationState = vi.hoisted(() => ({ suppressLabels: false }));
 
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
@@ -17,9 +20,18 @@ vi.mock('recharts', async () => {
     // default bar entrance animation relies on, so animated bars never mount
     // a <path> in tests. Disabling animation here only affects the test
     // environment; production continues to use Recharts' default animation.
-    Bar: (props: React.ComponentProps<typeof actual.Bar>) => (
-      <actual.Bar isAnimationActive={false} {...props} />
-    ),
+    Bar: ({ children, ...props }: React.ComponentProps<typeof actual.Bar>) => {
+      const renderedChildren = barAnimationState.suppressLabels
+        ? Children.toArray(children).filter(
+            (child) => !isValidElement(child) || child.type !== actual.LabelList,
+          )
+        : children;
+      return (
+        <actual.Bar isAnimationActive={false} {...props}>
+          {renderedChildren}
+        </actual.Bar>
+      );
+    },
   };
 });
 
@@ -156,6 +168,7 @@ describe('TimeSeriesChart', () => {
     });
 
     afterEach(() => {
+      barAnimationState.suppressLabels = false;
       vi.useRealTimers();
     });
 
@@ -239,6 +252,76 @@ describe('TimeSeriesChart', () => {
       expect(drops).toHaveLength(1);
       expect(drops[0]).toHaveTextContent('+2.00');
       expect(drops[0]).toHaveAttribute('fill', '#22d3ee');
+    });
+
+    it('associates a sparse project change with the matching date column', () => {
+      const initial = [
+        { date: '2026-09-01', aiuCredits: 0, byProject: { 'org/repo-a': 0 } },
+        { date: '2026-09-02', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
+        { date: '2026-09-03', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+      ];
+      const { container, rerender } = render(
+        <TimeSeriesChart data={initial} updateContextKey="all" />,
+      );
+
+      act(() => {
+        rerender(
+          <TimeSeriesChart
+            data={[
+              initial[0],
+              { date: '2026-09-02', aiuCredits: 4, byProject: { 'org/repo-a': 4 } },
+              initial[2],
+            ]}
+            updateContextKey="all"
+          />,
+        );
+      });
+
+      const drop = container.querySelector('[data-credit-drop="true"]');
+      expect(drop).not.toBeNull();
+
+      const changedDateTick = Array.from(
+        container.querySelectorAll('.recharts-cartesian-axis-tick-value'),
+      ).find((tick) => tick.textContent === '2026-09-02');
+      expect(changedDateTick).not.toBeUndefined();
+      expect(drop).toHaveAttribute('x', changedDateTick?.getAttribute('x'));
+    });
+
+    it('keeps an existing project drop on its segment when a new project joins the stack', () => {
+      const initial = [
+        { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-b': 3 } },
+      ];
+      const { container, rerender } = render(
+        <TimeSeriesChart data={initial} updateContextKey="all" />,
+      );
+
+      act(() => {
+        rerender(
+          <TimeSeriesChart
+            data={[
+              {
+                date: '2026-09-01',
+                aiuCredits: 6,
+                byProject: { 'org/repo-a': 2, 'org/repo-b': 4 },
+              },
+            ]}
+            updateContextKey="all"
+          />,
+        );
+      });
+
+      const projectBColor = getColorForKey('org/repo-b');
+      const projectBBar = container.querySelector(
+        `.recharts-rectangle[fill="${projectBColor}"]`,
+      );
+      const projectBDrop = container.querySelector(
+        `[data-credit-drop="true"][fill="${projectBColor}"]`,
+      );
+      expect(projectBBar).not.toBeNull();
+      expect(projectBDrop).toHaveTextContent('+1.00');
+      expect(Number(projectBDrop?.getAttribute('y'))).toBe(
+        Math.max(12, Number(projectBBar?.getAttribute('y')) - 6),
+      );
     });
 
     it('removes all credit-drop labels 1,200 ms after they appear', () => {

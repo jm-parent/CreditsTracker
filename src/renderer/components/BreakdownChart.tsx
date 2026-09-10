@@ -1,4 +1,4 @@
-import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { MouseHandlerDataParam } from 'recharts/types/synchronisation/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { CreditDropLabel } from './CreditDropLabel';
@@ -63,22 +63,27 @@ export function BreakdownChart({
                   {data.map((entry) => (
                     <Cell key={entry.key} {...(colorByKey ? { fill: getColorForKey(entry.key) } : {})} />
                   ))}
-                  <LabelList
-                    dataKey="aiuCredits"
-                    content={(labelProps) => {
-                      const index = Number(labelProps.index);
-                      const entry = data[index];
-                      if (!entry) return null;
-                      return (
+                </Bar>
+                {data.map((entry) => {
+                  const change = changes.get(entry.key);
+                  if (!change) return null;
+
+                  return (
+                    <ReferenceDot
+                      key={`${entry.key}-${change.animationKey}`}
+                      x={entry.key}
+                      y={entry.aiuCredits}
+                      r={0}
+                      ifOverflow="visible"
+                      shape={
                         <CreditDropLabel
-                          {...labelProps}
-                          change={changes.get(entry.key)}
+                          change={change}
                           color={getColorForKey(entry.key)}
                         />
-                      );
-                    }}
-                  />
-                </Bar>
+                      }
+                    />
+                  );
+                })}
               </BarChart>
             </ResponsiveContainer>
           </div>

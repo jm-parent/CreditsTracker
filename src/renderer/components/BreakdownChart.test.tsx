@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { Children, isValidElement } from 'react';
 import { BreakdownChart } from './BreakdownChart';
 import { getColorForKey } from '../lib/colors';
+
+const barAnimationState = vi.hoisted(() => ({ suppressLabels: false }));
 
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
@@ -17,9 +20,18 @@ vi.mock('recharts', async () => {
     // default bar entrance animation relies on, so animated bars never mount
     // a <path> in tests. Disabling animation here only affects the test
     // environment; production continues to use Recharts' default animation.
-    Bar: (props: React.ComponentProps<typeof actual.Bar>) => (
-      <actual.Bar isAnimationActive={false} {...props} />
-    ),
+    Bar: ({ children, ...props }: React.ComponentProps<typeof actual.Bar>) => {
+      const renderedChildren = barAnimationState.suppressLabels
+        ? Children.toArray(children).filter(
+            (child) => !isValidElement(child) || child.type !== actual.LabelList,
+          )
+        : children;
+      return (
+        <actual.Bar isAnimationActive={false} {...props}>
+          {renderedChildren}
+        </actual.Bar>
+      );
+    },
   };
 });
 
@@ -137,6 +149,7 @@ describe('BreakdownChart', () => {
     });
 
     afterEach(() => {
+      barAnimationState.suppressLabels = false;
       vi.useRealTimers();
     });
 
@@ -185,6 +198,32 @@ describe('BreakdownChart', () => {
       expect(drop).toHaveTextContent('+2.00');
       expect(drop).toHaveAttribute('fill', getColorForKey('org/repo-a'));
       expect(container.querySelector('.credit-chart-updated')).toBeNull();
+    });
+
+    it('renders a credit drop while Recharts suppresses bar labels during animation', () => {
+      const initial = [{ key: 'org/repo-a', aiuCredits: 3 }];
+      const { container, rerender } = render(
+        <BreakdownChart
+          title="Credits by project"
+          data={initial}
+          colorByKey
+          updateContextKey="all"
+        />,
+      );
+
+      barAnimationState.suppressLabels = true;
+      act(() => {
+        rerender(
+          <BreakdownChart
+            title="Credits by project"
+            data={[{ key: 'org/repo-a', aiuCredits: 5 }]}
+            colorByKey
+            updateContextKey="all"
+          />,
+        );
+      });
+
+      expect(container.querySelector('[data-credit-drop="true"]')).toHaveTextContent('+2.00');
     });
 
     it('renders an orange credit-drop label for a negative correction', () => {

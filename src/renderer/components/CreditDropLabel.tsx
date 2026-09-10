@@ -4,6 +4,8 @@ export interface CreditDropLabelProps {
   x?: number | string;
   y?: number | string;
   width?: number | string;
+  cx?: number | string;
+  cy?: number | string;
   change?: CreditChange;
   color: string;
   offsetX?: number;
@@ -22,6 +24,8 @@ export function CreditDropLabel({
   x,
   y,
   width,
+  cx,
+  cy,
   change,
   color,
   offsetX = 0,
@@ -30,9 +34,9 @@ export function CreditDropLabel({
     return null;
   }
 
-  const numericX = numeric(x);
-  const numericY = numeric(y);
-  const numericWidth = numeric(width);
+  const numericX = numeric(cx ?? x);
+  const numericY = numeric(cy ?? y);
+  const numericWidth = numeric(width ?? 0);
 
   if (numericX === null || numericY === null || numericWidth === null) {
     return null;
