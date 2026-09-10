@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { TimeSeriesChart } from './TimeSeriesChart';
+import { getColorForKey } from '../lib/colors';
 
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
@@ -149,7 +150,7 @@ describe('TimeSeriesChart', () => {
     expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
   });
 
-  describe('credit-update highlighting', () => {
+  describe('credit drop labels', () => {
     beforeEach(() => {
       vi.useFakeTimers();
     });
@@ -158,22 +159,11 @@ describe('TimeSeriesChart', () => {
       vi.useRealTimers();
     });
 
-    function markedCells(container: HTMLElement): Element[] {
-      // Recharts' stacked Bar reuses each data entry's props to build both the
-      // visible segment and its invisible full-column background click
-      // target (via `background={{ fill: 'transparent' }}`), so our
-      // `data-credit-updated` attribute unavoidably leaks onto that
-      // background rectangle too. It never gets the `credit-chart-updated`
-      // class though (Recharts always overrides className on the background
-      // rect), so it stays transparent and never animates. Requiring both
-      // the attribute and the class scopes this query to the actually
-      // highlighted segment.
-      return Array.from(
-        container.querySelectorAll('.credit-chart-updated[data-credit-updated="true"]'),
-      );
+    function dropLabels(container: HTMLElement): Element[] {
+      return Array.from(container.querySelectorAll('[data-credit-drop="true"]'));
     }
 
-    it('does not mark any bar on initial render', () => {
+    it('does not render a credit-drop label on initial render', () => {
       const { container } = render(
         <TimeSeriesChart
           data={[
@@ -187,10 +177,71 @@ describe('TimeSeriesChart', () => {
         />,
       );
 
-      expect(markedCells(container)).toHaveLength(0);
+      expect(dropLabels(container)).toHaveLength(0);
     });
 
-    it('marks only the segment whose project contribution changed on a given date', () => {
+    it('renders a distinct, colored, offset label for each project that changed on the same date', () => {
+      const initial = [
+        {
+          date: '2026-09-10',
+          aiuCredits: 3,
+          byProject: { 'org/repo-a': 1, 'org/repo-b': 2 },
+        },
+      ];
+      const { container, rerender } = render(
+        <TimeSeriesChart data={initial} updateContextKey="all" />,
+      );
+
+      expect(dropLabels(container)).toHaveLength(0);
+
+      const next = [
+        {
+          date: '2026-09-10',
+          aiuCredits: 8,
+          byProject: { 'org/repo-a': 3, 'org/repo-b': 5 },
+        },
+      ];
+      act(() => {
+        rerender(<TimeSeriesChart data={next} updateContextKey="all" />);
+      });
+
+      const drops = dropLabels(container);
+      expect(drops).toHaveLength(2);
+
+      const texts = drops.map((drop) => drop.textContent);
+      expect(texts).toContain('+2.00');
+      expect(texts).toContain('+3.00');
+
+      const colors = drops.map((drop) => drop.getAttribute('fill'));
+      expect(colors).toContain(getColorForKey('org/repo-a'));
+      expect(colors).toContain(getColorForKey('org/repo-b'));
+
+      const xPositions = drops.map((drop) => drop.getAttribute('x'));
+      expect(new Set(xPositions).size).toBe(2);
+
+      expect(container.querySelector('.credit-chart-updated')).toBeNull();
+    });
+
+    it('renders a cyan credit-drop label for the single-series fallback', () => {
+      const initial = [{ date: '2026-09-01', aiuCredits: 3 }];
+      const { container, rerender } = render(
+        <TimeSeriesChart data={initial} updateContextKey="all" />,
+      );
+
+      expect(dropLabels(container)).toHaveLength(0);
+
+      const next = [{ date: '2026-09-01', aiuCredits: 5 }];
+      act(() => {
+        rerender(<TimeSeriesChart data={next} updateContextKey="all" />);
+      });
+
+      const drops = dropLabels(container);
+      expect(drops).toHaveLength(1);
+      expect(drops[0]).toHaveTextContent('+2.00');
+      expect(drops[0]).toHaveAttribute('fill', '#22d3ee');
+    });
+
+    it('removes all credit-drop labels 1,200 ms after they appear', () => {
       const initial = [
         {
           date: '2026-09-01',
@@ -201,8 +252,6 @@ describe('TimeSeriesChart', () => {
       const { container, rerender } = render(
         <TimeSeriesChart data={initial} updateContextKey="all" />,
       );
-
-      expect(markedCells(container)).toHaveLength(0);
 
       const next = [
         {
@@ -215,44 +264,22 @@ describe('TimeSeriesChart', () => {
         rerender(<TimeSeriesChart data={next} updateContextKey="all" />);
       });
 
-      const marked = markedCells(container);
-      expect(marked).toHaveLength(1);
-      expect(marked[0].getAttribute('class')).toContain('credit-chart-updated');
-    });
-
-    it('removes all update markers 1,000 ms after they appear', () => {
-      const initial = [
-        {
-          date: '2026-09-01',
-          aiuCredits: 3,
-          byProject: { 'org/repo-a': 1, 'org/repo-b': 2 },
-        },
-      ];
-      const { container, rerender } = render(
-        <TimeSeriesChart data={initial} updateContextKey="all" />,
-      );
-
-      const next = [
-        {
-          date: '2026-09-01',
-          aiuCredits: 4,
-          byProject: { 'org/repo-a': 2, 'org/repo-b': 2 },
-        },
-      ];
-      act(() => {
-        rerender(<TimeSeriesChart data={next} updateContextKey="all" />);
-      });
-
-      expect(markedCells(container)).toHaveLength(1);
+      expect(dropLabels(container)).toHaveLength(1);
 
       act(() => {
-        vi.advanceTimersByTime(1_000);
+        vi.advanceTimersByTime(1_199);
       });
 
-      expect(markedCells(container)).toHaveLength(0);
+      expect(dropLabels(container)).toHaveLength(1);
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+
+      expect(dropLabels(container)).toHaveLength(0);
     });
 
-    it('does not mark any segment when updateContextKey changes even if the values differ', () => {
+    it('does not render a credit-drop label when updateContextKey changes even if the values differ', () => {
       const initial = [
         {
           date: '2026-09-01',
@@ -275,7 +302,7 @@ describe('TimeSeriesChart', () => {
         rerender(<TimeSeriesChart data={next} updateContextKey="context-2" />);
       });
 
-      expect(markedCells(container)).toHaveLength(0);
+      expect(dropLabels(container)).toHaveLength(0);
     });
   });
 });

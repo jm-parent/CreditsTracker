@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -10,6 +11,7 @@ import {
 import type { TooltipContentProps } from 'recharts/types/component/Tooltip';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { CreditDropLabel } from './CreditDropLabel';
 import { getColorForKey } from '../lib/colors';
 import { useCreditChanges } from '../hooks/useCreditChanges';
 import type { TimeSeriesPoint } from '../../shared/types';
@@ -20,7 +22,7 @@ interface TimeSeriesChartProps {
   updateContextKey: string;
 }
 
-const CREDIT_CHART_ANIMATION_DURATION_MS = 1_000;
+const CREDIT_CHART_ANIMATION_DURATION_MS = 1_200;
 
 // Segment keys combine the date and project with a NUL separator so a
 // project name that happens to contain other punctuation can't collide with
@@ -96,12 +98,12 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
         ) : (
           <div data-testid="time-series-chart" style={{ width: '100%', height: 240 }}>
             <ResponsiveContainer>
-              <BarChart data={data}>
+              <BarChart data={data} margin={{ top: 28 }}>
                 <XAxis dataKey="date" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip content={StackedTooltip} cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
                 {projectKeys.length > 0 ? (
-                  projectKeys.map((key) => (
+                  projectKeys.map((key, projectIndex) => (
                     <Bar
                       key={key}
                       dataKey={(point: TimeSeriesPoint) => point.byProject?.[key] ?? 0}
@@ -122,18 +124,25 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
                       // non-zero that day ends up producing it.
                       background={{ fill: 'transparent' }}
                     >
-                      {data.map((point) => {
-                        const segmentKey = projectSegmentKey(point.date, key);
-                        const isUpdated = changes.has(segmentKey);
-                        return (
-                          <Cell
-                            key={segmentKey}
-                            {...(isUpdated
-                              ? { className: 'credit-chart-updated', 'data-credit-updated': 'true' }
-                              : {})}
-                          />
-                        );
-                      })}
+                      {data.map((point) => (
+                        <Cell key={projectSegmentKey(point.date, key)} />
+                      ))}
+                      <LabelList
+                        dataKey={(point: TimeSeriesPoint) => point.byProject?.[key] ?? 0}
+                        content={(labelProps) => {
+                          const index = Number(labelProps.index);
+                          const point = data[index];
+                          if (!point) return null;
+                          return (
+                            <CreditDropLabel
+                              {...labelProps}
+                              change={changes.get(projectSegmentKey(point.date, key))}
+                              color={getColorForKey(key)}
+                              offsetX={(projectIndex - (projectKeys.length - 1) / 2) * 6}
+                            />
+                          );
+                        }}
+                      />
                     </Bar>
                   ))
                 ) : (
@@ -144,17 +153,25 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
                     onClick={handleBarClick}
                     background={{ fill: 'transparent' }}
                   >
-                    {data.map((point) => {
-                      const isUpdated = changes.has(point.date);
-                      return (
-                        <Cell
-                          key={point.date}
-                          {...(isUpdated
-                            ? { className: 'credit-chart-updated', 'data-credit-updated': 'true' }
-                            : {})}
-                        />
-                      );
-                    })}
+                    {data.map((point) => (
+                      <Cell key={point.date} />
+                    ))}
+                    <LabelList
+                      dataKey="aiuCredits"
+                      content={(labelProps) => {
+                        const index = Number(labelProps.index);
+                        const point = data[index];
+                        if (!point) return null;
+                        return (
+                          <CreditDropLabel
+                            {...labelProps}
+                            change={changes.get(point.date)}
+                            color="#22d3ee"
+                            offsetX={0}
+                          />
+                        );
+                      }}
+                    />
                   </Bar>
                 )}
               </BarChart>
