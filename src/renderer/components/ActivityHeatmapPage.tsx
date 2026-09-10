@@ -1,6 +1,9 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Card, CardContent } from './ui/card';
+import { CreditValue } from './CreditValue';
+import { useCreditChanges } from '../hooks/useCreditChanges';
+import { cn } from '../lib/utils';
 import type { TimeSeriesPoint } from '../../shared/types';
 
 export interface ActivityHeatmapPageProps {
@@ -12,6 +15,7 @@ export interface ActivityHeatmapPageProps {
   error: Error | null;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  updateContextKey: string;
 }
 
 const MONTH_NAMES = [
@@ -125,6 +129,9 @@ function cellLabel(year: number, month: number, cell: DayCell): string {
   return `${formatDayLabel(year, month, cell.day)}: ${cell.aiuCredits.toFixed(2)} credits`;
 }
 
+const CELL_HIGHLIGHT_DURATION_MS = 1_000;
+const CREDIT_DELTA_DURATION_MS = 1_500;
+
 export function ActivityHeatmapPage({
   year,
   month,
@@ -133,6 +140,7 @@ export function ActivityHeatmapPage({
   error,
   onPrevMonth,
   onNextMonth,
+  updateContextKey,
 }: ActivityHeatmapPageProps) {
   const cells = buildCalendar(year, month, data);
   const activeDays = data.filter((point) => point.aiuCredits > 0);
@@ -148,6 +156,10 @@ export function ActivityHeatmapPage({
     null,
   );
 
+  const dayValues = data.map((point) => ({ key: point.date, value: point.aiuCredits }));
+  const cellChanges = useCreditChanges(data, dayValues, updateContextKey, CELL_HIGHLIGHT_DURATION_MS);
+  const numericChanges = useCreditChanges(data, dayValues, updateContextKey, CREDIT_DELTA_DURATION_MS);
+
   return (
     <div className="activity-heatmap-page flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -159,7 +171,11 @@ export function ActivityHeatmapPage({
             <span className="summary-label text-sm text-muted-foreground">Busiest day</span>
             {busiest && (
               <span className="summary-label text-sm text-muted-foreground">
-                {busiest.aiuCredits.toFixed(2)} credits
+                <CreditValue
+                  value={busiest.aiuCredits}
+                  change={numericChanges.get(busiest.date)}
+                  suffix=" credits"
+                />
               </span>
             )}
           </CardContent>
@@ -172,7 +188,11 @@ export function ActivityHeatmapPage({
             <span className="summary-label text-sm text-muted-foreground">Quietest active day</span>
             {quietest && (
               <span className="summary-label text-sm text-muted-foreground">
-                {quietest.aiuCredits.toFixed(2)} credits
+                <CreditValue
+                  value={quietest.aiuCredits}
+                  change={numericChanges.get(quietest.date)}
+                  suffix=" credits"
+                />
               </span>
             )}
           </CardContent>
@@ -225,14 +245,19 @@ export function ActivityHeatmapPage({
             {cells.map((cell, index) => {
               if (cell) {
                 const level = intensityLevel(cell.aiuCredits, maxCredits);
+                const isUpdated = cellChanges.has(cell.date);
                 return (
                 <button
                   key={cell.date}
                   type="button"
-                  className="activity-heatmap-cell h-8 w-full rounded-sm border text-xs font-medium"
+                  className={cn(
+                    'activity-heatmap-cell h-8 w-full rounded-sm border text-xs font-medium',
+                    isUpdated && 'credit-heatmap-updated',
+                  )}
                   style={cellStyle(level)}
                   data-intensity-level={level}
                   data-intensity-color={intensityColorName(level)}
+                  {...(isUpdated ? { 'data-credit-updated': 'true' } : {})}
                   aria-label={cellLabel(year, month, cell)}
                   title={cellLabel(year, month, cell)}
                 >
