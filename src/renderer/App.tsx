@@ -46,6 +46,12 @@ export function App() {
     project: filters.project,
     model: filters.model,
   });
+  const usageUpdateContextKey = JSON.stringify({
+    project: filters.project ?? null,
+    model: filters.model ?? null,
+    from: filters.from ?? null,
+    to: filters.to ?? null,
+  });
 
   useEffect(() => {
     window.api
@@ -131,6 +137,7 @@ export function App() {
                   totals={data.totals}
                   timeSeries={data.timeSeries}
                   onDayClick={setSelectedDate}
+                  updateContextKey={usageUpdateContextKey}
                 />
               </div>
             )}
@@ -149,12 +156,16 @@ export function App() {
             )}
             {data && !selectedProject && activeTab === 'projects' && (
               <div className="mt-6">
-                <ProjectsPage byProject={data.byProject} onProjectClick={setSelectedProject} />
+                <ProjectsPage
+                  byProject={data.byProject}
+                  onProjectClick={setSelectedProject}
+                  updateContextKey={usageUpdateContextKey}
+                />
               </div>
             )}
             {data && !selectedProject && activeTab === 'models' && (
               <div className="mt-6">
-                <ModelsPage byModel={data.byModel} />
+                <ModelsPage byModel={data.byModel} updateContextKey={usageUpdateContextKey} />
               </div>
             )}
           </>

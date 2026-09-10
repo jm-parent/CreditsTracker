@@ -1,4 +1,7 @@
 import { Card, CardContent } from './ui/card';
+import { CreditValue } from './CreditValue';
+import { useCreditChanges } from '../hooks/useCreditChanges';
+import type { CreditDatum } from '../hooks/useCreditChanges';
 
 export interface BreakdownSummaryCardsProps {
   countLabel: string;
@@ -7,7 +10,10 @@ export interface BreakdownSummaryCardsProps {
   topLabel: string;
   topKey: string;
   topCredits: number;
+  updateContextKey: string;
 }
+
+const CREDIT_DELTA_DURATION_MS = 1_500;
 
 export function BreakdownSummaryCards({
   countLabel,
@@ -16,7 +22,15 @@ export function BreakdownSummaryCards({
   topLabel,
   topKey,
   topCredits,
+  updateContextKey,
 }: BreakdownSummaryCardsProps) {
+  const snapshot = { count, totalCredits, topKey, topCredits };
+  const values: CreditDatum[] = [{ key: 'total', value: totalCredits }];
+  if (topKey) {
+    values.push({ key: topKey, value: topCredits });
+  }
+  const changes = useCreditChanges(snapshot, values, updateContextKey, CREDIT_DELTA_DURATION_MS);
+
   return (
     <div className="summary-cards grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Card className="summary-card">
@@ -28,7 +42,7 @@ export function BreakdownSummaryCards({
       <Card className="summary-card">
         <CardContent className="flex flex-col gap-1 p-4">
           <span className="summary-value text-2xl font-semibold text-foreground">
-            {totalCredits.toFixed(2)}
+            <CreditValue value={totalCredits} change={changes.get('total')} />
           </span>
           <span className="summary-label text-sm text-muted-foreground">Total credits</span>
         </CardContent>
@@ -43,7 +57,9 @@ export function BreakdownSummaryCards({
           </span>
           <span className="summary-label text-sm text-muted-foreground">{topLabel}</span>
           {topKey && (
-            <span className="summary-label text-sm text-muted-foreground">{topCredits.toFixed(2)}</span>
+            <span className="summary-label text-sm text-muted-foreground">
+              <CreditValue value={topCredits} change={changes.get(topKey)} />
+            </span>
           )}
         </CardContent>
       </Card>

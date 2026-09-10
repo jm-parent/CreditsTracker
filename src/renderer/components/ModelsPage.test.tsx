@@ -23,6 +23,7 @@ describe('ModelsPage', () => {
           { key: 'claude-sonnet-5', aiuCredits: 3 },
           { key: 'gpt-5.4', aiuCredits: 1 },
         ]}
+        updateContextKey="all"
       />,
     );
 
@@ -35,7 +36,7 @@ describe('ModelsPage', () => {
   });
 
   it('renders an empty state without crashing when there are no models', () => {
-    const { container } = render(<ModelsPage byModel={[]} />);
+    const { container } = render(<ModelsPage byModel={[]} updateContextKey="all" />);
 
     const summaryCards = container.querySelector('.summary-cards') as HTMLElement;
     expect(within(summaryCards).getByText('0')).toBeInTheDocument(); // count of models

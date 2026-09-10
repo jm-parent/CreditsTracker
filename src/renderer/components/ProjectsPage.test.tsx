@@ -24,6 +24,7 @@ describe('ProjectsPage', () => {
           { key: 'org/repo-b', aiuCredits: 1 },
         ]}
         onProjectClick={vi.fn()}
+        updateContextKey="all"
       />,
     );
 
@@ -34,7 +35,9 @@ describe('ProjectsPage', () => {
   });
 
   it('renders an empty state without crashing when there are no projects', () => {
-    const { container } = render(<ProjectsPage byProject={[]} onProjectClick={vi.fn()} />);
+    const { container } = render(
+      <ProjectsPage byProject={[]} onProjectClick={vi.fn()} updateContextKey="all" />,
+    );
 
     const summaryCards = container.querySelector('.summary-cards') as HTMLElement;
     expect(within(summaryCards).getByText('0')).toBeInTheDocument(); // count of projects
@@ -50,6 +53,7 @@ describe('ProjectsPage', () => {
           { key: 'org/repo-b', aiuCredits: 1 },
         ]}
         onProjectClick={onProjectClick}
+        updateContextKey="all"
       />,
     );
 
