@@ -20,7 +20,7 @@ export function CreditValue(props: CreditValueProps): JSX.Element {
           key={change.animationKey}
           aria-hidden="true"
           className={cn(
-            'credit-delta pointer-events-none absolute left-full ml-2 whitespace-nowrap text-xs font-medium',
+            'credit-delta pointer-events-none ml-2 whitespace-nowrap text-xs font-medium',
             change.delta > 0 ? 'credit-delta-positive' : 'credit-delta-negative',
           )}
         >

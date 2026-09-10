@@ -7,7 +7,10 @@ describe('CreditValue', () => {
     render(<CreditValue value={12.5} change={{ delta: 2.5, animationKey: 1 }} suffix=" credits" />);
 
     expect(screen.getByText('12.50')).toBeInTheDocument();
-    expect(screen.getByText('+2.50')).toHaveAttribute('aria-hidden', 'true');
+    const delta = screen.getByText('+2.50');
+    expect(delta).toHaveAttribute('aria-hidden', 'true');
+    expect(delta).not.toHaveClass('absolute');
+    expect(delta).not.toHaveClass('left-full');
     expect(screen.getByText('credits')).toBeInTheDocument();
   });
 
