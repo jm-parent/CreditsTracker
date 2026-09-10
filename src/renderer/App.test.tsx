@@ -317,4 +317,23 @@ describe('App', () => {
     expect(screen.queryByRole('heading', { name: 'org/repo-a' })).not.toBeInTheDocument();
     expect(await screen.findByText('Credits over time')).toBeInTheDocument();
   });
+
+  it('does not animate a credit delta when a filter change starts a new update context', async () => {
+    window.api.getUsage = vi
+      .fn()
+      .mockResolvedValueOnce(usage)
+      .mockResolvedValueOnce({
+        ...usage,
+        totals: { aiuCredits: 9, tokens: 300, requests: 5 },
+      });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.selectOptions(screen.getByLabelText('Project'), 'org/repo-a');
+
+    expect(await screen.findByText('9.00')).toBeInTheDocument();
+    expect(screen.queryByText('+6.00')).not.toBeInTheDocument();
+  });
 });

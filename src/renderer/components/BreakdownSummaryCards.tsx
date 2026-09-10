@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent } from './ui/card';
 import { CreditValue } from './CreditValue';
 import { useCreditChanges } from '../hooks/useCreditChanges';
@@ -24,7 +25,13 @@ export function BreakdownSummaryCards({
   topCredits,
   updateContextKey,
 }: BreakdownSummaryCardsProps) {
-  const snapshot = { count, totalCredits, topKey, topCredits };
+  // Stabilize the snapshot identity across renders so a state update inside
+  // useCreditChanges (which schedules the auto-clear via setChanges) does not
+  // itself look like a new snapshot and cancel its own pending timeout.
+  const snapshot = useMemo(
+    () => ({ count, totalCredits, topKey, topCredits }),
+    [count, totalCredits, topKey, topCredits],
+  );
   const values: CreditDatum[] = [{ key: 'total', value: totalCredits }];
   if (topKey) {
     values.push({ key: topKey, value: topCredits });

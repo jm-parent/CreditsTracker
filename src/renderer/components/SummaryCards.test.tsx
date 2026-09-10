@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
 import { SummaryCards } from './SummaryCards';
 
 describe('SummaryCards', () => {
@@ -30,5 +30,27 @@ describe('SummaryCards', () => {
     rerender(<SummaryCards totals={third} updateContextKey="workspace" />);
     expect(screen.queryByText('+2.50')).not.toBeInTheDocument();
     expect(screen.queryByText('−7.50')).not.toBeInTheDocument();
+  });
+
+  it('clears the credit delta 1,500 ms after it appears (stable totals reference per render)', () => {
+    vi.useFakeTimers();
+    try {
+      const first = { aiuCredits: 10, tokens: 100, requests: 1 };
+      const { rerender } = render(<SummaryCards totals={first} updateContextKey="all" />);
+
+      const second = { aiuCredits: 12.5, tokens: 200, requests: 2 };
+      rerender(<SummaryCards totals={second} updateContextKey="all" />);
+
+      expect(screen.getByText('+2.50')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1_500);
+      });
+
+      expect(screen.queryByText('+2.50')).not.toBeInTheDocument();
+      expect(screen.getByText('12.50')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

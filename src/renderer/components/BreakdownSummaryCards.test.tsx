@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import { BreakdownSummaryCards } from './BreakdownSummaryCards';
 
 describe('BreakdownSummaryCards', () => {
@@ -99,6 +99,47 @@ describe('BreakdownSummaryCards', () => {
     expect(within(topCard).getByText('org/repo-b')).toBeInTheDocument();
     expect(within(topCard).getByText('5.00')).toBeInTheDocument();
     expect(within(topCard).queryByText(/^[+−]/)).not.toBeInTheDocument();
+  });
+
+  it('clears the total and top-credit deltas 1,500 ms after they appear', () => {
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(
+        <BreakdownSummaryCards
+          countLabel="Projects"
+          count={2}
+          totalCredits={4}
+          topLabel="Top project"
+          topKey="org/repo-a"
+          topCredits={3}
+          updateContextKey="all"
+        />,
+      );
+
+      rerender(
+        <BreakdownSummaryCards
+          countLabel="Projects"
+          count={2}
+          totalCredits={6}
+          topLabel="Top project"
+          topKey="org/repo-a"
+          topCredits={4}
+          updateContextKey="all"
+        />,
+      );
+
+      expect(screen.getByText('+2.00')).toBeInTheDocument();
+      expect(screen.getByText('+1.00')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1_500);
+      });
+
+      expect(screen.queryByText('+2.00')).not.toBeInTheDocument();
+      expect(screen.queryByText('+1.00')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clears deltas when the update context key changes', () => {
