@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/jm-parent/CreditsTracker/compare/v1.7.0...v1.8.0) (2026-09-10)
+
+
+### Features
+
+* add manual update check in logs ([97af2e4](https://github.com/jm-parent/CreditsTracker/commit/97af2e420d9d68e0636544fd6f0f42191806dffe))
+
 # [1.7.0](https://github.com/jm-parent/CreditsTracker/compare/v1.6.0...v1.7.0) (2026-09-10)
 
 
