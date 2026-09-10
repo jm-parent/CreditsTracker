@@ -6,6 +6,8 @@
 scope for live update feedback. See "Scope Amendment" below; every other
 mention of heatmap highlighting in this document describes the original,
 now-superseded design and is retained only for history.
+**Visual refinement:** 2026-09-10 — chart drop labels use a 14 px font and
+Daily's simultaneous labels stay closer to the center of their date column.
 
 ## Context
 
@@ -55,8 +57,12 @@ IPC, polling frequency, filtering, sorting, or the shared data format.
 - The complete drop animation lasts 1.2 seconds and replaces the previous
   cyan/green glow; changed bars do not glow.
 - If several projects change on the same date, render one drop per project.
-  Offset simultaneous drops horizontally by a few pixels so their `+X.XX`
-  labels remain distinguishable while each falls into its own colored segment.
+  Offset simultaneous drops horizontally by 3 px per project around the column
+  center so their `+X.XX` labels remain distinguishable without making the
+  group look detached from its date column.
+- Render chart drop labels at 14 px with the existing semibold weight and
+  contrasting outline. Breakdown-chart labels remain exactly centered over
+  their bar.
 - Negative corrections do not use the falling-drop metaphor. They display a
   compact orange `−X.XX` above the affected segment and fade in place, because
   a falling value implies addition.
@@ -112,17 +118,19 @@ sorting moves a row after an update.
 
 Add a keyed comparison helper for chart datasets. Each chart derives the set
 of changed keys from its previous data in the same context and passes a
-transient changed state to the relevant custom Recharts shape. The chart keeps
-responsibility for rendering its own geometry; the comparison helper remains
-independent of Recharts. The monthly activity heatmap does not use this
-helper; see "Scope Amendment" below.
+transient changed state to the relevant SVG overlay. The chart keeps
+responsibility for positioning the overlay; the comparison helper remains
+independent of Recharts. The monthly activity heatmap does not use this helper;
+see "Scope Amendment" below.
 
-Render chart deltas through one reusable custom Recharts shape shared by the
-time-series and breakdown charts. The shape preserves the original bar
-rectangle and overlays non-interactive SVG text above its top edge. It receives
-the stable project/model color, delta, animation identity, and simultaneous
-drop offset. Existing bar clicks and transparent full-column click targets
-remain unchanged.
+Render chart deltas through one reusable SVG text component shared by the
+time-series and breakdown charts. Recharts `ReferenceDot` overlays position
+the component from semantic axis values independently of the bar-label
+lifecycle, while a persistent project order keeps stacked positions aligned
+when projects appear or disappear. The component receives the stable
+project/model color, delta, animation identity, and simultaneous drop offset.
+Existing bars, bar transitions, clicks, and transparent full-column click
+targets remain unchanged.
 
 No database, Electron main-process, preload, IPC, or shared-type changes are
 required.
@@ -162,6 +170,7 @@ Add focused tests for:
   breakdown data;
 - one horizontally offset drop per changed project when several stacked
   segments change on the same date;
+- 14 px drop typography and the 3 px Daily spacing step;
 - falling motion for additions and stationary orange fading for corrections;
 - no indicator after a refresh error;
 - reduced-motion styling.
