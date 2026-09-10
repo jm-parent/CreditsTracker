@@ -34,8 +34,8 @@ IPC, polling frequency, filtering, sorting, or the shared data format.
   avoided because a corrected value is not necessarily an application error.
 - The delta fades in with a slight upward movement, remains readable briefly,
   and fades out 1.5 seconds after the change.
-- Reserve or overlay the delta space so its appearance does not shift nearby
-  content.
+- Keep the delta in the normal inline flow beside the value so it cannot be
+  clipped or hidden behind adjacent content.
 - Apply the behavior to visible AIU credit amounts in summary cards and table
   cells. Non-credit counts, token values, and request values are out of scope.
 
@@ -43,8 +43,23 @@ IPC, polling frequency, filtering, sorting, or the shared data format.
 
 - Compare chart points by stable semantic key: date for time-series data, and
   project or model key for breakdown data.
-- A changed bar receives a soft cyan/green glow and a small brightness increase
-  for one second.
+- Apply the drop animation consistently to the `Daily consumption`,
+  `By Project`, and `By Model` charts.
+- A positive delta appears just above the changed bar or stacked segment in
+  that project's stable chart color. It tilts slightly to the right, falls
+  toward the segment with accelerating vertical motion, then shrinks and fades
+  on contact, like a drop entering the column.
+- Project and model breakdown bars each use the existing stable key-to-color
+  mapping, so every project and every model keeps the same color across renders.
+  The drop always matches its target bar or segment.
+- The complete drop animation lasts 1.2 seconds and replaces the previous
+  cyan/green glow; changed bars do not glow.
+- If several projects change on the same date, render one drop per project.
+  Offset simultaneous drops horizontally by a few pixels so their `+X.XX`
+  labels remain distinguishable while each falls into its own colored segment.
+- Negative corrections do not use the falling-drop metaphor. They display a
+  compact orange `−X.XX` above the affected segment and fade in place, because
+  a falling value implies addition.
 - The monthly activity heatmap is excluded from this behavior; see "Scope
   Amendment" below.
 - Preserve Recharts' normal bar-size transition so the new magnitude remains
@@ -102,16 +117,24 @@ responsibility for rendering its own geometry; the comparison helper remains
 independent of Recharts. The monthly activity heatmap does not use this
 helper; see "Scope Amendment" below.
 
+Render chart deltas through one reusable custom Recharts shape shared by the
+time-series and breakdown charts. The shape preserves the original bar
+rectangle and overlays non-interactive SVG text above its top edge. It receives
+the stable project/model color, delta, animation identity, and simultaneous
+drop offset. Existing bar clicks and transparent full-column click targets
+remain unchanged.
+
 No database, Electron main-process, preload, IPC, or shared-type changes are
 required.
 
 ## Accessibility
 
 - Respect `prefers-reduced-motion: reduce`. In reduced-motion mode, remove
-  translation and resizing flourishes and use only a brief color emphasis.
-- Treat transient deltas and glows as supplementary visual feedback. Hide them
-  from accessibility APIs so screen readers are not interrupted every five
-  seconds.
+  translation and resizing flourishes. Chart deltas appear above the segment
+  and fade in place without falling or tilting.
+- Treat transient deltas and chart drops as supplementary visual feedback.
+  Hide them from accessibility APIs so screen readers are not interrupted
+  every five seconds.
 - Keep the final numeric value available as normal text and preserve existing
   labels, roles, keyboard behavior, and chart interactions.
 - Do not rely on color alone for numeric changes: the explicit `+` or minus
@@ -129,13 +152,17 @@ required.
 
 Add focused tests for:
 
-- no delta or glow on initial render;
+- no delta or chart drop on initial render;
 - positive and negative numeric deltas;
 - indicator removal after its duration;
 - replacement and restart on successive updates;
 - reset without animation after a context or filter change;
 - stable row association when sorting changes row order;
-- changed-key detection for time-series and breakdown data;
+- changed-key detection and correctly colored drops for time-series and
+  breakdown data;
+- one horizontally offset drop per changed project when several stacked
+  segments change on the same date;
+- falling motion for additions and stationary orange fading for corrections;
 - no indicator after a refresh error;
 - reduced-motion styling.
 
@@ -178,9 +205,8 @@ loading/error handling are unchanged — but:
   again, with no `CreditValue`/delta.
 - `App` no longer derives a `monthlyUpdateContextKey`.
 - The heatmap-specific `credit-heatmap-highlight` keyframes and reduced-motion
-  override were removed from `index.css`. The generic `credit-delta` and
-  `credit-chart-updated` styles used by numeric, card, table, and bar-chart
-  indicators elsewhere are unaffected.
+  override were removed from `index.css`. Numeric deltas and the separate
+  bar-chart indicator implementation remain independent of the heatmap.
 
 This also makes the final-review concern about navigating to the Monthly tab
 during a pending usage-filter refresh moot for the heatmap specifically: with
