@@ -1,3 +1,15 @@
+# [1.9.0](https://github.com/jm-parent/CreditsTracker/compare/v1.8.0...v1.9.0) (2026-09-10)
+
+
+### Bug Fixes
+
+* delay app.quit after Squirrel shortcut creation so it actually completes ([1dd47b6](https://github.com/jm-parent/CreditsTracker/commit/1dd47b6e9fe39faa362f2941d7c44e46bd691b36))
+
+
+### Features
+
+* prompt to create a Desktop shortcut on first launch of the portable build ([28abc03](https://github.com/jm-parent/CreditsTracker/commit/28abc03753b112ece76849d3bf8f6cfcb0d01fb7))
+
 # [1.8.0](https://github.com/jm-parent/CreditsTracker/compare/v1.7.0...v1.8.0) (2026-09-10)
 
 
