@@ -1,3 +1,19 @@
+# [1.10.0](https://github.com/jm-parent/CreditsTracker/compare/v1.9.0...v1.10.0) (2026-09-11)
+
+
+### Bug Fixes
+
+* check desktop shortcut on every launch ([f69ae63](https://github.com/jm-parent/CreditsTracker/commit/f69ae63ee34ea41a09556907376d46d496adf67d))
+* match real Squirrel shortcut naming and verify creation on disk ([af0e79a](https://github.com/jm-parent/CreditsTracker/commit/af0e79aed018405da53755e6761f043d9d64b26e))
+* remove portable shortcut and zip support ([a4623c0](https://github.com/jm-parent/CreditsTracker/commit/a4623c00d20bbf2a02f4bf9706ea6412154e8be0))
+* use Update.exe for desktop shortcut creation ([2e7eecd](https://github.com/jm-parent/CreditsTracker/commit/2e7eecde185c47d84e7ea29dfe7897433ab61888))
+* verify desktop shortcut toast flow ([f12dc39](https://github.com/jm-parent/CreditsTracker/commit/f12dc390c5219c6a6753768511c24d443157afed))
+
+
+### Features
+
+* show missing desktop shortcut toast ([cb43d59](https://github.com/jm-parent/CreditsTracker/commit/cb43d597d709d0cf965ef950d7568ab586360a2b))
+
 # [1.9.0](https://github.com/jm-parent/CreditsTracker/compare/v1.8.0...v1.9.0) (2026-09-10)
 
 
