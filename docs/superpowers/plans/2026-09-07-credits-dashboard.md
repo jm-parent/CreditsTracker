@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a self-contained Electron + React desktop app that reads the local Copilot CLI `session-store.db` SQLite file and displays a filterable dashboard of AI-credit (AIU) and token consumption, packaged as a distributable `.zip`.
+**Goal:** Build a self-contained Electron + React desktop app that reads the local Copilot CLI `session-store.db` SQLite file and displays a filterable dashboard of AI-credit (AIU) and token consumption, packaged as a Squirrel Windows installer.
 
-**Architecture:** Electron main process opens `session-store.db` read-only with `better-sqlite3` and exposes two operations (`getFilterOptions`, `getUsage`) over `ipcMain.handle`; a `contextBridge` preload exposes these as `window.api`; the React (Vite) renderer renders filters, summary cards, and charts driven by a polling hook. Packaged with `electron-forge` (Vite plugin) using the ZIP maker.
+**Architecture:** Electron main process opens `session-store.db` read-only with `better-sqlite3` and exposes two operations (`getFilterOptions`, `getUsage`) over `ipcMain.handle`; a `contextBridge` preload exposes these as `window.api`; the React (Vite) renderer renders filters, summary cards, and charts driven by a polling hook. Packaged with `electron-forge` (Vite plugin) for Squirrel.Windows output.
 
 **Tech Stack:** TypeScript, Electron, electron-forge (+ `@electron-forge/plugin-vite`), Vite, React 18, `better-sqlite3`, `recharts`, Vitest, `@testing-library/react`.
 
@@ -14,7 +14,7 @@
 - DB path is always `path.join(os.homedir(), '.copilot', 'session-store.db')`, read-only access only — never write to this file (per spec Architecture).
 - Primary metric is AIU credits (`total_nano_aiu / 1e9`); tokens are secondary. No dollar conversion (per spec Purpose/Context).
 - No dollar cost estimates, no org-wide views, no auto-update mechanism, no e2e Electron tests in this version (per spec Scope, YAGNI).
-- Packaging output must be a `.zip` producible via `electron-forge`'s ZIP maker (per spec Architecture).
+- Packaging output must be the Squirrel.Windows installer bundle (`Setup.exe`, `.nupkg`, and `RELEASES`) producible via `electron-forge` (per spec Architecture).
 
 ---
 
@@ -61,7 +61,7 @@
 Run:
 ```bash
 npm install --save react react-dom recharts better-sqlite3
-npm install --save-dev electron @electron-forge/cli @electron-forge/maker-zip @electron-forge/plugin-vite typescript vite @vitejs/plugin-react vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event @types/react @types/react-dom @types/better-sqlite3 @types/node
+npm install --save-dev electron @electron-forge/cli @electron-forge/maker-squirrel @electron-forge/plugin-vite typescript vite @vitejs/plugin-react vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event @types/react @types/react-dom @types/better-sqlite3 @types/node
 ```
 Expected: installs succeed, `node_modules/` and `package-lock.json` are created.
 
@@ -148,7 +148,7 @@ export default defineConfig({
 
 ```ts
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerZIP } from '@electron-forge/maker-zip';
+import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 
 const config: ForgeConfig = {
@@ -156,7 +156,7 @@ const config: ForgeConfig = {
     asar: true,
   },
   rebuildConfig: {},
-  makers: [new MakerZIP({}, ['win32', 'darwin', 'linux'])],
+  makers: [new MakerSquirrel({})],
   plugins: [
     new VitePlugin({
       build: [
@@ -1935,15 +1935,15 @@ git commit -m "feat: compose full dashboard in App with filters, cards, charts, 
 
 ---
 
-### Task 15: Packaging (ZIP maker) + README
+### Task 15: Packaging (Squirrel installer) + README
 
 **Files:**
 - Modify: `forge.config.ts` (verify only — already configured in Task 1)
 - Create: `README.md`
 
 **Interfaces:**
-- Consumes: `npm run make` (electron-forge + `MakerZIP`, configured in Task 1).
-- Produces: a distributable `.zip` under `out/make/zip/<platform>/<arch>/`.
+- Consumes: `npm run make` (electron-forge + Squirrel.Windows maker, configured in Task 1).
+- Produces: Squirrel Windows artifacts under `out/make/squirrel.windows/x64/`.
 
 - [ ] **Step 1: Create `README.md`**
 
@@ -1966,13 +1966,12 @@ Opens the app in a dev window with hot reload.
 
     npm test
 
-## Building a distributable zip
+## Building the Windows installer bundle
 
     npm run make
 
-Produces a self-contained `.zip` under `out/make/zip/<platform>/<arch>/` that
-can be copied to another Windows PC and run without installing Node.js —
-just extract and launch the executable inside.
+Produces a Windows installer bundle under `out/make/squirrel.windows/x64/`,
+including `Setup.exe`, the `.nupkg`, and `RELEASES`.
 
 ## Data source
 
@@ -1981,14 +1980,16 @@ Copilot CLI already maintains. If that file doesn't exist on a machine, the
 app shows an empty-state message instead of failing.
 ```
 
-- [ ] **Step 2: Verify packaging produces a zip**
+- [ ] **Step 2: Verify packaging produces the Squirrel bundle**
 
 Run: `npm run make`
-Expected: command completes successfully; a `.zip` file appears under `out/make/zip/win32/x64/` (path may vary by platform/arch).
+Expected: command completes successfully; `Setup.exe`, the `.nupkg`, and
+`RELEASES` appear under `out/make/squirrel.windows/x64/`.
 
 - [ ] **Step 3: Manually verify the packaged app runs standalone**
 
-Extract the produced `.zip` to a separate folder and run the executable inside it.
+Run the produced `Setup.exe` on a separate test machine or profile and launch
+the installed app.
 Expected: the app launches and shows the same dashboard as `npm start` (or the empty-state message if `session-store.db` isn't present on this machine).
 
 - [ ] **Step 4: Commit**

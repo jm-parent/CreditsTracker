@@ -12,9 +12,10 @@ The Electron main process remains the source of truth for shortcut detection
 and creation. `src/main/shortcut.ts` will check for
 `Credits Tracker.lnk` in Electron's `desktop` path on every renderer mount.
 
-The check applies to every packaged Windows build, including Squirrel-managed
-installations and portable ZIP builds. Development runs and non-Windows
-platforms remain unsupported and never show the toast.
+The check applies only to packaged Windows builds installed through
+Squirrel, where the adjacent `Update.exe` is available. Development runs,
+non-Windows platforms, and unpacked/non-Squirrel builds remain unsupported
+and never show the toast.
 
 The existing persisted prompt flag is removed from this flow. Closing the
 toast suppresses it only for the current application session. If the shortcut
@@ -44,8 +45,7 @@ expected Desktop shortcut.
 
 Selecting **Create shortcut** invokes the existing creation IPC operation,
 which routes Squirrel-managed installs through the adjacent `Update.exe`
-with `--createShortcut` and the packaged executable basename, while portable
-builds continue using Electron's `shell.writeShortcutLink`. A successful
+with `--createShortcut` and the packaged executable basename. A successful
 result closes the toast. Closing the toast only updates renderer state and
 does not call a persistence IPC handler.
 
@@ -74,7 +74,7 @@ name, and progress and error text do not rely on color alone.
 
 Targeted tests will cover:
 
-- missing and existing shortcut detection for packaged Squirrel and portable
+- missing and existing shortcut detection for packaged Squirrel-managed
   Windows builds;
 - no prompt in development or on unsupported platforms;
 - toast rendering when the shortcut is absent;

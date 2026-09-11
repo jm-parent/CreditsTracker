@@ -320,4 +320,4 @@ Expected: the latest Release workflow succeeds after semantic-release builds and
 - [ ] **Step 5: Confirm published assets**
 
 Run: `gh release view v1.4.1 --json tagName,assets`  
-Expected: `tagName` is `v1.4.1`, with the Windows `Setup.exe`, `.nupkg`, `RELEASES`, and ZIP assets.
+Expected: `tagName` is `v1.4.1`, with the Windows `Setup.exe`, `.nupkg`, and `RELEASES` assets.

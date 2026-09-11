@@ -23,8 +23,9 @@ bonne version).
 - `ci.yml` : lance `npm test` sur chaque push/PR.
 - `release.yml` : sur chaque push sur `master` (ou déclenchement manuel via
   l'onglet Actions), fait tourner semantic-release qui bump la version,
-  génère `CHANGELOG.md`, build le zip Windows (`npm run make`), tague le
-  commit et publie une GitHub Release avec le zip attaché.
+  génère `CHANGELOG.md`, build les artefacts Squirrel Windows
+  (`npm run make`), tague le commit et publie une GitHub Release avec
+  `Setup.exe`, le `.nupkg` et `RELEASES`.
 - Config semantic-release : `.releaserc.json`.
 - Les deux workflows tournent sur `windows-latest` avec **Node 24** (doit
   matcher la version utilisée en local, car `better-sqlite3` embarque des
@@ -85,4 +86,4 @@ est refuse, s'arreter et demander a l'utilisateur de reauthentifier ce compte.
 
     npm start            # app en mode dev
     npm test              # suite de tests vitest
-    npm run make           # build le zip Windows (out/make/zip/win32/x64/*.zip)
+    npm run make           # build les artefacts Squirrel Windows (out/make/squirrel.windows/x64/*)

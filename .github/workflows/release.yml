@@ -48,9 +48,9 @@ jobs:
       # (Conventional Commits: fix: -> patch, feat: -> minor, "BREAKING
       # CHANGE"/"!" -> major). If nothing warrants a release, it exits
       # without creating one. On release it bumps package.json, updates
-      # CHANGELOG.md, builds the Windows zip (electron-forge make), tags the
-      # commit, pushes it back to master, and publishes a GitHub Release
-      # with the zip attached.
+      # CHANGELOG.md, builds the Windows Setup.exe installer bundle
+      # (electron-forge make), tags the commit, pushes it back to master,
+      # and publishes a GitHub Release with the Squirrel artifacts attached.
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

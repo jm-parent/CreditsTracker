@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { app, shell } from 'electron';
+import { app } from 'electron';
 import { spawnSync } from 'node:child_process';
 import { createDesktopShortcut, shouldPromptForDesktopShortcut } from './shortcut';
 
@@ -15,9 +15,6 @@ vi.mock('electron', () => ({
     getPath: vi.fn((name: string) => {
       throw new Error(`unexpected app.getPath("${name}") call before test setup`);
     }),
-  },
-  shell: {
-    writeShortcutLink: vi.fn(() => true),
   },
 }));
 
@@ -66,8 +63,8 @@ afterEach(() => {
 });
 
 describe('shouldPromptForDesktopShortcut', () => {
-  it('returns true for a portable, packaged, unprompted install', () => {
-    expect(shouldPromptForDesktopShortcut()).toBe(true);
+  it('returns false for a packaged install that is not Squirrel-managed', () => {
+    expect(shouldPromptForDesktopShortcut()).toBe(false);
   });
 
   it('returns false when not packaged', () => {
@@ -88,6 +85,8 @@ describe('shouldPromptForDesktopShortcut', () => {
   });
 
   it('returns false while the Desktop shortcut exists and true again after it is removed', () => {
+    const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
+    fs.writeFileSync(updateExe, '');
     const shortcutPath = path.join(desktopDir, 'Credits Tracker.lnk');
     fs.writeFileSync(shortcutPath, '');
     expect(shouldPromptForDesktopShortcut()).toBe(false);
@@ -98,26 +97,11 @@ describe('shouldPromptForDesktopShortcut', () => {
 });
 
 describe('createDesktopShortcut', () => {
-  it('uses shell.writeShortcutLink for portable installs and suppresses the prompt while it exists', () => {
-    const mockWriteShortcutLink = shell.writeShortcutLink as unknown as ReturnType<typeof vi.fn>;
-    mockWriteShortcutLink.mockImplementation((shortcutPath: string) => {
-      fs.writeFileSync(shortcutPath, '');
-      return true;
-    });
-
+  it('returns false when Update.exe is unavailable', () => {
     const result = createDesktopShortcut();
 
-    expect(result).toBe(true);
+    expect(result).toBe(false);
     expect(spawnSync).not.toHaveBeenCalled();
-    expect(shell.writeShortcutLink).toHaveBeenCalledWith(
-      path.join(desktopDir, 'Credits Tracker.lnk'),
-      'create',
-      expect.objectContaining({
-        target: process.execPath,
-        cwd: path.dirname(process.execPath),
-        icon: process.execPath,
-      }),
-    );
     expect(shouldPromptForDesktopShortcut()).toBe(false);
   });
 
@@ -138,19 +122,7 @@ describe('createDesktopShortcut', () => {
       ['--createShortcut', 'CreditsTracker.exe'],
       expect.objectContaining({ detached: true, stdio: 'ignore' }),
     );
-    expect(shell.writeShortcutLink).not.toHaveBeenCalled();
     expect(shouldPromptForDesktopShortcut()).toBe(false);
-  });
-
-  it('returns false when shell.writeShortcutLink throws', () => {
-    (shell.writeShortcutLink as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      throw new Error('boom');
-    });
-
-    const result = createDesktopShortcut();
-
-    expect(result).toBe(false);
-    expect(shouldPromptForDesktopShortcut()).toBe(true);
   });
 
   it('returns false when Update.exe reports a failure', () => {
@@ -161,8 +133,7 @@ describe('createDesktopShortcut', () => {
 
     const result = createDesktopShortcut();
 
-    expect(result).toBe(false);
-    expect(shell.writeShortcutLink).not.toHaveBeenCalled();
     expect(shouldPromptForDesktopShortcut()).toBe(true);
+    expect(result).toBe(false);
   });
 });

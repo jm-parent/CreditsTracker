@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Check for a Windows Desktop shortcut at every packaged app launch and show a persistent, retryable, non-blocking creation toast when it is missing.
+**Goal:** Check for a Windows Desktop shortcut at every packaged Squirrel app launch and show a persistent, retryable, non-blocking creation toast when it is missing.
 
 **Architecture:** The Electron main process checks the expected `.lnk` path and creates the shortcut through the existing IPC bridge. The renderer owns session-only toast dismissal and creation UI state; no dismissal is persisted. Squirrel's installation-time shortcut handling remains unchanged.
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Apply the check only to packaged Windows builds, including Squirrel-managed and portable builds.
+- Apply the check only to packaged Squirrel-managed Windows builds.
 - Never show the toast in development or on non-Windows platforms.
 - Keep the toast visible until the user closes it or shortcut creation succeeds; do not auto-dismiss it.
 - Closing the toast affects only the current renderer session.
@@ -32,7 +32,7 @@
 
 **Interfaces:**
 - Produces: `shouldPromptForDesktopShortcut(): boolean`, returning true only when a packaged Windows build has no `Credits Tracker.lnk` on the Desktop.
-- Preserves: `createDesktopShortcut(): boolean`, which uses the adjacent `Update.exe --createShortcut <exe>` path for Squirrel-managed installs and `shell.writeShortcutLink` for portable builds.
+- Preserves: `createDesktopShortcut(): boolean`, which uses the adjacent `Update.exe --createShortcut <exe>` path for Squirrel-managed installs.
 - Removes: `dismissDesktopShortcutPrompt(): void` and `window.api.dismissDesktopShortcutPrompt()`.
 
 - [ ] **Step 1: Replace persistence-oriented main-process tests with launch-time detection tests**
@@ -87,7 +87,7 @@ In `src/main/shortcut.ts`:
 - define support as packaged Windows only;
 - make `shouldPromptForDesktopShortcut()` return
   `isSupported() && !fs.existsSync(desktopShortcutPath())`;
-- retain logging and route Squirrel-managed installs through adjacent `Update.exe --createShortcut <exe>` while portable builds keep using `shell.writeShortcutLink` in `createDesktopShortcut()`;
+- retain logging and route supported installs through adjacent `Update.exe --createShortcut <exe>` in `createDesktopShortcut()`;
 - stop marking any prompt state after success or failure.
 
 The resulting detection core must be:

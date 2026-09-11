@@ -1,5 +1,4 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { ensureSquirrelSevenZipAlias } from './src/build/ensureSquirrelSevenZipAlias';
@@ -47,7 +46,6 @@ const config: ForgeConfig = {
   // perform a rebuild, and it isn't needed here.
   rebuildConfig: { onlyModules: [] },
   makers: [
-    new MakerZIP({}, ['win32', 'darwin', 'linux']),
     // Squirrel.Windows installer (Setup.exe + .nupkg + RELEASES) is what
     // Electron's built-in autoUpdater (driven by src/main/updater.ts) expects
     // to find attached to a GitHub Release in order to check for and install

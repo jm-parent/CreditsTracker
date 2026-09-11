@@ -116,7 +116,7 @@ rtk npm run make
 rtk git diff --check
 ```
 
-Expected: the complete test suite passes, Windows ZIP and Squirrel artifacts build successfully, and the diff check reports no whitespace errors.
+Expected: the complete test suite passes, Windows Squirrel artifacts build successfully, and the diff check reports no whitespace errors.
 
 - [ ] **Step 7: Commit the implementation**
 

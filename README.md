@@ -11,8 +11,8 @@ permissions required, nothing ever leaves your computer.
 
 Grab the latest Windows build from the
 [Releases page](https://github.com/jm-parent/CreditsTracker/releases/latest):
-download the zip, extract it, and run the executable inside — no
-installation, no Node.js required.
+download and run `CreditsTracker-<version>-win32-x64-Setup.exe` — no Node.js
+required.
 
 ## Features
 
