@@ -203,8 +203,8 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
 
   handle('should-prompt-desktop-shortcut', () => shouldPromptForDesktopShortcut());
 
-  handle('create-desktop-shortcut', () => {
-    const created = createDesktopShortcut();
+  handle('create-desktop-shortcut', async () => {
+    const created = await createDesktopShortcut();
     logInfo(
       'shortcut',
       created ? 'Desktop shortcut created from the Desktop shortcut toast' : 'Desktop shortcut creation failed from the Desktop shortcut toast',

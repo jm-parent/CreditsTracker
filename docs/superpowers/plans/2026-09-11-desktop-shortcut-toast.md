@@ -63,10 +63,11 @@ it('returns false while the Desktop shortcut exists and true again after it is r
 });
 ```
 
-Change the creation tests so a failed `writeShortcutLink` leaves
-`shouldPromptForDesktopShortcut()` true. In the successful test, have the
-mock implementation write `Credits Tracker.lnk` before returning true, then
-assert the check returns false.
+Change the creation tests so a failed `Update.exe --createShortcut`
+invocation leaves `shouldPromptForDesktopShortcut()` true. In the successful
+test, have the mock implementation write the shortcut named after the
+packaged executable's basename (not the display name) before reporting
+success, then assert the check returns false.
 
 - [ ] **Step 2: Run the shortcut tests to verify they fail**
 
