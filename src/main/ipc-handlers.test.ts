@@ -31,7 +31,6 @@ vi.mock('./updater', () => ({
 vi.mock('./shortcut', () => ({
   shouldPromptForDesktopShortcut: vi.fn(() => true),
   createDesktopShortcut: vi.fn(() => true),
-  dismissDesktopShortcutPrompt: vi.fn(),
 }));
 
 vi.mock('./db', async () => {
@@ -116,11 +115,9 @@ describe('registerIpcHandlers', () => {
 
     expect(handlers.get('should-prompt-desktop-shortcut')!({})).toBe(true);
     expect(handlers.get('create-desktop-shortcut')!({})).toBe(true);
-    handlers.get('dismiss-desktop-shortcut-prompt')!({});
 
     expect(shortcut.shouldPromptForDesktopShortcut).toHaveBeenCalled();
     expect(shortcut.createDesktopShortcut).toHaveBeenCalled();
-    expect(shortcut.dismissDesktopShortcutPrompt).toHaveBeenCalled();
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {

@@ -3,9 +3,9 @@ import { logError, logInfo } from '../lib/logger';
 
 /**
  * Drives the first-launch "create a Desktop shortcut?" dialog. The main
- * process decides once (on mount) whether the prompt is due — see
- * `shouldPromptForDesktopShortcut` in src/main/shortcut.ts — and the answer
- * is persisted there, so this hook never needs to ask again itself.
+ * process decides on each mount whether the prompt is due — see
+ * `shouldPromptForDesktopShortcut` in src/main/shortcut.ts — and the hook
+ * only manages renderer state.
  */
 export function useDesktopShortcutPrompt() {
   const [open, setOpen] = useState(false);
@@ -47,9 +47,6 @@ export function useDesktopShortcutPrompt() {
 
   const dismiss = useCallback(() => {
     setOpen(false);
-    window.api.dismissDesktopShortcutPrompt().catch((err) => {
-      logError('useDesktopShortcutPrompt', 'Failed to persist the desktop shortcut prompt dismissal', err);
-    });
   }, []);
 
   return { open, creating, create, dismiss };

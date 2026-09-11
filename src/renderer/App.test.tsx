@@ -71,7 +71,6 @@ beforeEach(() => {
     onUpdateStateChange: vi.fn(() => () => {}),
     shouldPromptDesktopShortcut: vi.fn().mockResolvedValue(false),
     createDesktopShortcut: vi.fn().mockResolvedValue(true),
-    dismissDesktopShortcutPrompt: vi.fn().mockResolvedValue(undefined),
     getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),

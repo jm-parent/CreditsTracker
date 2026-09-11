@@ -15,7 +15,6 @@ import { loadVscodeUsage } from './vscode-chat-store';
 import { checkForUpdate, downloadUpdate, getUpdateState, restartToUpdate } from './updater';
 import {
   createDesktopShortcut,
-  dismissDesktopShortcutPrompt,
   shouldPromptForDesktopShortcut,
 } from './shortcut';
 import {
@@ -208,15 +207,9 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
     const created = createDesktopShortcut();
     logInfo(
       'shortcut',
-      created
-        ? 'Desktop shortcut created from the first-launch prompt'
-        : 'Desktop shortcut creation failed from the first-launch prompt',
+      created ? 'Desktop shortcut created from the Desktop shortcut toast' : 'Desktop shortcut creation failed from the Desktop shortcut toast',
     );
     return created;
-  });
-
-  handle('dismiss-desktop-shortcut-prompt', () => {
-    dismissDesktopShortcutPrompt();
   });
 
   handle('get-logs', () => snapshot());

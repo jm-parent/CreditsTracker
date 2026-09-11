@@ -3,13 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { app, shell } from 'electron';
-import {
-  createDesktopShortcut,
-  dismissDesktopShortcutPrompt,
-  shouldPromptForDesktopShortcut,
-} from './shortcut';
+import { createDesktopShortcut, shouldPromptForDesktopShortcut } from './shortcut';
 
-let userDataDir: string;
 let desktopDir: string;
 
 vi.mock('electron', () => ({
@@ -40,15 +35,12 @@ function setExecPath(execPath: string): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'credits-tracker-shortcut-test-'));
-  userDataDir = path.join(root, 'userData');
-  desktopDir = path.join(root, 'Desktop');
-  fs.mkdirSync(userDataDir, { recursive: true });
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'credits-tracker-shortcut-test-'));
+  desktopDir = path.join(testRoot, 'Desktop');
   fs.mkdirSync(desktopDir, { recursive: true });
 
   (app as unknown as { isPackaged: boolean }).isPackaged = true;
   (app.getPath as unknown as ReturnType<typeof vi.fn>).mockImplementation((name: string) => {
-    if (name === 'userData') return userDataDir;
     if (name === 'desktop') return desktopDir;
     throw new Error(`unexpected app.getPath("${name}") call`);
   });
@@ -56,12 +48,13 @@ beforeEach(() => {
   setPlatform('win32');
   // A portable install: the exe sits directly in its own folder with no
   // sibling Update.exe, unlike a Squirrel-managed install.
-  setExecPath(path.join(root, 'CreditsTracker', 'CreditsTracker.exe'));
+  const installRoot = path.dirname(desktopDir);
+  setExecPath(path.join(installRoot, 'CreditsTracker', 'CreditsTracker.exe'));
   fs.mkdirSync(path.dirname(process.execPath), { recursive: true });
 });
 
 afterEach(() => {
-  fs.rmSync(path.dirname(userDataDir), { recursive: true, force: true });
+  fs.rmSync(path.dirname(desktopDir), { recursive: true, force: true });
 });
 
 describe('shouldPromptForDesktopShortcut', () => {
@@ -79,29 +72,31 @@ describe('shouldPromptForDesktopShortcut', () => {
     expect(shouldPromptForDesktopShortcut()).toBe(false);
   });
 
-  it('returns false when Squirrel manages the install (Update.exe sibling present)', () => {
+  it('returns true when a Squirrel-managed install has no Desktop shortcut', () => {
     const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
     fs.writeFileSync(updateExe, '');
-    expect(shouldPromptForDesktopShortcut()).toBe(false);
+
+    expect(shouldPromptForDesktopShortcut()).toBe(true);
   });
 
-  it('returns false and marks prompted when a shortcut already exists on the Desktop', () => {
-    fs.writeFileSync(path.join(desktopDir, 'Credits Tracker.lnk'), '');
+  it('returns false while the Desktop shortcut exists and true again after it is removed', () => {
+    const shortcutPath = path.join(desktopDir, 'Credits Tracker.lnk');
+    fs.writeFileSync(shortcutPath, '');
     expect(shouldPromptForDesktopShortcut()).toBe(false);
-    // The flag is now persisted, so even removing the shortcut afterwards
-    // must not bring the prompt back.
-    fs.rmSync(path.join(desktopDir, 'Credits Tracker.lnk'));
-    expect(shouldPromptForDesktopShortcut()).toBe(false);
-  });
 
-  it('returns false after the prompt has already been answered', () => {
-    dismissDesktopShortcutPrompt();
-    expect(shouldPromptForDesktopShortcut()).toBe(false);
+    fs.rmSync(shortcutPath);
+    expect(shouldPromptForDesktopShortcut()).toBe(true);
   });
 });
 
 describe('createDesktopShortcut', () => {
-  it('writes a shortcut targeting the running executable and marks the prompt handled', () => {
+  it('writes a shortcut targeting the running executable and suppresses the prompt while it exists', () => {
+    const mockWriteShortcutLink = shell.writeShortcutLink as unknown as ReturnType<typeof vi.fn>;
+    mockWriteShortcutLink.mockImplementation((shortcutPath: string) => {
+      fs.writeFileSync(shortcutPath, '');
+      return true;
+    });
+
     const result = createDesktopShortcut();
 
     expect(result).toBe(true);
@@ -117,7 +112,7 @@ describe('createDesktopShortcut', () => {
     expect(shouldPromptForDesktopShortcut()).toBe(false);
   });
 
-  it('still marks the prompt handled when shell.writeShortcutLink throws', () => {
+  it('leaves the prompt available when shell.writeShortcutLink throws', () => {
     (shell.writeShortcutLink as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => {
       throw new Error('boom');
     });
@@ -125,15 +120,6 @@ describe('createDesktopShortcut', () => {
     const result = createDesktopShortcut();
 
     expect(result).toBe(false);
-    expect(shouldPromptForDesktopShortcut()).toBe(false);
-  });
-});
-
-describe('dismissDesktopShortcutPrompt', () => {
-  it('suppresses further prompts without creating a shortcut', () => {
-    dismissDesktopShortcutPrompt();
-
-    expect(shouldPromptForDesktopShortcut()).toBe(false);
-    expect(shell.writeShortcutLink).not.toHaveBeenCalled();
+    expect(shouldPromptForDesktopShortcut()).toBe(true);
   });
 });
