@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { logError, logInfo } from '../lib/logger';
 
 /**
- * Drives the first-launch "create a Desktop shortcut?" dialog. The main
+ * Drives the launch-time "create a Desktop shortcut?" dialog. The main
  * process decides on each mount whether the prompt is due — see
  * `shouldPromptForDesktopShortcut` in src/main/shortcut.ts — and the hook
  * only manages renderer state.

@@ -3,9 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { app, shell } from 'electron';
+import { spawnSync } from 'node:child_process';
 import { createDesktopShortcut, shouldPromptForDesktopShortcut } from './shortcut';
 
 let desktopDir: string;
+let installRoot: string;
 
 vi.mock('electron', () => ({
   app: {
@@ -18,6 +20,14 @@ vi.mock('electron', () => ({
     writeShortcutLink: vi.fn(() => true),
   },
 }));
+
+vi.mock('node:child_process', () => {
+  const spawnSync = vi.fn();
+  return {
+    spawnSync,
+    default: { spawnSync },
+  };
+});
 
 vi.mock('./logger', () => ({
   logError: vi.fn(),
@@ -38,6 +48,7 @@ beforeEach(() => {
   const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'credits-tracker-shortcut-test-'));
   desktopDir = path.join(testRoot, 'Desktop');
   fs.mkdirSync(desktopDir, { recursive: true });
+  installRoot = path.join(testRoot, 'Install');
 
   (app as unknown as { isPackaged: boolean }).isPackaged = true;
   (app.getPath as unknown as ReturnType<typeof vi.fn>).mockImplementation((name: string) => {
@@ -46,9 +57,6 @@ beforeEach(() => {
   });
 
   setPlatform('win32');
-  // A portable install: the exe sits directly in its own folder with no
-  // sibling Update.exe, unlike a Squirrel-managed install.
-  const installRoot = path.dirname(desktopDir);
   setExecPath(path.join(installRoot, 'CreditsTracker', 'CreditsTracker.exe'));
   fs.mkdirSync(path.dirname(process.execPath), { recursive: true });
 });
@@ -90,7 +98,7 @@ describe('shouldPromptForDesktopShortcut', () => {
 });
 
 describe('createDesktopShortcut', () => {
-  it('writes a shortcut targeting the running executable and suppresses the prompt while it exists', () => {
+  it('uses shell.writeShortcutLink for portable installs and suppresses the prompt while it exists', () => {
     const mockWriteShortcutLink = shell.writeShortcutLink as unknown as ReturnType<typeof vi.fn>;
     mockWriteShortcutLink.mockImplementation((shortcutPath: string) => {
       fs.writeFileSync(shortcutPath, '');
@@ -100,6 +108,7 @@ describe('createDesktopShortcut', () => {
     const result = createDesktopShortcut();
 
     expect(result).toBe(true);
+    expect(spawnSync).not.toHaveBeenCalled();
     expect(shell.writeShortcutLink).toHaveBeenCalledWith(
       path.join(desktopDir, 'Credits Tracker.lnk'),
       'create',
@@ -112,7 +121,28 @@ describe('createDesktopShortcut', () => {
     expect(shouldPromptForDesktopShortcut()).toBe(false);
   });
 
-  it('leaves the prompt available when shell.writeShortcutLink throws', () => {
+  it('uses Update.exe for Squirrel-managed installs and creates the shortcut there', () => {
+    const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
+    fs.writeFileSync(updateExe, '');
+    const spawnSyncMock = spawnSync as unknown as ReturnType<typeof vi.fn>;
+    spawnSyncMock.mockImplementation((command: string, args: string[]) => {
+      fs.writeFileSync(path.join(desktopDir, 'Credits Tracker.lnk'), '');
+      return { status: 0, signal: null, error: undefined } as never;
+    });
+
+    const result = createDesktopShortcut();
+
+    expect(result).toBe(true);
+    expect(spawnSync).toHaveBeenCalledWith(
+      updateExe,
+      ['--createShortcut', 'CreditsTracker.exe'],
+      expect.objectContaining({ detached: true, stdio: 'ignore' }),
+    );
+    expect(shell.writeShortcutLink).not.toHaveBeenCalled();
+    expect(shouldPromptForDesktopShortcut()).toBe(false);
+  });
+
+  it('returns false when shell.writeShortcutLink throws', () => {
     (shell.writeShortcutLink as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => {
       throw new Error('boom');
     });
@@ -120,6 +150,19 @@ describe('createDesktopShortcut', () => {
     const result = createDesktopShortcut();
 
     expect(result).toBe(false);
+    expect(shouldPromptForDesktopShortcut()).toBe(true);
+  });
+
+  it('returns false when Update.exe reports a failure', () => {
+    const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
+    fs.writeFileSync(updateExe, '');
+    const spawnSyncMock = spawnSync as unknown as ReturnType<typeof vi.fn>;
+    spawnSyncMock.mockReturnValue({ status: 1, signal: null, error: undefined } as never);
+
+    const result = createDesktopShortcut();
+
+    expect(result).toBe(false);
+    expect(shell.writeShortcutLink).not.toHaveBeenCalled();
     expect(shouldPromptForDesktopShortcut()).toBe(true);
   });
 });

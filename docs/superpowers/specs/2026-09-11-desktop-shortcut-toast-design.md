@@ -43,9 +43,11 @@ The main process returns whether the packaged Windows application lacks the
 expected Desktop shortcut.
 
 Selecting **Create shortcut** invokes the existing creation IPC operation,
-which uses Electron's `shell.writeShortcutLink`. A successful result closes
-the toast. Closing the toast only updates renderer state and does not call a
-persistence IPC handler.
+which routes Squirrel-managed installs through the adjacent `Update.exe`
+with `--createShortcut` and the packaged executable basename, while portable
+builds continue using Electron's `shell.writeShortcutLink`. A successful
+result closes the toast. Closing the toast only updates renderer state and
+does not call a persistence IPC handler.
 
 The obsolete dismissal persistence API and its prompt flag file are removed.
 Squirrel's install/update shortcut creation remains unchanged and continues

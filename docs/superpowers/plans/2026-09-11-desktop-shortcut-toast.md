@@ -32,7 +32,7 @@
 
 **Interfaces:**
 - Produces: `shouldPromptForDesktopShortcut(): boolean`, returning true only when a packaged Windows build has no `Credits Tracker.lnk` on the Desktop.
-- Preserves: `createDesktopShortcut(): boolean`.
+- Preserves: `createDesktopShortcut(): boolean`, which uses the adjacent `Update.exe --createShortcut <exe>` path for Squirrel-managed installs and `shell.writeShortcutLink` for portable builds.
 - Removes: `dismissDesktopShortcutPrompt(): void` and `window.api.dismissDesktopShortcutPrompt()`.
 
 - [ ] **Step 1: Replace persistence-oriented main-process tests with launch-time detection tests**
@@ -87,7 +87,7 @@ In `src/main/shortcut.ts`:
 - define support as packaged Windows only;
 - make `shouldPromptForDesktopShortcut()` return
   `isSupported() && !fs.existsSync(desktopShortcutPath())`;
-- retain logging and `shell.writeShortcutLink` in `createDesktopShortcut()`;
+- retain logging and route Squirrel-managed installs through adjacent `Update.exe --createShortcut <exe>` while portable builds keep using `shell.writeShortcutLink` in `createDesktopShortcut()`;
 - stop marking any prompt state after success or failure.
 
 The resulting detection core must be:
