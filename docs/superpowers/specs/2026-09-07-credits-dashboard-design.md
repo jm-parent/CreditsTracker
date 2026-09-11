@@ -5,8 +5,8 @@
 A standalone desktop app (Electron + React) that lets a user track their own GitHub
 Copilot CLI credit consumption on their local machine: how many AI credits (AIU) and
 tokens they've used, broken down over time, by project, and by model. Distributed as a
-self-contained `.zip` that runs on any Windows PC with no prerequisites (no Node.js,
-no GitHub admin/billing permissions required).
+Windows installer (`Setup.exe`) with Squirrel update metadata, with no Node.js,
+no GitHub admin/billing permissions required.
 
 ## Context / Why not the official GitHub API
 
@@ -52,8 +52,8 @@ Electron app with a React (Vite) renderer:
   Node/fs access leaks into the renderer.
 - **Renderer (React)**: dashboard UI, calls `window.api` only — no HTTP server, no
   CORS concerns.
-- **Packaging**: `electron-forge` with the ZIP maker, producing a self-contained
-  `.zip` (bundles Node + Chromium) that a recipient can extract and run directly.
+- **Packaging**: `electron-forge` with Squirrel.Windows packaging, producing a
+  `Setup.exe` installer plus `.nupkg` and `RELEASES` metadata for updates.
   `better-sqlite3`'s native module is rebuilt for Electron's ABI as part of the
   packaging step (`electron-rebuild`, handled by electron-forge's built-in workflow).
 - **DB path resolution**: `path.join(os.homedir(), '.copilot', 'session-store.db')`.

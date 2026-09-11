@@ -706,8 +706,8 @@ Run:
 rtk npm run make
 ```
 
-Expected: exit code 0 and a Windows x64 ZIP under
-`out/make/zip/win32/x64/`.
+Expected: exit code 0 and Windows Squirrel artifacts under
+`out/make/squirrel.windows/x64/`.
 
 - [ ] **Step 3: Inspect the final diff**
 

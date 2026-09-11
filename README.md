@@ -11,8 +11,11 @@ permissions required, nothing ever leaves your computer.
 
 Grab the latest Windows build from the
 [Releases page](https://github.com/jm-parent/CreditsTracker/releases/latest):
-download the zip, extract it, and run the executable inside — no
-installation, no Node.js required.
+download and run `CreditsTracker-<version>-win32-x64-Setup.exe` — no Node.js
+required. The release also lists a `.nupkg` file and a `RELEASES` manifest;
+those are Squirrel auto-update metadata consumed by the app itself when
+checking for updates, not something to download by hand — only the
+`Setup.exe` asset is needed to install or upgrade.
 
 ## Features
 

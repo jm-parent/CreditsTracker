@@ -30,8 +30,7 @@ vi.mock('./updater', () => ({
 
 vi.mock('./shortcut', () => ({
   shouldPromptForDesktopShortcut: vi.fn(() => true),
-  createDesktopShortcut: vi.fn(() => true),
-  dismissDesktopShortcutPrompt: vi.fn(),
+  createDesktopShortcut: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('./db', async () => {
@@ -115,12 +114,21 @@ describe('registerIpcHandlers', () => {
     }).__handlers;
 
     expect(handlers.get('should-prompt-desktop-shortcut')!({})).toBe(true);
-    expect(handlers.get('create-desktop-shortcut')!({})).toBe(true);
-    handlers.get('dismiss-desktop-shortcut-prompt')!({});
+    await expect(handlers.get('create-desktop-shortcut')!({})).resolves.toBe(true);
 
     expect(shortcut.shouldPromptForDesktopShortcut).toHaveBeenCalled();
     expect(shortcut.createDesktopShortcut).toHaveBeenCalled();
-    expect(shortcut.dismissDesktopShortcutPrompt).toHaveBeenCalled();
+  });
+
+  it('reports false through create-desktop-shortcut when creation fails', async () => {
+    const shortcut = await import('./shortcut');
+    (shortcut.createDesktopShortcut as unknown as Mock).mockResolvedValueOnce(false);
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+
+    await expect(handlers.get('create-desktop-shortcut')!({})).resolves.toBe(false);
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {

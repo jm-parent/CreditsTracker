@@ -57,7 +57,6 @@ contextBridge.exposeInMainWorld('api', {
   },
   shouldPromptDesktopShortcut: (): Promise<boolean> => ipcRenderer.invoke('should-prompt-desktop-shortcut'),
   createDesktopShortcut: (): Promise<boolean> => ipcRenderer.invoke('create-desktop-shortcut'),
-  dismissDesktopShortcutPrompt: (): Promise<void> => ipcRenderer.invoke('dismiss-desktop-shortcut-prompt'),
   getLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('get-logs'),
   clearLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('clear-logs'),
   openLogFile: (): Promise<string | null> => ipcRenderer.invoke('open-log-file'),

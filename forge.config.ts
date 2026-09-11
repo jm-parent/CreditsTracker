@@ -1,10 +1,15 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerZIP } from '@electron-forge/maker-zip';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
+import { ensureSquirrelSevenZipAlias } from './src/build/ensureSquirrelSevenZipAlias';
+import { ResilientMakerSquirrel } from './src/build/ResilientMakerSquirrel';
 
 const config: ForgeConfig = {
+  hooks: {
+    preMake: async () => {
+      ensureSquirrelSevenZipAlias();
+    },
+  },
   packagerConfig: {
     // electron-packager appends the platform-appropriate extension
     // (.ico on Windows, .icns on macOS, .png on Linux) to this base path.
@@ -41,12 +46,11 @@ const config: ForgeConfig = {
   // perform a rebuild, and it isn't needed here.
   rebuildConfig: { onlyModules: [] },
   makers: [
-    new MakerZIP({}, ['win32', 'darwin', 'linux']),
     // Squirrel.Windows installer (Setup.exe + .nupkg + RELEASES) is what
     // Electron's built-in autoUpdater (driven by src/main/updater.ts) expects
     // to find attached to a GitHub Release in order to check for and install
     // updates on Windows.
-    new MakerSquirrel({
+    new ResilientMakerSquirrel({
       authors: 'jm-parent',
       setupIcon: './assets/icon.ico',
     }),

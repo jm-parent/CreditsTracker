@@ -395,8 +395,8 @@ rtk git diff origin/master...HEAD --check
 rtk git status --short
 ```
 
-Expected: all tests pass, ZIP and Squirrel artifacts are generated, the diff
-has no whitespace errors, and the worktree contains no uncommitted tracked
+Expected: all tests pass, the Squirrel artifacts are generated, the diff has
+no whitespace errors, and the worktree contains no uncommitted tracked
 changes.
 
 If `npm ci --ignore-scripts` was run in a fresh checkout, restore

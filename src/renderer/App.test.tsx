@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, act } from '@testing-library/react';
+import { render, screen, within, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { resetLogDedupeForTests } from './lib/logger';
@@ -71,7 +71,6 @@ beforeEach(() => {
     onUpdateStateChange: vi.fn(() => () => {}),
     shouldPromptDesktopShortcut: vi.fn().mockResolvedValue(false),
     createDesktopShortcut: vi.fn().mockResolvedValue(true),
-    dismissDesktopShortcutPrompt: vi.fn().mockResolvedValue(undefined),
     getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),
@@ -97,6 +96,43 @@ describe('App', () => {
 
     expect(await screen.findByText('3.00')).toBeInTheDocument();
     expect(screen.queryByText(/^v/)).not.toBeInTheDocument();
+  });
+
+  it('shows the desktop shortcut toast without blocking the dashboard and closes it after creating the shortcut', async () => {
+    window.api.shouldPromptDesktopShortcut = vi.fn().mockResolvedValue(true);
+    window.api.createDesktopShortcut = vi.fn().mockResolvedValue(true);
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(await screen.findByText('3.00')).toBeInTheDocument();
+    expect(await screen.findByText('No Desktop shortcut found')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Create shortcut' }));
+
+    expect(window.api.createDesktopShortcut).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.queryByText('No Desktop shortcut found')).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps the desktop shortcut toast open and shows an error when creation fails', async () => {
+    window.api.shouldPromptDesktopShortcut = vi.fn().mockResolvedValue(true);
+    window.api.createDesktopShortcut = vi.fn().mockResolvedValue(false);
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(await screen.findByText('3.00')).toBeInTheDocument();
+    expect(await screen.findByText('No Desktop shortcut found')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Create shortcut' }));
+
+    expect(window.api.createDesktopShortcut).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not create the shortcut. Please try again.',
+    );
+    expect(screen.getByText('No Desktop shortcut found')).toBeInTheDocument();
   });
 
   it('switches to the monthly activity heatmap when the sidebar entry is clicked', async () => {

@@ -1,110 +1,142 @@
-import { app, shell } from 'electron';
+import { app } from 'electron';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logError, logInfo, logWarn } from './logger';
 
-const SHORTCUT_NAME = 'Credits Tracker.lnk';
-const PROMPT_FLAG_FILE = 'desktop-shortcut-prompt.json';
+/**
+ * Name used by an earlier (buggy) version of this file that assumed
+ * Squirrel names the shortcut after the product ("Credits Tracker.lnk")
+ * rather than after the packaged executable's basename. Kept only so an
+ * install that somehow already has that file isn't re-prompted.
+ */
+const LEGACY_SHORTCUT_NAME = 'Credits Tracker.lnk';
 
-function flagFilePath(): string {
-  return path.join(app.getPath('userData'), PROMPT_FLAG_FILE);
+/** Basename (with extension) of the currently running packaged executable, e.g. `credits-tracker.exe`. */
+function exeBasename(): string {
+  return path.basename(process.execPath);
+}
+
+/**
+ * Squirrel names the `.lnk` it creates after the target executable's
+ * basename with its extension replaced by `.lnk` (e.g. `credits-tracker.exe`
+ * -> `credits-tracker.lnk`), not after the product name. This must track
+ * whatever the packaged executable is actually named, since Electron
+ * Packager derives that name from `package.json` and it can change.
+ */
+function shortcutNameForExe(exeName: string): string {
+  return `${path.basename(exeName, path.extname(exeName))}.lnk`;
+}
+
+function desktopDir(): string {
+  return app.getPath('desktop');
 }
 
 function desktopShortcutPath(): string {
-  return path.join(app.getPath('desktop'), SHORTCUT_NAME);
+  return path.join(desktopDir(), shortcutNameForExe(exeBasename()));
 }
 
-/**
- * Squirrel-installed builds already get a Desktop shortcut created on
- * install/update by squirrel-events.ts (via `Update.exe --createShortcut`),
- * pointed at the stable launcher shim rather than the versioned exe path
- * inside `app-x.y.z` (which moves on every update). Detected by the presence
- * of `Update.exe` one directory above the running executable, which only
- * exists in a Squirrel install layout — never in the portable zip build.
- */
-function isSquirrelManaged(): boolean {
-  try {
-    const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
-    return fs.existsSync(updateExe);
-  } catch {
-    return false;
-  }
+function legacyDesktopShortcutPath(): string {
+  return path.join(desktopDir(), LEGACY_SHORTCUT_NAME);
 }
 
-/**
- * Only the portable Windows zip build needs the first-launch prompt: a
- * Squirrel install already manages its own shortcut, and unpackaged dev runs
- * have no stable exe path to point a shortcut at.
- */
 function isSupported(): boolean {
-  return process.platform === 'win32' && app.isPackaged && !isSquirrelManaged();
+  return process.platform === 'win32' && app.isPackaged;
 }
 
-function hasBeenPrompted(): boolean {
-  try {
-    return fs.existsSync(flagFilePath());
-  } catch {
-    return false;
-  }
+function updateExePath(): string {
+  return path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
 }
 
-function markPrompted(): void {
-  try {
-    fs.mkdirSync(path.dirname(flagFilePath()), { recursive: true });
-    fs.writeFileSync(flagFilePath(), JSON.stringify({ promptedAt: new Date().toISOString() }), 'utf8');
-  } catch (error) {
-    logWarn('shortcut', 'Failed to persist the desktop shortcut prompt flag', error);
-  }
+function isSquirrelManagedInstall(): boolean {
+  return fs.existsSync(updateExePath());
 }
 
 /**
- * Whether the first-launch dialog offering to create a Desktop shortcut
- * should be shown. Only true once per install: the flag file recorded by
- * {@link createDesktopShortcut} or {@link dismissDesktopShortcutPrompt}
- * suppresses it afterwards, and a shortcut found on the Desktop already
- * (created manually, or by a previous run) also suppresses it without
- * requiring a decision.
+ * Whether the launch-time Desktop shortcut toast should be shown.
+ * Packaged Squirrel-managed Windows builds prompt only when the expected
+ * shortcut is absent. The legacy name is also checked so an install that
+ * already has it (from before this naming bug was fixed) isn't re-prompted.
  */
 export function shouldPromptForDesktopShortcut(): boolean {
-  if (!isSupported()) return false;
-  if (hasBeenPrompted()) return false;
-  if (fs.existsSync(desktopShortcutPath())) {
-    markPrompted();
-    return false;
-  }
-  return true;
+  return (
+    isSupported() &&
+    isSquirrelManagedInstall() &&
+    !fs.existsSync(desktopShortcutPath()) &&
+    !fs.existsSync(legacyDesktopShortcutPath())
+  );
 }
 
 /**
- * Creates (or overwrites) a Desktop `.lnk` pointing at the running
- * executable, using Electron's built-in Windows shortcut writer — no
- * external process needed. Always marks the prompt as handled, even on
- * failure, so the dialog isn't shown again on the next launch.
+ * Creates the Desktop `.lnk` pointing at the running executable by asking
+ * the adjacent Squirrel `Update.exe` to do it. `spawn` (not `spawnSync`) is
+ * required here: this is called from an IPC handler on the main process,
+ * and blocking that process would freeze every other IPC call (including
+ * the renderer's polling) until Update.exe exits. The returned promise
+ * settles once Update.exe exits and the expected shortcut has been
+ * verified on disk, rather than trusting its exit code alone.
  */
-export function createDesktopShortcut(): boolean {
-  try {
-    const created = shell.writeShortcutLink(desktopShortcutPath(), 'create', {
-      target: process.execPath,
-      cwd: path.dirname(process.execPath),
-      description: 'Credits Tracker',
-      icon: process.execPath,
-      iconIndex: 0,
-    });
-    if (created) {
-      logInfo('shortcut', `Desktop shortcut created at ${desktopShortcutPath()}`);
-    } else {
-      logWarn('shortcut', 'Desktop shortcut creation reported failure');
-    }
-    markPrompted();
-    return created;
-  } catch (error) {
-    logError('shortcut', 'Failed to create the desktop shortcut', error);
-    markPrompted();
-    return false;
+export function createDesktopShortcut(): Promise<boolean> {
+  if (!isSupported()) {
+    logWarn('shortcut', 'Desktop shortcut creation is unsupported on this platform or build');
+    return Promise.resolve(false);
   }
-}
 
-/** Records the user's "no thanks" answer so the prompt isn't shown again. */
-export function dismissDesktopShortcutPrompt(): void {
-  markPrompted();
+  if (!isSquirrelManagedInstall()) {
+    logWarn('shortcut', 'Desktop shortcut creation requires a Squirrel-managed installation', {
+      execPath: process.execPath,
+    });
+    return Promise.resolve(false);
+  }
+
+  const updatePath = updateExePath();
+  const exeName = exeBasename();
+
+  return new Promise((resolve) => {
+    try {
+      // No --shortcut-locations flag: Squirrel's default refreshes both the
+      // Desktop and Start Menu shortcuts, which is what we want here, and
+      // passing the flag explicitly risks Update.exe's argument parser
+      // rejecting or ignoring the whole invocation depending on the
+      // Squirrel.Windows version.
+      const child = spawn(updatePath, ['--createShortcut', exeName], { stdio: 'ignore' });
+
+      child.on('error', (error) => {
+        logError('shortcut', 'Failed to start the desktop shortcut creation process via Update.exe', error);
+        resolve(false);
+      });
+
+      child.on('exit', (code, signal) => {
+        if (code !== 0) {
+          logWarn('shortcut', 'Desktop shortcut creation reported failure via Update.exe', {
+            updateExePath: updatePath,
+            exeName,
+            status: code,
+            signal,
+          });
+          resolve(false);
+          return;
+        }
+
+        // Update.exe can exit 0 without actually having written the
+        // shortcut (e.g. an unexpected Squirrel.Windows behavior change),
+        // so the exit code alone is not trusted: the Desktop is re-checked
+        // for the file before reporting success.
+        const created = fs.existsSync(desktopShortcutPath());
+        if (created) {
+          logInfo('shortcut', `Desktop shortcut created via ${updatePath}`, { exeName });
+        } else {
+          logWarn('shortcut', 'Update.exe exited successfully but the expected Desktop shortcut was not found', {
+            updateExePath: updatePath,
+            exeName,
+            expectedPath: desktopShortcutPath(),
+          });
+        }
+        resolve(created);
+      });
+    } catch (error) {
+      logError('shortcut', 'Failed to start the desktop shortcut creation process', error);
+      resolve(false);
+    }
+  });
 }

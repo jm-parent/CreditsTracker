@@ -2,14 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { logError, logInfo } from '../lib/logger';
 
 /**
- * Drives the first-launch "create a Desktop shortcut?" dialog. The main
- * process decides once (on mount) whether the prompt is due — see
- * `shouldPromptForDesktopShortcut` in src/main/shortcut.ts — and the answer
- * is persisted there, so this hook never needs to ask again itself.
+ * Drives the launch-time "create a Desktop shortcut?" toast. The main process
+ * decides on each mount whether the prompt is due — see
+ * `shouldPromptForDesktopShortcut` in src/main/shortcut.ts — and the hook only
+ * manages renderer state.
  */
 export function useDesktopShortcutPrompt() {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,6 +28,7 @@ export function useDesktopShortcutPrompt() {
   }, []);
 
   const create = useCallback(() => {
+    setError(null);
     setCreating(true);
     window.api
       .createDesktopShortcut()
@@ -35,22 +37,26 @@ export function useDesktopShortcutPrompt() {
           'useDesktopShortcutPrompt',
           created ? 'Desktop shortcut created' : 'Desktop shortcut creation failed',
         );
+
+        if (created) {
+          setOpen(false);
+          return;
+        }
+
+        setError('Could not create the shortcut. Please try again.');
       })
       .catch((err) => {
         logError('useDesktopShortcutPrompt', 'Failed to create the desktop shortcut', err);
+        setError('Could not create the shortcut. Please try again.');
       })
       .finally(() => {
         setCreating(false);
-        setOpen(false);
       });
   }, []);
 
   const dismiss = useCallback(() => {
     setOpen(false);
-    window.api.dismissDesktopShortcutPrompt().catch((err) => {
-      logError('useDesktopShortcutPrompt', 'Failed to persist the desktop shortcut prompt dismissal', err);
-    });
   }, []);
 
-  return { open, creating, create, dismiss };
+  return { open, creating, error, create, dismiss };
 }

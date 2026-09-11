@@ -58,15 +58,15 @@ Vitest runs every `*.test.ts`/`*.test.tsx` file under `src/`, covering both
 main-process logic (SQLite queries, IPC handlers, VS Code log parsing) and
 renderer components/hooks.
 
-## Building a distributable zip
+## Building the Windows installer bundle
 
 ```
 npm run make
 ```
 
-Produces a self-contained `.zip` under `out/make/zip/<platform>/<arch>/` that
-can be copied to another Windows PC and run without installing Node.js — just
-extract and launch the executable inside.
+Produces the Squirrel Windows release artifacts under
+`out/make/squirrel.windows/x64/`, including `Setup.exe`, the `.nupkg`, and
+`RELEASES`.
 
 ## Architecture notes
 
@@ -133,8 +133,9 @@ All renderer ↔ main communication goes through `contextBridge` in
 - **`.github/workflows/ci.yml`** — runs `npm test` on every push/PR.
 - **`.github/workflows/release.yml`** — on every push to `master` (or manual
   dispatch from the Actions tab), runs semantic-release, which bumps the
-  version, generates `CHANGELOG.md`, builds the Windows zip (`npm run make`),
-  tags the commit, and publishes a GitHub Release with the zip attached.
+  version, generates `CHANGELOG.md`, builds the Windows Squirrel installer
+  bundle (`npm run make`), tags the commit, and publishes a GitHub Release
+  with `Setup.exe`, the `.nupkg`, and `RELEASES` attached.
 - Both workflows run on `windows-latest` with **Node 24**, which must match
   the Node version used locally (`better-sqlite3` ships version-specific
   prebuilt binaries).
