@@ -16,7 +16,7 @@ import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
 import { HourlyDetailPanel } from './components/HourlyDetailPanel';
 import { UpdateDialog } from './components/UpdateDialog';
-import { DesktopShortcutDialog } from './components/DesktopShortcutDialog';
+import { DesktopShortcutToast } from './components/DesktopShortcutToast';
 import { Skeleton } from './components/ui/skeleton';
 import { logError, logInfo } from './lib/logger';
 import { useDesktopShortcutPrompt } from './hooks/useDesktopShortcutPrompt';
@@ -207,8 +207,9 @@ export function App() {
         />
       )}
       {shortcutPrompt.open && (
-        <DesktopShortcutDialog
+        <DesktopShortcutToast
           creating={shortcutPrompt.creating}
+          error={shortcutPrompt.error}
           onCreate={shortcutPrompt.create}
           onDismiss={shortcutPrompt.dismiss}
         />
