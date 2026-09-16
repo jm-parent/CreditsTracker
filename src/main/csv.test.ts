@@ -44,4 +44,18 @@ describe('getExportFilePaths', () => {
       sessionsPath: 'C:\\reports\\usage-sessions.csv',
     });
   });
+
+  it('normalizes a selected summary report back to the common export base', () => {
+    expect(getExportFilePaths('C:\\reports\\usage-summary.csv')).toEqual({
+      summaryPath: 'C:\\reports\\usage-summary.csv',
+      sessionsPath: 'C:\\reports\\usage-sessions.csv',
+    });
+  });
+
+  it('normalizes a selected sessions report back to the common export base', () => {
+    expect(getExportFilePaths('C:\\reports\\usage-sessions.csv')).toEqual({
+      summaryPath: 'C:\\reports\\usage-summary.csv',
+      sessionsPath: 'C:\\reports\\usage-sessions.csv',
+    });
+  });
 });

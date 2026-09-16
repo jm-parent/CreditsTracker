@@ -3,6 +3,7 @@ import { render, screen, within, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { resetLogDedupeForTests } from './lib/logger';
+import { createWindowApi } from './test-utils/windowApi';
 import type { FilterOptions, ProjectDetailResult, UsageResult } from '../shared/types';
 
 vi.mock('recharts', async () => {
@@ -50,7 +51,7 @@ const projectDetail: ProjectDetailResult = {
 
 beforeEach(() => {
   resetLogDedupeForTests();
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn().mockResolvedValue(options),
     getUsage: vi.fn().mockResolvedValue(usage),
     getProjectDetail: vi.fn().mockResolvedValue(projectDetail),
@@ -75,7 +76,7 @@ beforeEach(() => {
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),
     log: vi.fn().mockResolvedValue(undefined),
-  };
+  });
 });
 
 describe('App', () => {

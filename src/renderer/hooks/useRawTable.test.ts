@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useRawTable } from './useRawTable';
+import { createWindowApi } from '../test-utils/windowApi';
 import type { RawTableName, RawTablePage } from '../../shared/types';
 
 const page: RawTablePage = {
@@ -12,14 +13,14 @@ const page: RawTablePage = {
 };
 
 beforeEach(() => {
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn(),
     getUsage: vi.fn(),
     getProjectDetail: vi.fn(),
     getRawTablePage: vi.fn().mockResolvedValue(page),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn(),
-  };
+  });
 });
 
 describe('useRawTable', () => {

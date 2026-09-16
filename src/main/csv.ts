@@ -120,7 +120,7 @@ export function getExportFilePaths(selectedPath: string): {
   const directory = path.dirname(selectedPath);
   const baseName = path.basename(selectedPath, extension);
   const normalizedBaseName = extension.toLowerCase() === '.csv'
-    ? baseName
+    ? baseName.replace(/-(summary|sessions)$/i, '')
     : path.basename(selectedPath);
 
   return {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useUsageData } from './useUsageData';
+import { createWindowApi } from '../test-utils/windowApi';
 import type { UsageResult } from '../../shared/types';
 
 const sampleResult: UsageResult = {
@@ -11,14 +12,14 @@ const sampleResult: UsageResult = {
 };
 
 beforeEach(() => {
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn(),
     getUsage: vi.fn().mockResolvedValue(sampleResult),
     getProjectDetail: vi.fn(),
     getRawTablePage: vi.fn(),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn(),
-  };
+  });
 });
 
 afterEach(() => {

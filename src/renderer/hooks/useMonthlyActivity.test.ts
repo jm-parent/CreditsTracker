@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useMonthlyActivity } from './useMonthlyActivity';
+import { createWindowApi } from '../test-utils/windowApi';
 import type { TimeSeriesPoint } from '../../shared/types';
 
 const sampleResult: TimeSeriesPoint[] = [
@@ -9,14 +10,14 @@ const sampleResult: TimeSeriesPoint[] = [
 ];
 
 beforeEach(() => {
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn(),
     getUsage: vi.fn(),
     getProjectDetail: vi.fn(),
     getRawTablePage: vi.fn(),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn().mockResolvedValue(sampleResult),
-  };
+  });
 });
 
 afterEach(() => {
