@@ -1,16 +1,20 @@
-import { app, ipcMain, shell } from 'electron';
+import fs from 'node:fs';
+import { app, dialog, ipcMain, shell } from 'electron';
 import Database from 'better-sqlite3';
 import {
   openDatabase,
   buildMergedDatabase,
   DatabaseNotFoundError,
   getFilterOptions,
+  getExportReport,
   getUsage,
   getProjectDetail,
   getRawTablePage,
   getHourlyDetail,
   getMonthlyActivity,
 } from './db';
+import { getExportFilePaths } from './csv';
+import { writeExportFiles } from './export-files';
 import { loadVscodeUsage } from './vscode-chat-store';
 import { checkForUpdate, downloadUpdate, getUpdateState, restartToUpdate } from './updater';
 import {
@@ -31,6 +35,8 @@ import type {
   HourlyDetailParams,
   LogsSnapshot,
   MonthlyActivityParams,
+  ExportRequest,
+  ExportResult,
   RawTableParams,
   RendererLogInput,
   UsageFilters,
@@ -127,6 +133,13 @@ const UNTRACED_CHANNELS = new Set(['get-logs', 'clear-logs', 'log-message']);
  */
 const SLOW_CALL_MS = 250;
 
+function logSlowCall(channel: string, startedAt: number): void {
+  const elapsed = Date.now() - startedAt;
+  if (elapsed >= SLOW_CALL_MS && !UNTRACED_CHANNELS.has(channel)) {
+    logWarn('ipc', `${channel} took ${elapsed}ms`);
+  }
+}
+
 /**
  * Wraps an IPC handler so slow calls are traced and any thrown error lands in
  * the Logs page with its stack, instead of only rejecting in the renderer
@@ -137,10 +150,19 @@ function handle(channel: string, listener: (...args: never[]) => unknown): void 
     const startedAt = Date.now();
     try {
       const result = (listener as (...inner: unknown[]) => unknown)(...args);
-      const elapsed = Date.now() - startedAt;
-      if (elapsed >= SLOW_CALL_MS && !UNTRACED_CHANNELS.has(channel)) {
-        logWarn('ipc', `${channel} took ${elapsed}ms`);
+      if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+        return Promise.resolve(result).then(
+          (value) => {
+            logSlowCall(channel, startedAt);
+            return value;
+          },
+          (error) => {
+            logError('ipc', `${channel} failed after ${Date.now() - startedAt}ms`, error);
+            throw error;
+          },
+        );
       }
+      logSlowCall(channel, startedAt);
       return result;
     } catch (error) {
       logError('ipc', `${channel} failed after ${Date.now() - startedAt}ms`, error);
@@ -189,6 +211,46 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
 
   handle('get-monthly-activity', (_event: unknown, params: MonthlyActivityParams) => {
     return getMonthlyActivity(currentDb(), params);
+  });
+
+  handle('get-export-preview', (_event: unknown, filters: UsageFilters) => {
+    return getExportReport(currentDb(), filters ?? {}).preview;
+  });
+
+  handle('export-csv', async (_event: unknown, request: ExportRequest) => {
+    const report = getExportReport(currentDb(), request?.filters ?? {});
+    const save = await dialog.showSaveDialog({
+      title: 'Export Copilot usage',
+      defaultPath: request?.suggestedName ?? 'copilot-usage.csv',
+      filters: [{ name: 'CSV files', extensions: ['csv'] }],
+    });
+    if (save.canceled || !save.filePath) {
+      return { cancelled: true } satisfies ExportResult;
+    }
+
+    const paths = getExportFilePaths(save.filePath);
+    const existing = [paths.summaryPath, paths.sessionsPath].filter((filePath) => fs.existsSync(filePath));
+    if (existing.length > 0) {
+      const confirmation = await dialog.showMessageBox({
+        type: 'warning',
+        buttons: ['Overwrite', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1,
+        title: 'Files already exist',
+        message: 'Overwrite the existing CSV files?',
+        detail: existing.join('\n'),
+      });
+      if (confirmation.response !== 0) {
+        return { cancelled: true } satisfies ExportResult;
+      }
+    }
+
+    const counts = await writeExportFiles(paths, report);
+    return {
+      cancelled: false,
+      ...paths,
+      ...counts,
+    } satisfies ExportResult;
   });
 
   handle('get-app-version', () => app.getVersion());

@@ -1,5 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  ExportPreview,
+  ExportRequest,
+  ExportResult,
   HourlyDetailParams,
   HourlyPoint,
   LogsSnapshot,
@@ -41,6 +44,10 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-hourly-detail', params),
   getMonthlyActivity: (params: MonthlyActivityParams): Promise<TimeSeriesPoint[]> =>
     ipcRenderer.invoke('get-monthly-activity', params),
+  getExportPreview: (filters: UsageFilters): Promise<ExportPreview> =>
+    ipcRenderer.invoke('get-export-preview', filters),
+  exportCsv: (request: ExportRequest): Promise<ExportResult> =>
+    ipcRenderer.invoke('export-csv', request),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
   getUpdateState: (): Promise<UpdateState> => ipcRenderer.invoke('get-update-state'),
   checkForUpdate: (): Promise<UpdateState> => ipcRenderer.invoke('check-for-update'),
