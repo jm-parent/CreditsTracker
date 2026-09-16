@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/jm-parent/CreditsTracker/compare/v1.11.0...v1.11.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* debounce project path filter ([080851a](https://github.com/jm-parent/CreditsTracker/commit/080851adff188bd97e85651c803fb2691621b52b))
+
 # [1.11.0](https://github.com/jm-parent/CreditsTracker/compare/v1.10.0...v1.11.0) (2026-09-16)
 
 
