@@ -32,15 +32,46 @@ interface SidebarProps {
   onUpdateClick?: () => void;
 }
 
-const ENTRIES: Array<{ id: DashboardTab; label: string; icon: typeof CalendarDays }> = [
-  { id: 'daily', label: 'Daily consumption', icon: CalendarDays },
-  { id: 'monthly', label: 'Monthly activity', icon: Activity },
-  { id: 'projects', label: 'By project', icon: FolderKanban },
-  { id: 'models', label: 'By model', icon: Cpu },
-  { id: 'raw', label: 'Raw data', icon: Database },
-  { id: 'export', label: 'CSV export', icon: Download },
-  { id: 'logs', label: 'Logs', icon: ScrollText },
-  { id: 'featured', label: 'Featured projects', icon: Sparkles },
+type NavigationEntry = {
+  id: DashboardTab;
+  label: string;
+  icon: typeof CalendarDays;
+};
+
+type NavigationGroup = {
+  label: string;
+  entries: NavigationEntry[];
+};
+
+const NAV_GROUPS: NavigationGroup[] = [
+  {
+    label: 'Overview',
+    entries: [
+      { id: 'daily', label: 'Daily consumption', icon: CalendarDays },
+      { id: 'monthly', label: 'Monthly activity', icon: Activity },
+    ],
+  },
+  {
+    label: 'Analysis',
+    entries: [
+      { id: 'projects', label: 'By project', icon: FolderKanban },
+      { id: 'models', label: 'By model', icon: Cpu },
+    ],
+  },
+  {
+    label: 'Data & tools',
+    entries: [
+      { id: 'raw', label: 'Raw data', icon: Database },
+      { id: 'export', label: 'CSV export', icon: Download },
+      { id: 'logs', label: 'Logs', icon: ScrollText },
+    ],
+  },
+  {
+    label: 'Discovery',
+    entries: [
+      { id: 'featured', label: 'Featured projects', icon: Sparkles },
+    ],
+  },
 ];
 
 export function Sidebar({
@@ -68,23 +99,42 @@ export function Sidebar({
   const BadgeIcon = badge.icon;
 
   return (
-    <nav className="sidebar flex h-screen w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border p-4">
-      {ENTRIES.map(({ id, label, icon: Icon }) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => onTabChange(id)}
-          aria-current={activeTab === id ? 'page' : undefined}
-          className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${
-            activeTab === id
-              ? 'bg-primary text-primary-foreground'
-              : 'text-foreground hover:bg-muted'
-          }`}
-        >
-          <Icon size={16} aria-hidden="true" />
-          {label}
-        </button>
-      ))}
+    <nav className="sidebar flex h-screen w-56 shrink-0 flex-col gap-4 overflow-y-auto border-r border-border p-4">
+      {NAV_GROUPS.map(({ label, entries }, groupIndex) => {
+        const headingId = `sidebar-group-${groupIndex}`;
+
+        return (
+          <section
+            key={label}
+            role="group"
+            aria-labelledby={headingId}
+            className="space-y-1"
+          >
+            <h2
+              id={headingId}
+              className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            >
+              {label}
+            </h2>
+            {entries.map(({ id, label: entryLabel, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onTabChange(id)}
+                aria-current={activeTab === id ? 'page' : undefined}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${
+                  activeTab === id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-foreground hover:bg-muted'
+                }`}
+              >
+                <Icon size={16} aria-hidden="true" />
+                {entryLabel}
+              </button>
+            ))}
+          </section>
+        );
+      })}
       {appVersion && (
         <div className="mt-auto flex items-center gap-1.5 px-3 pt-4">
           <p className="text-xs text-muted-foreground">v{appVersion}</p>
