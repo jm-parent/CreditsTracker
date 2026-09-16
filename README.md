@@ -19,8 +19,9 @@ checking for updates, not something to download by hand — only the
 
 ## Features
 
-A sidebar lets you switch between seven tabs, each scoped to the current
-project/model/date filters:
+A sidebar lets you switch between seven tabs. Usage tabs are scoped to the
+current project/model/date filters, while Featured projects is a static,
+offline-friendly catalogue:
 
 - **Daily consumption** — total AIU credits, tokens, and requests at a
   glance, with a stacked bar chart of credits over time broken down by

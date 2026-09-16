@@ -156,6 +156,8 @@ describe('registerIpcHandlers', () => {
     'https://GitHub.com/rtk-ai/rtk',
     'https://github.com/rtk-ai/rtk%2Fissues',
     'https://github.com/rtk-ai/rtk?redirect=https://evil.example',
+    'https://user:pass@github.com/rtk-ai/rtk',
+    'https://github.com/rtk-ai/rtk#overview',
     'not a URL',
   ])('rejects unsafe external URL %s', async (value) => {
     registerIpcHandlers('/fake/path.db');
