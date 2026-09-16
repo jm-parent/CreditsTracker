@@ -28,7 +28,7 @@ export function UpdateDialog({ state, onDownload, onRestart, onClose }: UpdateDi
         role="dialog"
         aria-modal="true"
         aria-labelledby="update-dialog-title"
-        className="w-full max-w-md rounded-lg border border-border bg-card p-5 text-card-foreground shadow-xl"
+        className="w-full max-w-2xl rounded-lg border border-border bg-card p-5 text-card-foreground shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -53,7 +53,7 @@ export function UpdateDialog({ state, onDownload, onRestart, onClose }: UpdateDi
         </p>
 
         {state.releaseNotes && state.status !== 'downloading' && (
-          <pre className="mt-3 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-xs text-muted-foreground">
+          <pre className="mt-3 max-h-[min(16rem,50vh)] overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-xs text-muted-foreground">
             {state.releaseNotes}
           </pre>
         )}
