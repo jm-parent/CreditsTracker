@@ -511,7 +511,7 @@ describe('getExportReport', () => {
     db.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?)`)
       .run('s2', null, null, null, '2026-09-03 10:00:00');
     db.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?)`)
-      .run('s3', 'org/repo-a', null, 'Filtered fallback work', '2026-09-03 08:30:00');
+      .run('s3', 'org/repo-a', null, 'Filtered fallback work', '2026-09-01 08:30:00');
 
     const insertEvent = db.prepare(`
       INSERT INTO assistant_usage_events
@@ -629,7 +629,7 @@ describe('getExportReport', () => {
     expect(report.sessionRows).toEqual([
       {
         sessionId: 's3',
-        createdAt: '2026-09-03 08:30:00',
+        createdAt: '2026-09-01 08:30:00',
         date: '2026-09-03',
         project: 'org/repo-a',
         summary: 'Filtered fallback work',
@@ -641,6 +641,30 @@ describe('getExportReport', () => {
         requests: 1,
       },
     ]);
+
+    db.close();
+  });
+
+  it('returns zero totals and empty collections when no events match the filters', () => {
+    const db = new Database(':memory:');
+    seedExportReportFixtures(db);
+
+    const report = getExportReport(db, {
+      project: 'org/repo-a',
+      model: 'claude-opus-5',
+      from: '2026-09-04',
+      to: '2026-09-05',
+    });
+
+    expect(report.preview).toEqual({
+      totals: { aiuCredits: 0, tokens: 0, requests: 0 },
+      sessionCount: 0,
+      activeDays: 0,
+      byModel: [],
+      daily: [],
+    });
+    expect(report.summaryRows).toEqual([]);
+    expect(report.sessionRows).toEqual([]);
 
     db.close();
   });

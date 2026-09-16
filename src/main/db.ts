@@ -407,7 +407,7 @@ export function getExportReport(db: Database.Database, filters: UsageFilters): E
       `SELECT
          s.id AS sessionId,
          s.created_at AS createdAt,
-         date(s.created_at) AS date,
+         MIN(date(e.created_at)) AS date,
          COALESCE(s.repository, s.cwd, 'Unassigned') AS project,
          COALESCE(s.summary, '') AS summary,
          GROUP_CONCAT(e.model) AS models,
