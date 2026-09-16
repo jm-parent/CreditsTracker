@@ -14,6 +14,42 @@ function parseLocalDate(value: string): Date {
   return new Date(year, month - 1, day);
 }
 
+function shiftLocalDate(value: string, days: number): string {
+  const date = parseLocalDate(value);
+  date.setDate(date.getDate() + days);
+  return toLocalDateString(date);
+}
+
+function getEmptyClampedRange(
+  range: Pick<UsageFilters, 'from' | 'to'>,
+  bounds: Pick<FilterOptions, 'minDate' | 'maxDate'>,
+): Pick<UsageFilters, 'from' | 'to'> {
+  if (bounds.minDate && range.to && parseLocalDate(range.to) < parseLocalDate(bounds.minDate)) {
+    const sentinel = shiftLocalDate(bounds.minDate, -1);
+    return { from: sentinel, to: sentinel };
+  }
+
+  if (bounds.maxDate && range.from && parseLocalDate(range.from) > parseLocalDate(bounds.maxDate)) {
+    const sentinel = shiftLocalDate(bounds.maxDate, 1);
+    return { from: sentinel, to: sentinel };
+  }
+
+  if (bounds.maxDate) {
+    const sentinel = shiftLocalDate(bounds.maxDate, 1);
+    return { from: sentinel, to: sentinel };
+  }
+
+  if (bounds.minDate) {
+    const sentinel = shiftLocalDate(bounds.minDate, -1);
+    return { from: sentinel, to: sentinel };
+  }
+
+  return {
+    from: '1970-01-01',
+    to: '1970-01-01',
+  };
+}
+
 function clampRange(
   range: Pick<UsageFilters, 'from' | 'to'>,
   bounds: Pick<FilterOptions, 'minDate' | 'maxDate'>,
@@ -40,7 +76,7 @@ function clampRange(
   }
 
   if (from > to) {
-    return {};
+    return getEmptyClampedRange(range, bounds);
   }
 
   return {

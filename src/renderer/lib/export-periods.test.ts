@@ -23,6 +23,33 @@ describe('export periods', () => {
     });
   });
 
+  it('returns a valid empty range when a preset has no overlap with available bounds', () => {
+    const noOverlap = getPresetFilters('this-month', today, {
+      minDate: '2026-08-01',
+      maxDate: '2026-08-31',
+    });
+
+    expect(noOverlap).not.toEqual({});
+    expect(noOverlap).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-01',
+    });
+    expect(validateExportFilters(noOverlap)).toBeNull();
+  });
+
+  it('returns a valid empty range when only a minimum bound exists and the preset is earlier', () => {
+    const noOverlap = getPresetFilters('last-7-days', today, {
+      minDate: '2026-10-10',
+      maxDate: null,
+    });
+
+    expect(noOverlap).toEqual({
+      from: '2026-10-09',
+      to: '2026-10-09',
+    });
+    expect(validateExportFilters(noOverlap)).toBeNull();
+  });
+
   it('returns no dates for all data and reports inverted ranges', () => {
     expect(getPresetFilters('all', today, bounds)).toEqual({});
     expect(validateExportFilters({ from: '2026-09-02', to: '2026-09-01' })).toBe(
