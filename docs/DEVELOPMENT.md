@@ -21,13 +21,18 @@ and screenshots, see the [main README](../README.md).
 src/
   main/            Electron main process
     db.ts             SQLite queries + in-memory "merged database" builder
+    csv.ts            CSV serialization + paired export filename logic
+    export-files.ts   Main-process CSV file writes
     ipc-handlers.ts    Registers all renderer-facing IPC channels
     vscode-chat-store.ts  Reads VS Code Copilot Chat JSONL logs
   preload.ts        contextBridge API exposed to the renderer as `window.api`
   renderer/         React app
     App.tsx            Top-level layout: sidebar + active tab routing
     components/         Sidebar, per-tab pages, charts, tables
+      ExportPage.tsx      CSV export screen + save workflow
+      ExportFilters.tsx   Export-only project/model/date controls + shortcuts
     hooks/               useUsageData, useHourlyDetail, etc.
+      useExportPreview.ts Fetches export preview cards/tables from IPC
     lib/                 Formatting/color helpers
   shared/types.ts   Types shared between main and renderer (IPC payloads)
 ```
@@ -84,8 +89,11 @@ database** built by `buildMergedDatabase()` in `src/main/db.ts`. It combines:
 
 Both are normalized into the same `sessions` / `assistant_usage_events`
 schema and copied into a single in-memory `:memory:` SQLite database, so all
-query functions (`getUsage`, `getFilterOptions`, `getProjectDetail`, ...) only
-ever need to know about one schema.
+query functions (`getUsage`, `getFilterOptions`, `getProjectDetail`,
+`getExportReport`, ...) only ever need to know about one schema. The CSV
+export preview and final extraction both read from this merged in-memory
+database, so a report can span Copilot CLI and VS Code Copilot Chat usage in
+one pass without touching two storage backends separately.
 
 ### Live refresh
 
@@ -119,14 +127,38 @@ All renderer ↔ main communication goes through `contextBridge` in
 | `get-project-detail`  | Per-project totals, time series, and conversation list |
 | `get-raw-table-page`  | Paginated raw `sessions`/`assistant_usage_events` rows |
 | `get-hourly-detail`   | Hour-by-hour breakdown for a single date             |
+| `get-export-preview`  | Preview totals, by-model rows, and by-day rows for the CSV export page |
+| `export-csv`          | Runs Save As, derives `*-summary.csv` / `*-sessions.csv`, and writes both files from the main process |
 
 ### Sidebar navigation
 
-`App.tsx` holds `activeTab: DashboardTab` (`'daily' | 'projects' | 'models' |
-'raw'`) and routes to one of `DailyConsumptionPage`, `ProjectsPage`,
-`ModelsPage`, or `RawDataPage`. Switching tabs clears any open overlay
+`App.tsx` holds `activeTab: DashboardTab`
+(`'daily' | 'monthly' | 'projects' | 'models' | 'raw' | 'export' | 'logs'`)
+and routes to seven sidebar entries: `DailyConsumptionPage`,
+`ActivityHeatmapPage`, `ProjectsPage`, `ModelsPage`, `RawDataPage`,
+`ExportPage`, and `LogsPage`. Switching tabs clears any open overlay
 (`selectedProject` project-detail drill-down, `selectedDate` hourly panel).
-`FilterBar` is shared across the three stats tabs and hidden on `raw`.
+`FilterBar` is shared across the dashboard views and hidden on `raw`,
+`export`, and `logs`.
+
+`ExportPage` deliberately does **not** reuse the shared dashboard filter
+state. Instead, it owns independent project/model/date filters plus the
+period shortcuts from `ExportFilters` (`All dates`, `Last 7 days`,
+`This month`, `Previous month`). `useExportPreview` validates those export
+filters, calls `get-export-preview`, and ignores stale responses after the
+user changes filters. If a refresh fails for the current filters,
+`ExportPage` hides the preview until a later retry succeeds.
+
+When the user clicks **Export 2 CSV files**, the renderer sends `export-csv`
+with the current export filters and suggested basename. The main process
+recomputes the report from the merged in-memory database, opens the Save As
+dialog, expands the selected path into `*-summary.csv` and
+`*-sessions.csv`, and writes both files via `writeExportFiles()`.
+
+Privacy boundary: the summary CSV is aggregate-only (day/project/model
+metrics), and the per-session CSV stops at session metadata plus the existing
+session `summary`. Neither file includes prompt text, assistant responses, or
+raw conversation transcripts.
 
 ## CI/CD workflows
 

@@ -19,14 +19,16 @@ checking for updates, not something to download by hand — only the
 
 ## Features
 
-A sidebar lets you switch between six tabs, each scoped to the current
-project/model/date filters:
+A sidebar lets you switch between seven navigation entries:
 
 - **Daily consumption** — total AIU credits, tokens, and requests at a
   glance, with a stacked bar chart of credits over time broken down by
   project (hover a bar to see the per-project breakdown for that day).
   Click a day to open an hourly breakdown showing usage trends throughout
   that day.
+- **Monthly activity** — a calendar-style heatmap for scanning which days of
+  the current month were active, with project/model filtering carried through
+  from the main dashboard controls.
 - **By project** — per-project totals with a breakdown chart and table;
   click a project's bar to drill into a detail page for that project.
 - **By model** — per-model totals with a breakdown chart and a table
@@ -34,13 +36,25 @@ project/model/date filters:
 - **Raw data** — a sortable table of every session with date, summary,
   model(s) used, AIU credits, tokens, and request count, for drilling into
   the underlying data.
+- **CSV export** — an export workspace with its own project, model, and date
+  filters plus period shortcuts for **All dates**, **Last 7 days**, **This
+  month**, and **Previous month**. Each export writes two files with the
+  chosen base name: `*-summary.csv` for aggregated day/project/model rows and
+  `*-sessions.csv` for per-session rows. The most detailed text field
+  exported is the existing session summary; prompts and responses are never
+  exported.
 - **Logs** — the application's own diagnostic log (startup, database access,
   failed IPC calls, and any renderer crash with its stack trace), filterable
   by level and text. Logs are also written to
   `%APPDATA%\credits-tracker\logs\app.log` (rotated at 2 MB), and the page
   offers "Copy" and "Open log folder" so a broken screen can be reported with
   the underlying error attached.
-- **Filtering** — filter all tabs' charts and stats by project and/or model.
+
+Additional capabilities include:
+
+- **Filtering** — the dashboard views share project/model/date filters for
+  exploration, while the CSV export page keeps an independent set of export
+  filters so report selection does not disturb the on-screen dashboard.
 - **Live updates** — the dashboard refreshes itself automatically every few
   seconds, so credits from a Copilot CLI (or Copilot Chat) session you just
   finished show up on screen shortly after, without restarting the app.
