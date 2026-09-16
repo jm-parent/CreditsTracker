@@ -54,26 +54,47 @@ pour `jeanmarie-parent_exakisc`, ne pas enregistrer de token dans l'URL du
 remote ou la configuration Git. Même après `gh auth switch`, Git Credential
 Manager peut continuer a choisir cet identifiant non autorise.
 
-Utiliser le compte `jm-parent` deja enregistre dans GitHub CLI, puis verifier
-que la branche cible est toujours au commit de base attendu :
+Le `GH_TOKEN` d'environnement a priorite sur le compte gere par GitHub CLI :
+le supprimer **avant** toute commande `gh`, sinon `gh auth switch` peut
+echouer ou continuer a utiliser le mauvais compte.
 
 ```powershell
 $env:GH_TOKEN = $null
-gh auth switch --hostname github.com --user jm-parent
-gh api repos/jm-parent/CreditsTracker/git/ref/heads/master --jq .object.sha
+rtk gh auth switch --hostname github.com --user jm-parent
+rtk gh auth status --hostname github.com
+rtk gh api repos/jm-parent/CreditsTracker/git/ref/heads/master --jq .object.sha
 ```
 
 Comparer le SHA affiche avec le commit de base attendu avant de poursuivre.
-S'il differe, s'arreter : ne jamais utiliser de push force.
+S'il differe, s'arreter et demander confirmation. Apres accord, recuperer le
+`master` courant, rebaser la branche, relancer les tests, puis pousser sans
+jamais utiliser de push force.
 
-Pour pousser sans persister le token, l'utiliser uniquement en memoire dans un
+Pour recuperer `master` sans persister le token, l'utiliser uniquement en
 en-tete HTTP Basic temporaire :
 
 ```powershell
-$token = gh auth token --hostname github.com
+$token = rtk gh auth token --hostname github.com
 $bytes = [Text.Encoding]::UTF8.GetBytes("x-access-token:$token")
 $authorization = [Convert]::ToBase64String($bytes)
-rtk git -c "http.extraheader=AUTHORIZATION: Basic $authorization" push origin HEAD:master
+rtk git -c "http.extraheader=AUTHORIZATION: Basic $authorization" fetch origin master
+$fetchExit = $LASTEXITCODE
+Remove-Variable token, bytes, authorization
+if ($fetchExit -ne 0) { exit $fetchExit }
+rtk git rebase origin/master
+npm test
+```
+
+Pour pousser une branche de PR, utiliser la branche courante comme source.
+Ne pas pousser `HEAD:master` sauf demande explicite de mise a jour directe de
+`master` :
+
+```powershell
+$env:GH_TOKEN = $null
+$token = rtk gh auth token --hostname github.com
+$bytes = [Text.Encoding]::UTF8.GetBytes("x-access-token:$token")
+$authorization = [Convert]::ToBase64String($bytes)
+rtk git -c "http.extraheader=AUTHORIZATION: Basic $authorization" push -u origin HEAD
 $pushExit = $LASTEXITCODE
 Remove-Variable token, bytes, authorization
 exit $pushExit
@@ -81,6 +102,16 @@ exit $pushExit
 
 Si le compte `jm-parent` est absent, si `gh auth token` echoue, ou si le push
 est refuse, s'arreter et demander a l'utilisateur de reauthentifier ce compte.
+
+Si la creation de PR via l'outil integre echoue avec un `403 Unauthorized`
+(`Enterprise Managed User`), garder `GH_TOKEN` vide et utiliser GitHub CLI
+avec le compte `jm-parent`, en ciblant explicitement `master` :
+
+```powershell
+$env:GH_TOKEN = $null
+rtk gh pr create --repo jm-parent/CreditsTracker --base master `
+  --head <branche> --title "<titre>" --body "<description>"
+```
 
 ## Autres commandes utiles
 

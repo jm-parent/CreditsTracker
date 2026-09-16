@@ -101,4 +101,22 @@ export const FEATURED_PROJECTS: readonly FeaturedProject[] = [
     icon: 'file',
     tags: ['Spec-driven', 'Developer tools', 'AI coding'],
   },
+  {
+    id: 'strix',
+    repository: 'usestrix/strix',
+    url: 'https://github.com/usestrix/strix',
+    title: 'Strix',
+    description: 'An open-source AI penetration testing tool that finds and fixes application vulnerabilities.',
+    icon: 'shield',
+    tags: ['AI coding', 'Security', 'Developer tools'],
+  },
+  {
+    id: 'headroom',
+    repository: 'headroomlabs-ai/headroom',
+    url: 'https://github.com/headroomlabs-ai/headroom',
+    title: 'Headroom',
+    description: 'A compression layer for tool outputs, logs, files, and RAG chunks before they reach the LLM.',
+    icon: 'gauge',
+    tags: ['AI coding', 'Developer tools', 'Performance'],
+  },
 ];
