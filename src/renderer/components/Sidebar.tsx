@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Cpu,
   Database,
+  Download,
   FolderKanban,
   RotateCcw,
   ScrollText,
@@ -18,6 +19,7 @@ export type DashboardTab =
   | 'projects'
   | 'models'
   | 'raw'
+  | 'export'
   | 'logs'
   | 'featured';
 
@@ -36,6 +38,7 @@ const ENTRIES: Array<{ id: DashboardTab; label: string; icon: typeof CalendarDay
   { id: 'projects', label: 'By project', icon: FolderKanban },
   { id: 'models', label: 'By model', icon: Cpu },
   { id: 'raw', label: 'Raw data', icon: Database },
+  { id: 'export', label: 'CSV export', icon: Download },
   { id: 'logs', label: 'Logs', icon: ScrollText },
   { id: 'featured', label: 'Featured projects', icon: Sparkles },
 ];

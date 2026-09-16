@@ -1,3 +1,25 @@
+# [1.12.0](https://github.com/jm-parent/CreditsTracker/compare/v1.11.1...v1.12.0) (2026-09-16)
+
+
+### Bug Fixes
+
+* address task 5 export review findings ([db629d5](https://github.com/jm-parent/CreditsTracker/commit/db629d5f5c36453083517f43df6f2e7ec0dbc0fd))
+* correct export report session dates ([62ad383](https://github.com/jm-parent/CreditsTracker/commit/62ad3838836204b842278b98371abe1a878038fb))
+* hide stale export preview on refresh errors ([9bc7010](https://github.com/jm-parent/CreditsTracker/commit/9bc7010795e48dc7169b38283a0a6af42f3d38ab))
+* make export file writes atomic ([029f3d4](https://github.com/jm-parent/CreditsTracker/commit/029f3d432f964e6ad210da4f6add1d10d937ec5f))
+* normalize export CSV pair paths ([1e57d02](https://github.com/jm-parent/CreditsTracker/commit/1e57d024c859653352ce4f82ebbee599a158bb0e))
+* preserve empty export preset ranges ([719e13e](https://github.com/jm-parent/CreditsTracker/commit/719e13e66892e649dd4e14cf39d81d6ded1da456))
+
+
+### Features
+
+* add CSV export navigation ([de5be1c](https://github.com/jm-parent/CreditsTracker/commit/de5be1c86726d9bbb848bf1da6e2394796d821bd))
+* add CSV export report page ([9ca6277](https://github.com/jm-parent/CreditsTracker/commit/9ca62776c499b0e302ebe541266f94ec9ba20bea))
+* add CSV report serialization ([0fc65bc](https://github.com/jm-parent/CreditsTracker/commit/0fc65bccb93301d351d2c972dda85fa4c4236ebf))
+* add export period filters and preview hook ([cd8cd51](https://github.com/jm-parent/CreditsTracker/commit/cd8cd514610f0c738872ade7c3df2baf3b84e63f))
+* add export report data extraction ([30e3be6](https://github.com/jm-parent/CreditsTracker/commit/30e3be6c509056c007c3e0e52bc6c96e42ef7a01))
+* expose CSV report export through IPC ([e963c86](https://github.com/jm-parent/CreditsTracker/commit/e963c867a48d25d4b9f8e631ac7c9d976b552e86))
+
 ## [1.11.1](https://github.com/jm-parent/CreditsTracker/compare/v1.11.0...v1.11.1) (2026-09-16)
 
 

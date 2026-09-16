@@ -1,7 +1,8 @@
 # Credits Dashboard
 
 A local desktop app that shows your GitHub Copilot CLI credit (AIU) and token
-consumption, filterable by project, model, and date range.
+consumption, with shared dashboard filters for project and model plus a
+dedicated CSV export page for date-range reporting.
 
 🔒 **Privacy-first**: everything runs on your machine. It reads
 `~/.copilot/session-store.db` read-only — no network calls, no GitHub
@@ -19,17 +20,18 @@ checking for updates, not something to download by hand — only the
 
 ## Features
 
-A sidebar lets you switch between seven tabs. Usage tabs are scoped to the
-current project/model/date filters, while Featured projects is a static,
-offline-friendly catalogue:
+A sidebar lets you switch between eight navigation entries. Usage tabs are
+scoped to the current project/model/date filters, while Featured projects is a
+static, offline-friendly catalogue and CSV export has its own report filters:
 
 - **Daily consumption** — total AIU credits, tokens, and requests at a
   glance, with a stacked bar chart of credits over time broken down by
   project (hover a bar to see the per-project breakdown for that day).
   Click a day to open an hourly breakdown showing usage trends throughout
   that day.
-- **Monthly activity** — a calendar heatmap that shows daily activity and
-  makes high-usage days easy to spot.
+- **Monthly activity** — a calendar-style heatmap for scanning which days of
+  the current month were active, with project/model filtering carried through
+  from the main dashboard controls.
 - **By project** — per-project totals with a breakdown chart and table;
   click a project's bar to drill into a detail page for that project.
 - **By model** — per-model totals with a breakdown chart and a table
@@ -37,6 +39,13 @@ offline-friendly catalogue:
 - **Raw data** — a sortable table of every session with date, summary,
   model(s) used, AIU credits, tokens, and request count, for drilling into
   the underlying data.
+- **CSV export** — an export workspace with its own project, model, and date
+  filters plus period shortcuts for **All dates**, **Last 7 days**, **This
+  month**, and **Previous month**. Each export writes two files with the
+  chosen base name: `*-summary.csv` for aggregated day/project/model rows and
+  `*-sessions.csv` for per-session rows. The most detailed text field
+  exported is the existing session summary; prompts and responses are never
+  exported.
 - **Logs** — the application's own diagnostic log (startup, database access,
   failed IPC calls, and any renderer crash with its stack trace), filterable
   by level and text. Logs are also written to
@@ -46,7 +55,13 @@ offline-friendly catalogue:
 - **Featured projects** — a curated, offline-friendly collection of GitHub
   projects with descriptions, tags, and one-click links to open each
   repository in the system browser.
-- **Filtering** — filter all tabs' charts and stats by project and/or model.
+
+Additional capabilities include:
+
+- **Filtering** — the dashboard views share project/model filters for
+  exploration, while the CSV export page provides its own project, model, and
+  date-range export filters so report selection does not disturb the
+  on-screen dashboard.
 - **Live updates** — the dashboard refreshes itself automatically every few
   seconds, so credits from a Copilot CLI (or Copilot Chat) session you just
   finished show up on screen shortly after, without restarting the app.

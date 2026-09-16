@@ -1,4 +1,7 @@
 import type {
+  ExportPreview,
+  ExportRequest,
+  ExportResult,
   FilterOptions,
   HourlyDetailParams,
   HourlyPoint,
@@ -23,6 +26,8 @@ declare global {
       getRawTablePage: (params: RawTableParams) => Promise<RawTablePage>;
       getHourlyDetail: (params: HourlyDetailParams) => Promise<HourlyPoint[]>;
       getMonthlyActivity: (params: MonthlyActivityParams) => Promise<TimeSeriesPoint[]>;
+      getExportPreview: (filters: UsageFilters) => Promise<ExportPreview>;
+      exportCsv: (request: ExportRequest) => Promise<ExportResult>;
       getAppVersion: () => Promise<string>;
       getUpdateState: () => Promise<UpdateState>;
       checkForUpdate: () => Promise<UpdateState>;

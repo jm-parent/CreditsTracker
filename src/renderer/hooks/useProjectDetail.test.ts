@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useProjectDetail } from './useProjectDetail';
+import { createWindowApi } from '../test-utils/windowApi';
 import type { ProjectDetailResult } from '../../shared/types';
 
 const detail: ProjectDetailResult = {
@@ -21,15 +22,14 @@ const detail: ProjectDetailResult = {
 };
 
 beforeEach(() => {
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn(),
     getUsage: vi.fn(),
     getProjectDetail: vi.fn().mockResolvedValue(detail),
     getRawTablePage: vi.fn(),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn(),
-    openExternalUrl: vi.fn().mockResolvedValue(undefined),
-  };
+  });
 });
 
 describe('useProjectDetail', () => {

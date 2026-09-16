@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Sidebar } from './Sidebar';
 
 describe('Sidebar', () => {
-  it('renders all seven navigation entries', () => {
+  it('renders all eight navigation entries', () => {
     render(<Sidebar activeTab="daily" onTabChange={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Daily consumption' })).toBeInTheDocument();
@@ -12,6 +12,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: 'By project' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'By model' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Raw data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'CSV export' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Logs' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Featured projects' })).toBeInTheDocument();
   });
@@ -19,8 +20,21 @@ describe('Sidebar', () => {
   it('highlights the active tab', () => {
     render(<Sidebar activeTab="featured" onTabChange={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Featured projects' }).className).toContain('bg-primary');
+    const featuredButton = screen.getByRole('button', { name: 'Featured projects' });
+    expect(featuredButton.className).toContain('bg-primary');
+    expect(featuredButton).toHaveAttribute('aria-current', 'page');
+    expect(featuredButton.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Daily consumption' }).className).not.toContain('bg-primary');
+  });
+
+  it('highlights the CSV export tab', () => {
+    render(<Sidebar activeTab="export" onTabChange={vi.fn()} />);
+
+    const exportButton = screen.getByRole('button', { name: 'CSV export' });
+
+    expect(exportButton.className).toContain('bg-primary');
+    expect(exportButton).toHaveAttribute('aria-current', 'page');
+    expect(exportButton.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
   it('calls onTabChange with the clicked tab id', async () => {
@@ -28,9 +42,9 @@ describe('Sidebar', () => {
     const onTabChange = vi.fn();
     render(<Sidebar activeTab="daily" onTabChange={onTabChange} />);
 
-    await user.click(screen.getByRole('button', { name: 'By model' }));
+    await user.click(screen.getByRole('button', { name: 'CSV export' }));
 
-    expect(onTabChange).toHaveBeenCalledWith('models');
+    expect(onTabChange).toHaveBeenCalledWith('export');
   });
 
   it('calls onTabChange with the featured tab id', async () => {

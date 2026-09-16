@@ -15,6 +15,7 @@ import { FeaturedProjectsPage } from './components/FeaturedProjectsPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
+import { ExportPage } from './components/ExportPage';
 import { HourlyDetailPanel } from './components/HourlyDetailPanel';
 import { UpdateDialog } from './components/UpdateDialog';
 import { DesktopShortcutToast } from './components/DesktopShortcutToast';
@@ -120,6 +121,8 @@ export function App() {
             <LogsPage />
           ) : activeTab === 'featured' ? (
             <FeaturedProjectsPage />
+          ) : activeTab === 'export' ? (
+            <ExportPage options={options} />
           ) : dataUnavailable ? (
             <EmptyState
               title="Couldn't load Copilot CLI usage data."

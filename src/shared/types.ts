@@ -45,6 +45,76 @@ export interface UsageResult {
   byModel: BreakdownPoint[];
 }
 
+export interface ExportModelPreviewRow {
+  model: string;
+  aiuCredits: number;
+  sharePercent: number;
+}
+
+export interface ExportDailyPreviewRow {
+  date: string;
+  aiuCredits: number;
+  tokens: number;
+  requests: number;
+}
+
+export interface ExportPreview {
+  totals: UsageTotals;
+  sessionCount: number;
+  activeDays: number;
+  byModel: ExportModelPreviewRow[];
+  daily: ExportDailyPreviewRow[];
+}
+
+export interface ExportSummaryRow {
+  date: string;
+  project: string;
+  model: string;
+  aiuCredits: number;
+  inputTokens: number;
+  outputTokens: number;
+  tokens: number;
+  requests: number;
+  dayTotalAiuCredits: number;
+  modelTotalAiuCredits: number;
+  modelSharePercent: number;
+  projectTotalAiuCredits: number;
+  projectSharePercent: number;
+}
+
+export interface ExportSessionRow {
+  sessionId: string;
+  createdAt: string;
+  date: string;
+  project: string;
+  summary: string;
+  models: string;
+  aiuCredits: number;
+  inputTokens: number;
+  outputTokens: number;
+  tokens: number;
+  requests: number;
+}
+
+export interface ExportReport {
+  preview: ExportPreview;
+  summaryRows: ExportSummaryRow[];
+  sessionRows: ExportSessionRow[];
+}
+
+export interface ExportRequest {
+  filters: UsageFilters;
+  suggestedName?: string;
+}
+
+export interface ExportResult {
+  cancelled: boolean;
+  summaryPath?: string;
+  sessionsPath?: string;
+  summaryRows?: number;
+  sessionRows?: number;
+}
+
 export interface FilterOptions {
   projects: string[];
   models: string[];

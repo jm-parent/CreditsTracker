@@ -12,6 +12,7 @@ import {
   getHourlyDetail,
   getMonthlyActivity,
   getProjectDetail,
+  getExportReport,
   getRawTablePage,
   buildMergedDatabase,
 } from './db';
@@ -480,6 +481,201 @@ describe('getProjectDetail', () => {
       projectSearch: 'repo-a',
     });
     expect(result.totals).toEqual({ aiuCredits: 3.5, tokens: 215, requests: 3 });
+
+    db.close();
+  });
+});
+
+describe('getExportReport', () => {
+  function seedExportReportFixtures(db: Database.Database): void {
+    db.exec(`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        cwd TEXT,
+        repository TEXT,
+        summary TEXT,
+        created_at TEXT
+      );
+      CREATE TABLE assistant_usage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        model TEXT NOT NULL,
+        total_nano_aiu INTEGER,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        created_at TEXT
+      );
+    `);
+    db.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?)`)
+      .run('s1', 'C:/repo-a', 'org/repo-a', 'Mixed model work', '2026-09-01 10:00:00');
+    db.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?)`)
+      .run('s2', null, null, null, '2026-09-03 10:00:00');
+    db.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?)`)
+      .run('s3', 'org/repo-a', null, 'Filtered fallback work', '2026-09-01 08:30:00');
+
+    const insertEvent = db.prepare(`
+      INSERT INTO assistant_usage_events
+        (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    insertEvent.run('s1', 'claude-sonnet-5', 3_000_000_000, 100, 20, '2026-09-01 10:00:05');
+    insertEvent.run('s1', 'gpt-5.4', 1_000_000_000, 50, 10, '2026-09-01 10:05:00');
+    insertEvent.run('s2', 'gpt-5.4', 2_000_000_000, 40, 5, '2026-09-03 11:00:00');
+    insertEvent.run('s3', 'gpt-5.4', 4_000_000_000, 70, 30, '2026-09-03 09:00:00');
+  }
+
+  it('groups daily/project/model rows and sessions using the selected filters', () => {
+    const db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        cwd TEXT,
+        repository TEXT,
+        summary TEXT,
+        created_at TEXT
+      );
+      CREATE TABLE assistant_usage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        model TEXT NOT NULL,
+        total_nano_aiu INTEGER,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        created_at TEXT
+      );
+    `);
+    db.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?)`)
+      .run('s1', 'C:/repo-a', 'org/repo-a', 'Mixed model work', '2026-09-01 10:00:00');
+    db.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?)`)
+      .run('s2', null, null, null, '2026-09-03 10:00:00');
+    const insertEvent = db.prepare(`
+      INSERT INTO assistant_usage_events
+        (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    insertEvent.run('s1', 'claude-sonnet-5', 3_000_000_000, 100, 20, '2026-09-01 10:00:05');
+    insertEvent.run('s1', 'gpt-5.4', 1_000_000_000, 50, 10, '2026-09-01 10:05:00');
+    insertEvent.run('s2', 'gpt-5.4', 2_000_000_000, 40, 5, '2026-09-03 11:00:00');
+
+    const report = getExportReport(db, { from: '2026-09-01', to: '2026-09-03' });
+
+    expect(report.preview.totals).toEqual({ aiuCredits: 6, tokens: 225, requests: 3 });
+    expect(report.preview.sessionCount).toBe(2);
+    expect(report.preview.activeDays).toBe(2);
+    expect(report.preview.byModel).toEqual([
+      { model: 'claude-sonnet-5', aiuCredits: 3, sharePercent: 50 },
+      { model: 'gpt-5.4', aiuCredits: 3, sharePercent: 50 },
+    ]);
+    expect(report.sessionRows).toContainEqual(expect.objectContaining({
+      sessionId: 's2',
+      project: 'Unassigned',
+      summary: '',
+      models: 'gpt-5.4',
+      aiuCredits: 2,
+      inputTokens: 40,
+      outputTokens: 5,
+      tokens: 45,
+      requests: 1,
+    }));
+    expect(report.summaryRows).toContainEqual(expect.objectContaining({
+      date: '2026-09-01',
+      project: 'org/repo-a',
+      model: 'claude-sonnet-5',
+      aiuCredits: 3,
+      dayTotalAiuCredits: 4,
+      modelSharePercent: 50,
+      projectTotalAiuCredits: 4,
+      projectSharePercent: expect.closeTo(66.66666666666667, 10),
+    }));
+
+    db.close();
+  });
+
+  it('applies project, model, and date filters to preview, summary, and session rows', () => {
+    const db = new Database(':memory:');
+    seedExportReportFixtures(db);
+
+    const report = getExportReport(db, {
+      project: 'org/repo-a',
+      model: 'gpt-5.4',
+      from: '2026-09-02',
+      to: '2026-09-03',
+    });
+
+    expect(report.preview).toEqual({
+      totals: { aiuCredits: 4, tokens: 100, requests: 1 },
+      sessionCount: 1,
+      activeDays: 1,
+      byModel: [{ model: 'gpt-5.4', aiuCredits: 4, sharePercent: 100 }],
+      daily: [{ date: '2026-09-03', aiuCredits: 4, tokens: 100, requests: 1 }],
+    });
+    expect(report.summaryRows).toEqual([
+      {
+        date: '2026-09-03',
+        project: 'org/repo-a',
+        model: 'gpt-5.4',
+        aiuCredits: 4,
+        inputTokens: 70,
+        outputTokens: 30,
+        tokens: 100,
+        requests: 1,
+        dayTotalAiuCredits: 4,
+        modelTotalAiuCredits: 4,
+        modelSharePercent: 100,
+        projectTotalAiuCredits: 4,
+        projectSharePercent: 100,
+      },
+    ]);
+    expect(report.sessionRows).toEqual([
+      {
+        sessionId: 's3',
+        createdAt: '2026-09-01 08:30:00',
+        date: '2026-09-03',
+        project: 'org/repo-a',
+        summary: 'Filtered fallback work',
+        models: 'gpt-5.4',
+        aiuCredits: 4,
+        inputTokens: 70,
+        outputTokens: 30,
+        tokens: 100,
+        requests: 1,
+      },
+    ]);
+
+    db.close();
+  });
+
+  it('returns zero totals and empty collections when no events match the filters', () => {
+    const db = new Database(':memory:');
+    seedExportReportFixtures(db);
+
+    const report = getExportReport(db, {
+      project: 'org/repo-a',
+      model: 'claude-opus-5',
+      from: '2026-09-04',
+      to: '2026-09-05',
+    });
+
+    expect(report.preview).toEqual({
+      totals: { aiuCredits: 0, tokens: 0, requests: 0 },
+      sessionCount: 0,
+      activeDays: 0,
+      byModel: [],
+      daily: [],
+    });
+    expect(report.summaryRows).toEqual([]);
+    expect(report.sessionRows).toEqual([]);
+
+    db.close();
+  });
+
+  it('throws when the export date range is inverted', () => {
+    const db = new Database(':memory:');
+    seedExportReportFixtures(db);
+
+    expect(() =>
+      getExportReport(db, { from: '2026-09-04', to: '2026-09-03' }),
+    ).toThrow('Invalid export date range');
 
     db.close();
   });
