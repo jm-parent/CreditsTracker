@@ -1,3 +1,15 @@
+# [1.16.0](https://github.com/jm-parent/CreditsTracker/compare/v1.15.1...v1.16.0) (2026-09-16)
+
+
+### Bug Fixes
+
+* make graft helpers portable ([3717b4a](https://github.com/jm-parent/CreditsTracker/commit/3717b4a21fa1ac3c3a20fa99043ea8086153b025))
+
+
+### Features
+
+* add graft context graph integration ([6a78185](https://github.com/jm-parent/CreditsTracker/commit/6a78185f875473d68708bee1a0b86a03d36cfacf))
+
 ## [1.15.1](https://github.com/jm-parent/CreditsTracker/compare/v1.15.0...v1.15.1) (2026-09-16)
 
 
