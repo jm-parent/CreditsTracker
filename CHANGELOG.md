@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/jm-parent/CreditsTracker/compare/v1.14.0...v1.15.0) (2026-09-16)
+
+
+### Features
+
+* add featured GitHub projects ([0d7cd70](https://github.com/jm-parent/CreditsTracker/commit/0d7cd70d1b49b9e323979a8ad0f9b6feff77d4d4))
+
 # [1.14.0](https://github.com/jm-parent/CreditsTracker/compare/v1.13.0...v1.14.0) (2026-09-16)
 
 
