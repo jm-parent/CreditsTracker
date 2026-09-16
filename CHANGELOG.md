@@ -1,3 +1,12 @@
+# [1.11.0](https://github.com/jm-parent/CreditsTracker/compare/v1.10.0...v1.11.0) (2026-09-16)
+
+
+### Features
+
+* add live project path filter input ([320dfe7](https://github.com/jm-parent/CreditsTracker/commit/320dfe7faa303d693d77d9049a083b04952044fe))
+* filter usage by project path ([d0cd45e](https://github.com/jm-parent/CreditsTracker/commit/d0cd45e752bb04a35cf86896bdd55265e65d2e6b))
+* propagate project path filter across dashboard ([243b192](https://github.com/jm-parent/CreditsTracker/commit/243b192a0e68e0deb0315f681831bf5c79c7076b))
+
 # [1.10.0](https://github.com/jm-parent/CreditsTracker/compare/v1.9.0...v1.10.0) (2026-09-11)
 
 
