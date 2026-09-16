@@ -19,7 +19,7 @@ checking for updates, not something to download by hand — only the
 
 ## Features
 
-A sidebar lets you switch between six tabs, each scoped to the current
+A sidebar lets you switch between seven tabs, each scoped to the current
 project/model/date filters:
 
 - **Daily consumption** — total AIU credits, tokens, and requests at a
@@ -27,6 +27,8 @@ project/model/date filters:
   project (hover a bar to see the per-project breakdown for that day).
   Click a day to open an hourly breakdown showing usage trends throughout
   that day.
+- **Monthly activity** — a calendar heatmap that shows daily activity and
+  makes high-usage days easy to spot.
 - **By project** — per-project totals with a breakdown chart and table;
   click a project's bar to drill into a detail page for that project.
 - **By model** — per-model totals with a breakdown chart and a table
@@ -40,6 +42,9 @@ project/model/date filters:
   `%APPDATA%\credits-tracker\logs\app.log` (rotated at 2 MB), and the page
   offers "Copy" and "Open log folder" so a broken screen can be reported with
   the underlying error attached.
+- **Featured projects** — a curated, offline-friendly collection of GitHub
+  projects with descriptions, tags, and one-click links to open each
+  repository in the system browser.
 - **Filtering** — filter all tabs' charts and stats by project and/or model.
 - **Live updates** — the dashboard refreshes itself automatically every few
   seconds, so credits from a Copilot CLI (or Copilot Chat) session you just
