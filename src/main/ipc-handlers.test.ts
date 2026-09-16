@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { app, ipcMain, shell } from 'electron';
 import Database from 'better-sqlite3';
 import { registerIpcHandlers } from './ipc-handlers';
+import { getLogEntries, resetLoggerForTests } from './logger';
 
 vi.mock('electron', () => {
   const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -67,6 +68,7 @@ describe('registerIpcHandlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (ipcMain as unknown as { __handlers: Map<string, unknown> }).__handlers.clear();
+    resetLoggerForTests();
   });
 
   it('registers a get-filter-options and a get-usage handler', () => {
@@ -146,9 +148,13 @@ describe('registerIpcHandlers', () => {
 
   it.each([
     'http://github.com/rtk-ai/rtk',
+    'https://github.com:443/rtk-ai/rtk',
     'https://evil.example/rtk-ai/rtk',
     'https://github.com/rtk-ai',
     'https://github.com/rtk-ai/rtk/issues',
+    'https://github.com/rtk-ai/rtk/',
+    'https://GitHub.com/rtk-ai/rtk',
+    'https://github.com/rtk-ai/rtk%2Fissues',
     'https://github.com/rtk-ai/rtk?redirect=https://evil.example',
     'not a URL',
   ])('rejects unsafe external URL %s', async (value) => {
@@ -159,10 +165,30 @@ describe('registerIpcHandlers', () => {
 
     vi.mocked(shell.openExternal).mockClear();
 
-    await expect(handlers.get('open-external-url')!({}, value)).rejects.toThrow(
+    expect(() => handlers.get('open-external-url')!({}, value)).toThrow(
       'Only GitHub repository URLs can be opened',
     );
     expect(shell.openExternal).not.toHaveBeenCalled();
+  });
+
+  it('logs invalid external URL validation failures through the IPC wrapper', () => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+    const entriesBefore = getLogEntries().length;
+
+    expect(() => handlers.get('open-external-url')!({}, 'https://github.com:443/rtk-ai/rtk')).toThrow(
+      'Only GitHub repository URLs can be opened',
+    );
+
+    expect(getLogEntries().slice(entriesBefore)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        level: 'error',
+        scope: 'ipc',
+        message: expect.stringContaining('open-external-url failed after'),
+      }),
+    ]));
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {

@@ -37,6 +37,8 @@ import type {
 } from '../shared/types';
 import type { VscodeUsageData } from './vscode-chat-store';
 
+const CANONICAL_GITHUB_REPOSITORY_PATH = /^\/[^/%?#]+\/[^/%?#]+$/;
+
 function validateExternalRepositoryUrl(value: unknown): string {
   if (typeof value !== 'string') {
     throw new Error('Only GitHub repository URLs can be opened');
@@ -49,17 +51,19 @@ function validateExternalRepositoryUrl(value: unknown): string {
     throw new Error('Only GitHub repository URLs can be opened');
   }
 
-  const segments = parsed.pathname.split('/').filter(Boolean);
   if (
     parsed.protocol !== 'https:'
     || parsed.hostname !== 'github.com'
     || parsed.username
     || parsed.password
-    || parsed.port
     || parsed.search
     || parsed.hash
-    || segments.length !== 2
+    || !CANONICAL_GITHUB_REPOSITORY_PATH.test(parsed.pathname)
   ) {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  if (value !== `https://github.com${parsed.pathname}`) {
     throw new Error('Only GitHub repository URLs can be opened');
   }
 
@@ -259,7 +263,7 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
     return filePath;
   });
 
-  handle('open-external-url', async (_event: unknown, value: unknown) => {
+  handle('open-external-url', (_event: unknown, value: unknown) => {
     return shell.openExternal(validateExternalRepositoryUrl(value));
   });
 
