@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Sidebar } from './Sidebar';
 
 describe('Sidebar', () => {
-  it('renders all six navigation entries', () => {
+  it('renders all seven navigation entries', () => {
     render(<Sidebar activeTab="daily" onTabChange={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Daily consumption' })).toBeInTheDocument();
@@ -13,12 +13,13 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: 'By model' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Raw data' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Logs' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Featured projects' })).toBeInTheDocument();
   });
 
   it('highlights the active tab', () => {
-    render(<Sidebar activeTab="projects" onTabChange={vi.fn()} />);
+    render(<Sidebar activeTab="featured" onTabChange={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'By project' }).className).toContain('bg-primary');
+    expect(screen.getByRole('button', { name: 'Featured projects' }).className).toContain('bg-primary');
     expect(screen.getByRole('button', { name: 'Daily consumption' }).className).not.toContain('bg-primary');
   });
 
@@ -30,6 +31,16 @@ describe('Sidebar', () => {
     await user.click(screen.getByRole('button', { name: 'By model' }));
 
     expect(onTabChange).toHaveBeenCalledWith('models');
+  });
+
+  it('calls onTabChange with the featured tab id', async () => {
+    const user = userEvent.setup();
+    const onTabChange = vi.fn();
+    render(<Sidebar activeTab="daily" onTabChange={onTabChange} />);
+
+    await user.click(screen.getByRole('button', { name: 'Featured projects' }));
+
+    expect(onTabChange).toHaveBeenCalledWith('featured');
   });
 
   it('renders the packaged version footer when provided', () => {
