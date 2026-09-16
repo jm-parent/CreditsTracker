@@ -5,6 +5,7 @@ import { ExportPage } from './ExportPage';
 import { createWindowApi } from '../test-utils/windowApi';
 import { resetLogDedupeForTests } from '../lib/logger';
 import type { ExportPreview, FilterOptions } from '../../shared/types';
+import { getPresetFilters } from '../lib/export-periods';
 import * as logger from '../lib/logger';
 
 const options: FilterOptions = {
@@ -65,9 +66,9 @@ describe('ExportPage', () => {
       filters: {},
       suggestedName: 'copilot-usage.csv',
     });
-    expect(
-      await screen.findByText(/usage-summary\.csv \(2 rows\).*usage-sessions\.csv \(2 rows\)/),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /usage-summary\.csv \(2 rows\).*usage-sessions\.csv \(2 rows\)/,
+    );
   });
 
   it('shows an empty-state message and keeps export disabled when the preview is empty', async () => {
@@ -110,7 +111,7 @@ describe('ExportPage', () => {
 
     render(<ExportPage options={options} />);
 
-    expect(await screen.findByText("Couldn't load the export preview.")).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load the export preview.");
 
     await user.click(screen.getByRole('button', { name: 'Retry preview' }));
 
@@ -143,5 +144,39 @@ describe('ExportPage', () => {
     await waitFor(() => expect(window.api.exportCsv).toHaveBeenCalledTimes(1));
     expect(screen.queryByText(/usage-summary\.csv/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('restores the matching preset after manual date edits and preserves project/model filters', async () => {
+    const matchingRange = getPresetFilters('last-7-days', new Date(), options);
+
+    render(<ExportPage options={options} />);
+
+    await screen.findByText('6.00');
+
+    fireEvent.change(screen.getByLabelText('Project'), { target: { value: 'org/repo-a' } });
+    fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'gpt-5.4' } });
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: matchingRange.from } });
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: matchingRange.to } });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute('aria-pressed', 'true'),
+    );
+    expect(screen.getByRole('button', { name: 'All dates' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Previous month' })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export 2 CSV files' }));
+
+    await waitFor(() =>
+      expect(window.api.exportCsv).toHaveBeenCalledWith({
+        filters: {
+          project: 'org/repo-a',
+          model: 'gpt-5.4',
+          from: matchingRange.from,
+          to: matchingRange.to,
+        },
+        suggestedName: 'copilot-usage.csv',
+      }),
+    );
   });
 });

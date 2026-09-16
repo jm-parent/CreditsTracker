@@ -35,6 +35,19 @@ function formatShare(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
+const DATE_PRESETS: ExportPeriodPreset[] = ['last-7-days', 'this-month', 'previous-month'];
+
+function getMatchingPreset(filters: UsageFilters, options: FilterOptions): ExportPeriodPreset {
+  for (const candidate of DATE_PRESETS) {
+    const candidateRange = getPresetFilters(candidate, new Date(), options);
+    if (filters.from === candidateRange.from && filters.to === candidateRange.to) {
+      return candidate;
+    }
+  }
+
+  return 'all';
+}
+
 export function ExportPage({ options }: ExportPageProps) {
   const [filters, setFilters] = useState<UsageFilters>({});
   const [preset, setPreset] = useState<ExportPeriodPreset>('all');
@@ -49,9 +62,10 @@ export function ExportPage({ options }: ExportPageProps) {
 
   function handleFiltersChange(nextFilters: UsageFilters): void {
     const dateChanged = nextFilters.from !== filters.from || nextFilters.to !== filters.to;
-    setFilters(normalizeFilters(nextFilters));
+    const normalizedFilters = normalizeFilters(nextFilters);
+    setFilters(normalizedFilters);
     if (dateChanged) {
-      setPreset('all');
+      setPreset(getMatchingPreset(normalizedFilters, options));
     }
   }
 
@@ -118,11 +132,20 @@ export function ExportPage({ options }: ExportPageProps) {
       )}
 
       {exportMessage && (
-        <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">{exportMessage}</p>
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground"
+        >
+          {exportMessage}
+        </p>
       )}
 
       {error && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted px-4 py-3">
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted px-4 py-3"
+        >
           <p className="text-sm text-muted-foreground">Couldn't load the export preview.</p>
           <button
             type="button"

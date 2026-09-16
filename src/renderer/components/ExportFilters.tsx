@@ -40,12 +40,13 @@ export function ExportFilters({
 
   return (
     <div className="export-filters flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" aria-label="Export period shortcuts">
         {PRESET_OPTIONS.map((option) => (
           <button
             key={option.id}
             type="button"
             onClick={() => onPresetChange(option.id)}
+            aria-pressed={preset === option.id}
             className={`rounded-md px-3 py-1.5 text-sm ${
               preset === option.id
                 ? 'bg-primary text-primary-foreground'

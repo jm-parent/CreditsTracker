@@ -35,6 +35,10 @@ describe('ExportFilters', () => {
     expect(screen.getByRole('option', { name: 'All models' })).toBeInTheDocument();
     expect(screen.getByLabelText('From')).toHaveAttribute('min', '2026-09-01');
     expect(screen.getByLabelText('To')).toHaveAttribute('max', '2026-09-07');
+    expect(screen.getByRole('button', { name: 'All dates' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Previous month' })).toHaveAttribute('aria-pressed', 'false');
 
     await user.click(screen.getByRole('button', { name: 'Last 7 days' }));
 
