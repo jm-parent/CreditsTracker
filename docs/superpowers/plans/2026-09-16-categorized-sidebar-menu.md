@@ -162,7 +162,7 @@ active-class expression exactly as shown so behavior does not drift:
           type="button"
           onClick={() => onTabChange(id)}
           aria-current={activeTab === id ? 'page' : undefined}
-          className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${
+          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${
             activeTab === id
               ? 'bg-primary text-primary-foreground'
               : 'text-foreground hover:bg-muted'

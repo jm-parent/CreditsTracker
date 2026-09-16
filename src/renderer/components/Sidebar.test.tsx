@@ -35,6 +35,8 @@ describe('Sidebar', () => {
     expect(buttonsInGroup('Discovery')).toEqual([
       'Featured projects',
     ]);
+
+    expect(screen.getByRole('button', { name: 'Logs' }).className).toContain('w-full');
   });
 
   it('highlights the active tab', () => {
