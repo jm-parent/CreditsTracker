@@ -56,9 +56,11 @@ export function ExportPage({ options }: ExportPageProps) {
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const { data, loading, error } = useExportPreview(filters, reloadToken);
+  const previewData = error ? null : data;
   const validationMessage = validateExportFilters(filters);
-  const empty = data ? isEmptyPreview(data) : false;
-  const exportDisabled = exporting || Boolean(validationMessage) || loading || Boolean(error) || !data || empty;
+  const empty = previewData ? isEmptyPreview(previewData) : false;
+  const exportDisabled =
+    exporting || Boolean(validationMessage) || loading || Boolean(error) || !previewData || empty;
 
   function handleFiltersChange(nextFilters: UsageFilters): void {
     const dateChanged = nextFilters.from !== filters.from || nextFilters.to !== filters.to;
@@ -170,30 +172,32 @@ export function ExportPage({ options }: ExportPageProps) {
         </div>
       )}
 
-      {data && (
+      {previewData && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card>
               <CardContent className="flex flex-col gap-1 p-4">
-                <span className="text-2xl font-semibold text-foreground">{formatCredits(data.totals.aiuCredits)}</span>
+                <span className="text-2xl font-semibold text-foreground">
+                  {formatCredits(previewData.totals.aiuCredits)}
+                </span>
                 <span className="text-sm text-muted-foreground">AIU credits</span>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="flex flex-col gap-1 p-4">
-                <span className="text-2xl font-semibold text-foreground">{formatTokens(data.totals.tokens)}</span>
+                <span className="text-2xl font-semibold text-foreground">{formatTokens(previewData.totals.tokens)}</span>
                 <span className="text-sm text-muted-foreground">Tokens</span>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="flex flex-col gap-1 p-4">
-                <span className="text-2xl font-semibold text-foreground">{data.totals.requests}</span>
+                <span className="text-2xl font-semibold text-foreground">{previewData.totals.requests}</span>
                 <span className="text-sm text-muted-foreground">Requests</span>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="flex flex-col gap-1 p-4">
-                <span className="text-2xl font-semibold text-foreground">{data.sessionCount}</span>
+                <span className="text-2xl font-semibold text-foreground">{previewData.sessionCount}</span>
                 <span className="text-sm text-muted-foreground">Sessions</span>
               </CardContent>
             </Card>
@@ -217,7 +221,7 @@ export function ExportPage({ options }: ExportPageProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.byModel.map((row) => (
+                      {previewData.byModel.map((row) => (
                         <TableRow key={row.model}>
                           <TableCell>{row.model}</TableCell>
                           <TableCell>{formatCredits(row.aiuCredits)}</TableCell>
@@ -232,7 +236,9 @@ export function ExportPage({ options }: ExportPageProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Usage by day</CardTitle>
-                  <p className="text-sm text-muted-foreground">{data.activeDays} active day{data.activeDays === 1 ? '' : 's'} in this period.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {previewData.activeDays} active day{previewData.activeDays === 1 ? '' : 's'} in this period.
+                  </p>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
@@ -245,7 +251,7 @@ export function ExportPage({ options }: ExportPageProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.daily.map((row) => (
+                      {previewData.daily.map((row) => (
                         <TableRow key={row.date}>
                           <TableCell>{row.date}</TableCell>
                           <TableCell>{formatCredits(row.aiuCredits)}</TableCell>

@@ -119,6 +119,26 @@ describe('ExportPage', () => {
     expect(window.api.getExportPreview).toHaveBeenCalledTimes(2);
   });
 
+  it('hides stale preview content after a refreshed preview request fails', async () => {
+    window.api.getExportPreview = vi
+      .fn()
+      .mockResolvedValueOnce(preview)
+      .mockRejectedValueOnce(new Error('refresh failed'));
+    const user = userEvent.setup();
+
+    render(<ExportPage options={options} />);
+
+    expect(await screen.findByText('6.00')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Model'), 'gpt-5.4');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load the export preview.");
+    expect(screen.queryByText('6.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('Usage by model')).not.toBeInTheDocument();
+    expect(screen.queryByText('2026-09-01')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export 2 CSV files' })).toBeDisabled();
+  });
+
   it('shows an export error alert when the CSV export fails', async () => {
     const boom = new Error('disk full');
     window.api.exportCsv = vi.fn().mockRejectedValue(boom);
