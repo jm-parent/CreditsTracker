@@ -86,7 +86,7 @@ describe('App', () => {
     expect(await screen.findByText('v1.4.1')).toBeInTheDocument();
     const summaryCards = container.querySelector('.summary-cards') as HTMLElement;
     expect(within(summaryCards).getByText('AIU credits')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'org/repo-a' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Project path')).toBeInTheDocument();
   });
 
   it('keeps the dashboard usable when version lookup fails', async () => {
@@ -152,6 +152,16 @@ describe('App', () => {
     render(<App />);
     await screen.findByText('3.00');
 
+    await waitFor(() => {
+      expect(window.api.getMonthlyActivity).toHaveBeenCalledWith({
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        project: undefined,
+        projectSearch: undefined,
+        model: undefined,
+      });
+    });
+
     await user.click(screen.getByRole('button', { name: 'Monthly activity' }));
 
     expect(await screen.findByLabelText(`${expectedLabel}: 2.00 credits`)).toBeInTheDocument();
@@ -162,9 +172,30 @@ describe('App', () => {
     render(<App />);
     await screen.findByText('3.00');
 
-    await user.selectOptions(screen.getByLabelText('Project'), 'org/repo-a');
+    await user.type(screen.getByLabelText('Project path'), 'repo-a');
 
-    expect(window.api.getUsage).toHaveBeenLastCalledWith({ project: 'org/repo-a' });
+    await waitFor(() => {
+      expect(window.api.getUsage).toHaveBeenLastCalledWith({ projectSearch: 'repo-a' });
+    });
+  });
+
+  it('propagates the project path filter to monthly activity requests', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.type(screen.getByLabelText('Project path'), 'repo-a');
+    await waitFor(() => {
+      expect(window.api.getUsage).toHaveBeenLastCalledWith({ projectSearch: 'repo-a' });
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Monthly activity' }));
+
+    await waitFor(() => {
+      expect(window.api.getMonthlyActivity).toHaveBeenLastCalledWith(
+        expect.objectContaining({ projectSearch: 'repo-a' }),
+      );
+    });
   });
 
   it('shows an empty state when the database is unreachable and no data has ever loaded', async () => {
@@ -363,19 +394,29 @@ describe('App', () => {
   });
 
   it('does not animate a credit delta when a filter change starts a new update context', async () => {
-    window.api.getUsage = vi
-      .fn()
-      .mockResolvedValueOnce(usage)
-      .mockResolvedValueOnce({
-        ...usage,
-        totals: { aiuCredits: 9, tokens: 300, requests: 5 },
+    const filteredUsage: UsageResult = {
+      ...usage,
+      totals: { aiuCredits: 9, tokens: 300, requests: 5 },
+    };
+    let resolveFiltered: (value: UsageResult) => void = () => {};
+    window.api.getUsage = vi.fn().mockImplementation(({ projectSearch }) => {
+      if (!projectSearch) {
+        return Promise.resolve(usage);
+      }
+      return new Promise<UsageResult>((resolve) => {
+        resolveFiltered = resolve;
       });
+    });
 
     const user = userEvent.setup();
     render(<App />);
     await screen.findByText('3.00');
 
-    await user.selectOptions(screen.getByLabelText('Project'), 'org/repo-a');
+    await user.type(screen.getByLabelText('Project path'), 'repo-a');
+
+    await act(async () => {
+      resolveFiltered(filteredUsage);
+    });
 
     expect(await screen.findByText('9.00')).toBeInTheDocument();
     expect(screen.queryByText('+6.00')).not.toBeInTheDocument();
@@ -404,7 +445,7 @@ describe('App', () => {
     const { container } = render(<App />);
     await screen.findByText('3.00');
 
-    await user.selectOptions(screen.getByLabelText('Project'), 'org/repo-a');
+    await user.type(screen.getByLabelText('Project path'), 'repo-a');
     // The filtered request is still pending, so the by-project tab mounts on
     // the unfiltered response that is still displayed.
     await user.click(screen.getByRole('button', { name: 'By project' }));
