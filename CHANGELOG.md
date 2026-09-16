@@ -1,3 +1,15 @@
+# [1.14.0](https://github.com/jm-parent/CreditsTracker/compare/v1.13.0...v1.14.0) (2026-09-16)
+
+
+### Bug Fixes
+
+* preserve sidebar button full width ([023a3ff](https://github.com/jm-parent/CreditsTracker/commit/023a3ffdeea0910cb186bffab571bb5c5aa6cf17))
+
+
+### Features
+
+* group sidebar navigation by category ([ebc00b2](https://github.com/jm-parent/CreditsTracker/commit/ebc00b293354c5373512857b060276a2e64b39c9))
+
 # [1.13.0](https://github.com/jm-parent/CreditsTracker/compare/v1.12.0...v1.13.0) (2026-09-16)
 
 
