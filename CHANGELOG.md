@@ -1,3 +1,18 @@
+# [1.13.0](https://github.com/jm-parent/CreditsTracker/compare/v1.12.0...v1.13.0) (2026-09-16)
+
+
+### Bug Fixes
+
+* clarify featured projects scope ([47ab486](https://github.com/jm-parent/CreditsTracker/commit/47ab4863ecee1ac3ad12484fef34760ae0f0ad29))
+* tighten external browser bridge validation ([029917e](https://github.com/jm-parent/CreditsTracker/commit/029917ed503b65eddcc240b66068281320dd36ca))
+
+
+### Features
+
+* add featured projects cards ([b7ad0f4](https://github.com/jm-parent/CreditsTracker/commit/b7ad0f4918bbd929fd0cbfe3818933c12afa371b))
+* add featured projects navigation ([21a7938](https://github.com/jm-parent/CreditsTracker/commit/21a79389b5ea4554845aab0bb290e75d5e3b2724))
+* add validated external URL bridge ([2a457de](https://github.com/jm-parent/CreditsTracker/commit/2a457de816b8a3c1abdc8d36d5115cb1e51153a8))
+
 # [1.12.0](https://github.com/jm-parent/CreditsTracker/compare/v1.11.1...v1.12.0) (2026-09-16)
 
 
