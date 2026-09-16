@@ -123,7 +123,7 @@ rtk gh pr create --repo jm-parent/CreditsTracker --base master `
 ## Graft — repo context graph
 
 This repo is indexed in `graft/`: small linked markdown nodes that explain each
-system and carry exact file:line spans, kept in sync with the code through git.
+system and carry exact file:line spans, generated locally and kept in sync by Graft.
 
 For ANY task here — understanding how something works, finding where code lives,
 or scoping a change — get context from the graph before grepping or opening
