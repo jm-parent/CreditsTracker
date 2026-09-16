@@ -48,10 +48,10 @@ describe('useUsageData', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    rerender({ filters: { project: 'org/repo-a' } });
+    rerender({ filters: { projectSearch: 'repo-a' } });
 
     await waitFor(() => {
-      expect(window.api.getUsage).toHaveBeenLastCalledWith({ project: 'org/repo-a' });
+      expect(window.api.getUsage).toHaveBeenLastCalledWith({ projectSearch: 'repo-a' });
     });
   });
 

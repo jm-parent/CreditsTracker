@@ -82,6 +82,16 @@ function buildWhereClause(filters: UsageFilters): WhereClause {
     conditions.push('COALESCE(s.repository, s.cwd) = @project');
     params.project = filters.project;
   }
+
+  // projectSearch: literal, case-insensitive substring match against repository or cwd
+  const projectSearch = filters.projectSearch?.trim();
+  if (projectSearch) {
+    conditions.push(
+      'instr(lower(COALESCE(s.repository, s.cwd)), lower(@projectSearch)) > 0',
+    );
+    params.projectSearch = projectSearch;
+  }
+
   if (filters.model) {
     conditions.push('e.model = @model');
     params.model = filters.model;

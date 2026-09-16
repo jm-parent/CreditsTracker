@@ -52,7 +52,7 @@ export function useHourlyDetail(
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, filters.project, filters.model, filters.from, filters.to]);
+  }, [date, filters.project, filters.projectSearch, filters.model, filters.from, filters.to]);
 
   return { data, loading, error };
 }

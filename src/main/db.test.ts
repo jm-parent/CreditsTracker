@@ -184,6 +184,28 @@ describe('getUsage', () => {
 
     db.close();
   });
+
+  it('filters by projectSearch (case-insensitive substring against repository or cwd)', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const repositoryMatch = getUsage(db, { projectSearch: 'REPO-A' });
+    expect(repositoryMatch.totals).toEqual({ aiuCredits: 3, tokens: 120, requests: 1 });
+    expect(repositoryMatch.byProject).toEqual([{ key: 'org/repo-a', aiuCredits: 3 }]);
+
+    const cwdFallbackMatch = getUsage(db, { projectSearch: 'REPO-B' });
+    expect(cwdFallbackMatch.totals).toEqual({ aiuCredits: 1, tokens: 60, requests: 1 });
+    expect(cwdFallbackMatch.byProject).toEqual([{ key: 'C:/repo-b', aiuCredits: 1 }]);
+
+    const literalWildcard = getUsage(db, { projectSearch: 'repo-%' });
+    expect(literalWildcard.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
+
+    const noMatch = getUsage(db, { projectSearch: 'does-not-exist' });
+    expect(noMatch.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
+    expect(noMatch.timeSeries).toEqual([]);
+
+    db.close();
+  });
 });
 
 // getHourlyDetail converts stored UTC timestamps to the machine's local hour, so
@@ -236,6 +258,19 @@ describe('getHourlyDetail', () => {
 
     expect(result).toEqual([
       { hour: localHourLabel('2026-09-01 11:00:00'), aiuCredits: 0.5, byProject: { 'org/repo-a': 0.5 } },
+    ]);
+
+    db.close();
+  });
+
+  it('applies projectSearch on top of the date for hourly detail', () => {
+    const db = new Database(':memory:');
+    seedSchemaAndFixtures(db);
+
+    const result = getHourlyDetail(db, { date: '2026-09-01', projectSearch: 'repo-a' });
+
+    expect(result).toEqual([
+      { hour: localHourLabel('2026-09-01 10:00:05'), aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
     ]);
 
     db.close();
@@ -294,6 +329,9 @@ describe('getMonthlyActivity', () => {
 
     const byModel = getMonthlyActivity(db, { year: 2026, month: 9, model: 'gpt-5.4' });
     expect(byModel).toEqual([{ date: '2026-09-03', aiuCredits: 1 }]);
+
+    const byProjectSearch = getMonthlyActivity(db, { year: 2026, month: 9, projectSearch: 'repo-b' });
+    expect(byProjectSearch).toEqual([{ date: '2026-09-03', aiuCredits: 1 }]);
 
     db.close();
   });
@@ -430,6 +468,19 @@ describe('getProjectDetail', () => {
 
     expect(result.conversations).toEqual([]);
     expect(result.totals).toEqual({ aiuCredits: 0, tokens: 0, requests: 0 });
+    db.close();
+  });
+
+  it('allows combining exact project with projectSearch (still returns matching project data)', () => {
+    const db = new Database(':memory:');
+    seedWithSummaryAndSecondEvent(db);
+
+    const result = getProjectDetail(db, {
+      project: 'org/repo-a',
+      projectSearch: 'repo-a',
+    });
+    expect(result.totals).toEqual({ aiuCredits: 3.5, tokens: 215, requests: 3 });
+
     db.close();
   });
 });

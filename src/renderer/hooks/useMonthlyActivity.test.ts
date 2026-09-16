@@ -46,10 +46,14 @@ describe('useMonthlyActivity', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    rerender({ params: { year: 2026, month: 10 } });
+    rerender({ params: { year: 2026, month: 9, projectSearch: 'repo-a' } });
 
     await waitFor(() => {
-      expect(window.api.getMonthlyActivity).toHaveBeenLastCalledWith({ year: 2026, month: 10 });
+      expect(window.api.getMonthlyActivity).toHaveBeenLastCalledWith({
+        year: 2026,
+        month: 9,
+        projectSearch: 'repo-a',
+      });
     });
   });
 

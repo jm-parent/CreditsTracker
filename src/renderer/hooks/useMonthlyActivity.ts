@@ -47,7 +47,7 @@ export function useMonthlyActivity(params: MonthlyActivityParams): UseMonthlyAct
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [params.year, params.month, params.project, params.model]);
+  }, [params.year, params.month, params.project, params.projectSearch, params.model]);
 
   return { data, loading, error };
 }

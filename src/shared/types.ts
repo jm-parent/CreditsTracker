@@ -1,5 +1,6 @@
 export interface UsageFilters {
   project?: string;
+  projectSearch?: string;
   model?: string;
   /** Inclusive ISO date string 'YYYY-MM-DD' */
   from?: string;
@@ -157,5 +158,6 @@ export interface MonthlyActivityParams {
   /** Month number, 1-12. */
   month: number;
   project?: string;
+  projectSearch?: string;
   model?: string;
 }

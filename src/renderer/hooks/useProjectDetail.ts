@@ -43,7 +43,7 @@ export function useProjectDetail(project: string, filters: UsageFilters): UsePro
     return () => {
       cancelled = true;
     };
-  }, [project, filters.project, filters.model, filters.from, filters.to]);
+  }, [project, filters.project, filters.projectSearch, filters.model, filters.from, filters.to]);
 
   return { data, loading, error };
 }

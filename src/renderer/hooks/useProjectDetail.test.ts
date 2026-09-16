@@ -48,12 +48,12 @@ describe('useProjectDetail', () => {
     });
     await waitFor(() => expect(window.api.getProjectDetail).toHaveBeenCalledTimes(1));
 
-    rerender({ project: 'org/repo-a', filters: { model: 'claude-sonnet-5' } });
+    rerender({ project: 'org/repo-a', filters: { projectSearch: 'repo-a' } });
 
     await waitFor(() => expect(window.api.getProjectDetail).toHaveBeenCalledTimes(2));
     expect(window.api.getProjectDetail).toHaveBeenLastCalledWith({
       project: 'org/repo-a',
-      model: 'claude-sonnet-5',
+      projectSearch: 'repo-a',
     });
   });
 

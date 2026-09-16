@@ -51,6 +51,7 @@ export function App() {
     year: activityMonth.year,
     month: activityMonth.month,
     project: filters.project,
+    projectSearch: filters.projectSearch,
     model: filters.model,
   });
   // Derived from the filters the displayed data was fetched with, not the
@@ -59,6 +60,7 @@ export function App() {
   // context and then animate the difference between the two.
   const usageUpdateContextKey = JSON.stringify({
     project: dataFilters?.project ?? null,
+    projectSearch: dataFilters?.projectSearch ?? null,
     model: dataFilters?.model ?? null,
     from: dataFilters?.from ?? null,
     to: dataFilters?.to ?? null,
