@@ -24,21 +24,18 @@ export function FilterBar({ options, filters, onChange, showProjectFilter = true
       {showProjectFilter && (
         <div className="flex flex-col gap-1">
           <label htmlFor="project-filter" className="text-xs font-medium text-muted-foreground">
-            Project
+            Project path
           </label>
-          <select
+          <input
             id="project-filter"
-            className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            value={filters.project ?? ''}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) => update({ project: event.target.value || undefined })}
-          >
-            <option value="">All projects</option>
-            {options.projects.map((project) => (
-              <option key={project} value={project}>
-                {project}
-              </option>
-            ))}
-          </select>
+            type="text"
+            placeholder="Search project path"
+            className="min-w-64 rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            value={filters.projectSearch ?? ''}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              update({ projectSearch: event.target.value.trim() ? event.target.value : undefined })
+            }
+          />
         </div>
       )}
 

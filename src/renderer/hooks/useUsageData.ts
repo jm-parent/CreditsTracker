@@ -61,7 +61,7 @@ export function useUsageData(filters: UsageFilters): UseUsageDataResult {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [filters.project, filters.model, filters.from, filters.to]);
+  }, [filters.project, filters.projectSearch, filters.model, filters.from, filters.to]);
 
   return {
     data: snapshot?.data ?? null,
