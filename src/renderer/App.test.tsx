@@ -413,6 +413,9 @@ describe('App', () => {
     await screen.findByText('3.00');
 
     await user.type(screen.getByLabelText('Project path'), 'repo-a');
+    await waitFor(() => {
+      expect(window.api.getUsage).toHaveBeenLastCalledWith({ projectSearch: 'repo-a' });
+    });
 
     await act(async () => {
       resolveFiltered(filteredUsage);
@@ -446,6 +449,9 @@ describe('App', () => {
     await screen.findByText('3.00');
 
     await user.type(screen.getByLabelText('Project path'), 'repo-a');
+    await waitFor(() => {
+      expect(window.api.getUsage).toHaveBeenLastCalledWith({ projectSearch: 'repo-a' });
+    });
     // The filtered request is still pending, so the by-project tab mounts on
     // the unfiltered response that is still displayed.
     await user.click(screen.getByRole('button', { name: 'By project' }));

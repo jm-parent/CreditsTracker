@@ -1,5 +1,7 @@
-import type { ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { FilterOptions, UsageFilters } from '../../shared/types';
+
+const PROJECT_SEARCH_DEBOUNCE_MS = 300;
 
 interface FilterBarProps {
   options: FilterOptions;
@@ -9,6 +11,37 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ options, filters, onChange, showProjectFilter = true }: FilterBarProps) {
+  const [projectSearchInput, setProjectSearchInput] = useState(filters.projectSearch ?? '');
+  const filtersRef = useRef(filters);
+  const onChangeRef = useRef(onChange);
+  const projectSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const committedProjectSearchRef = useRef(filters.projectSearch ?? '');
+
+  filtersRef.current = filters;
+  onChangeRef.current = onChange;
+
+  useEffect(() => {
+    const nextProjectSearch = filters.projectSearch ?? '';
+    if (nextProjectSearch === committedProjectSearchRef.current) {
+      return;
+    }
+
+    committedProjectSearchRef.current = nextProjectSearch;
+    setProjectSearchInput(nextProjectSearch);
+    if (projectSearchTimerRef.current !== null) {
+      clearTimeout(projectSearchTimerRef.current);
+      projectSearchTimerRef.current = null;
+    }
+  }, [filters.projectSearch]);
+
+  useEffect(() => {
+    return () => {
+      if (projectSearchTimerRef.current !== null) {
+        clearTimeout(projectSearchTimerRef.current);
+      }
+    };
+  }, []);
+
   function update(partial: Partial<UsageFilters>): void {
     const next: UsageFilters = { ...filters, ...partial };
     (Object.keys(next) as Array<keyof UsageFilters>).forEach((key) => {
@@ -17,6 +50,28 @@ export function FilterBar({ options, filters, onChange, showProjectFilter = true
       }
     });
     onChange(next);
+  }
+
+  function handleProjectSearchChange(event: ChangeEvent<HTMLInputElement>): void {
+    const value = event.target.value;
+    setProjectSearchInput(value);
+
+    if (projectSearchTimerRef.current !== null) {
+      clearTimeout(projectSearchTimerRef.current);
+    }
+
+    projectSearchTimerRef.current = setTimeout(() => {
+      projectSearchTimerRef.current = null;
+      const projectSearch = value.trim() ? value : undefined;
+      const next: UsageFilters = { ...filtersRef.current, projectSearch };
+      (Object.keys(next) as Array<keyof UsageFilters>).forEach((key) => {
+        if (!next[key]) {
+          delete next[key];
+        }
+      });
+      committedProjectSearchRef.current = projectSearch ?? '';
+      onChangeRef.current(next);
+    }, PROJECT_SEARCH_DEBOUNCE_MS);
   }
 
   return (
@@ -31,10 +86,8 @@ export function FilterBar({ options, filters, onChange, showProjectFilter = true
             type="text"
             placeholder="Search project path"
             className="min-w-64 rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            value={filters.projectSearch ?? ''}
-            onChange={(event: ChangeEvent<HTMLInputElement>) =>
-              update({ projectSearch: event.target.value.trim() ? event.target.value : undefined })
-            }
+            value={projectSearchInput}
+            onChange={handleProjectSearchChange}
           />
         </div>
       )}

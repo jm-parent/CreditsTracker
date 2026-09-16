@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FilterBar } from './FilterBar';
 import type { FilterOptions, UsageFilters } from '../../shared/types';
@@ -35,6 +35,10 @@ function FilterBarHarness({
 }
 
 describe('FilterBar', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders a project path input and the model options', () => {
     render(<FilterBarHarness onChange={vi.fn()} />);
 
@@ -44,25 +48,44 @@ describe('FilterBar', () => {
     expect(screen.queryByRole('option', { name: 'org/repo-a' })).not.toBeInTheDocument();
   });
 
-  it('emits the project path search on every text change and clears it', async () => {
+  it('debounces project path search until typing pauses', () => {
+    vi.useFakeTimers();
     const onChange = vi.fn();
-    const user = userEvent.setup();
     render(<FilterBarHarness onChange={onChange} />);
 
     const input = screen.getByLabelText('Project path');
-    await user.type(input, 'repo-a');
-    expect(onChange).toHaveBeenLastCalledWith({ projectSearch: 'repo-a' });
+    fireEvent.change(input, { target: { value: 'r' } });
+    fireEvent.change(input, { target: { value: 'repo-a' } });
 
-    await user.clear(input);
+    expect(onChange).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(299));
+    expect(onChange).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(1));
+    expect(onChange).toHaveBeenLastCalledWith({ projectSearch: 'repo-a' });
+  });
+
+  it('debounces clearing the project path search', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    render(<FilterBarHarness onChange={onChange} />);
+
+    const input = screen.getByLabelText('Project path');
+    fireEvent.change(input, { target: { value: 'repo-a' } });
+    fireEvent.change(input, { target: { value: '' } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(300));
     expect(onChange).toHaveBeenLastCalledWith({});
   });
 
-  it('does not keep a whitespace-only search filter', async () => {
+  it('does not keep a whitespace-only search filter', () => {
+    vi.useFakeTimers();
     const onChange = vi.fn();
-    const user = userEvent.setup();
     render(<FilterBarHarness onChange={onChange} />);
 
-    await user.type(screen.getByLabelText('Project path'), '   ');
+    fireEvent.change(screen.getByLabelText('Project path'), { target: { value: '   ' } });
+    act(() => vi.advanceTimersByTime(300));
     expect(onChange).toHaveBeenLastCalledWith({});
   });
 
