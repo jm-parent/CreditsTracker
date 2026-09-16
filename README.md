@@ -1,7 +1,8 @@
 # Credits Dashboard
 
 A local desktop app that shows your GitHub Copilot CLI credit (AIU) and token
-consumption, filterable by project, model, and date range.
+consumption, with shared dashboard filters for project and model plus a
+dedicated CSV export page for date-range reporting.
 
 🔒 **Privacy-first**: everything runs on your machine. It reads
 `~/.copilot/session-store.db` read-only — no network calls, no GitHub
@@ -52,9 +53,10 @@ A sidebar lets you switch between seven navigation entries:
 
 Additional capabilities include:
 
-- **Filtering** — the dashboard views share project/model/date filters for
-  exploration, while the CSV export page keeps an independent set of export
-  filters so report selection does not disturb the on-screen dashboard.
+- **Filtering** — the dashboard views share project/model filters for
+  exploration, while the CSV export page provides its own project, model, and
+  date-range export filters so report selection does not disturb the
+  on-screen dashboard.
 - **Live updates** — the dashboard refreshes itself automatically every few
   seconds, so credits from a Copilot CLI (or Copilot Chat) session you just
   finished show up on screen shortly after, without restarting the app.

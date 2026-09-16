@@ -127,6 +127,7 @@ All renderer ↔ main communication goes through `contextBridge` in
 | `get-project-detail`  | Per-project totals, time series, and conversation list |
 | `get-raw-table-page`  | Paginated raw `sessions`/`assistant_usage_events` rows |
 | `get-hourly-detail`   | Hour-by-hour breakdown for a single date             |
+| `get-monthly-activity` | Day-by-day activity points for the monthly activity heatmap |
 | `get-export-preview`  | Preview totals, by-model rows, and by-day rows for the CSV export page |
 | `export-csv`          | Runs Save As, derives `*-summary.csv` / `*-sessions.csv`, and writes both files from the main process |
 
