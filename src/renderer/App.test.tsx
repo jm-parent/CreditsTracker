@@ -3,6 +3,7 @@ import { render, screen, within, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { resetLogDedupeForTests } from './lib/logger';
+import { createWindowApi } from './test-utils/windowApi';
 import type { FilterOptions, ProjectDetailResult, UsageResult } from '../shared/types';
 
 vi.mock('recharts', async () => {
@@ -50,7 +51,7 @@ const projectDetail: ProjectDetailResult = {
 
 beforeEach(() => {
   resetLogDedupeForTests();
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn().mockResolvedValue(options),
     getUsage: vi.fn().mockResolvedValue(usage),
     getProjectDetail: vi.fn().mockResolvedValue(projectDetail),
@@ -61,6 +62,14 @@ beforeEach(() => {
       page: 0,
       pageSize: 50,
     }),
+    getExportPreview: vi.fn().mockResolvedValue({
+      totals: { aiuCredits: 0, tokens: 0, requests: 0 },
+      sessionCount: 0,
+      activeDays: 0,
+      byModel: [],
+      daily: [],
+    }),
+    exportCsv: vi.fn().mockResolvedValue({ cancelled: true }),
     getHourlyDetail: vi.fn().mockResolvedValue([]),
     getMonthlyActivity: vi.fn().mockResolvedValue([]),
     getAppVersion: vi.fn().mockResolvedValue('1.4.1'),
@@ -75,7 +84,7 @@ beforeEach(() => {
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),
     log: vi.fn().mockResolvedValue(undefined),
-  };
+  });
 });
 
 describe('App', () => {
@@ -234,6 +243,20 @@ describe('App', () => {
     expect(screen.getByText('db not found')).toBeInTheDocument();
   });
 
+  it('keeps the CSV export page reachable when the initial dashboard usage load fails', async () => {
+    window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Couldn't load Copilot CLI usage data.");
+
+    await user.click(screen.getByRole('button', { name: 'CSV export' }));
+
+    expect(await screen.findByRole('heading', { name: 'CSV export' })).toBeInTheDocument();
+    expect(document.querySelector('#project-filter')).toBeNull();
+    expect(window.api.getExportPreview).toHaveBeenCalledWith({});
+  });
+
   it('logs failures and tab navigation through the bridge', async () => {
     window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
 
@@ -338,6 +361,41 @@ describe('App', () => {
 
     expect(await screen.findByText('3.00')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Raw data' })).not.toBeInTheDocument();
+  });
+
+  it('opens the independent CSV export page from the sidebar', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'CSV export' }));
+
+    expect(await screen.findByRole('heading', { name: 'CSV export' })).toBeInTheDocument();
+    expect(document.querySelector('#project-filter')).toBeNull();
+    expect(window.api.getExportPreview).toHaveBeenCalledWith({});
+  });
+
+  it('clears the project detail overlay when switching to CSV export', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+
+    const projectChartCard = screen.getByText('Credits by project').closest('.chart-card') as HTMLElement;
+    const projectChart = within(projectChartCard).getByTestId('breakdown-chart');
+    const bar = projectChart.querySelector('.recharts-bar-rectangle');
+    expect(bar).not.toBeNull();
+
+    await user.click(bar as Element);
+
+    expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'CSV export' }));
+
+    expect(await screen.findByRole('heading', { name: 'CSV export' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'org/repo-a' })).not.toBeInTheDocument();
+    expect(document.querySelector('#project-filter')).toBeNull();
   });
 
   it('shows the models tab with a breakdown chart and table', async () => {

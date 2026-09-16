@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProjectDetailPage } from './ProjectDetailPage';
+import { createWindowApi } from '../test-utils/windowApi';
 import type { FilterOptions, ProjectDetailResult } from '../../shared/types';
 
 vi.mock('recharts', async () => {
@@ -42,14 +43,14 @@ const detail: ProjectDetailResult = {
 };
 
 beforeEach(() => {
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn(),
     getUsage: vi.fn(),
     getProjectDetail: vi.fn().mockResolvedValue(detail),
     getRawTablePage: vi.fn(),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn(),
-  };
+  });
 });
 
 describe('ProjectDetailPage', () => {

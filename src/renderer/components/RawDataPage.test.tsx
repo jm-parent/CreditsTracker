@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RawDataPage } from './RawDataPage';
+import { createWindowApi } from '../test-utils/windowApi';
 import type { RawTablePage } from '../../shared/types';
 
 const sessionsPage: RawTablePage = {
@@ -21,7 +22,7 @@ const eventsPage: RawTablePage = {
 };
 
 beforeEach(() => {
-  window.api = {
+  window.api = createWindowApi({
     getFilterOptions: vi.fn(),
     getUsage: vi.fn(),
     getProjectDetail: vi.fn(),
@@ -30,7 +31,7 @@ beforeEach(() => {
     ),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn(),
-  };
+  });
 });
 
 describe('RawDataPage', () => {

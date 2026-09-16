@@ -1,30 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetLogDedupeForTests } from '../lib/logger';
+import { createWindowApi } from '../test-utils/windowApi';
 import { useDesktopShortcutPrompt } from './useDesktopShortcutPrompt';
-
-function createWindowApi(): Window['api'] {
-  return {
-    getFilterOptions: vi.fn(),
-    getUsage: vi.fn(),
-    getProjectDetail: vi.fn(),
-    getRawTablePage: vi.fn(),
-    getHourlyDetail: vi.fn(),
-    getMonthlyActivity: vi.fn(),
-    getAppVersion: vi.fn(),
-    getUpdateState: vi.fn(),
-    checkForUpdate: vi.fn(),
-    downloadUpdate: vi.fn(),
-    restartToUpdate: vi.fn(),
-    onUpdateStateChange: vi.fn(() => () => {}),
-    shouldPromptDesktopShortcut: vi.fn().mockResolvedValue(false),
-    createDesktopShortcut: vi.fn().mockResolvedValue(true),
-    getLogs: vi.fn(),
-    clearLogs: vi.fn(),
-    openLogFile: vi.fn(),
-    log: vi.fn().mockResolvedValue(undefined),
-  };
-}
 
 beforeEach(() => {
   resetLogDedupeForTests();

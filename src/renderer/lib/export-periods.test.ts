@@ -1,0 +1,60 @@
+import { describe, expect, it } from 'vitest';
+import { getPresetFilters, validateExportFilters } from './export-periods';
+
+describe('export periods', () => {
+  const today = new Date(2026, 8, 16);
+  const bounds = { minDate: '2026-08-01', maxDate: '2026-09-16' } as const;
+
+  it('returns the inclusive previous six days for last seven days', () => {
+    expect(getPresetFilters('last-7-days', today, bounds)).toEqual({
+      from: '2026-09-10',
+      to: '2026-09-16',
+    });
+  });
+
+  it('clamps the current month and previous month to available bounds', () => {
+    expect(getPresetFilters('this-month', today, bounds)).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-16',
+    });
+    expect(getPresetFilters('previous-month', today, bounds)).toEqual({
+      from: '2026-08-01',
+      to: '2026-08-31',
+    });
+  });
+
+  it('returns a valid empty range when a preset has no overlap with available bounds', () => {
+    const noOverlap = getPresetFilters('this-month', today, {
+      minDate: '2026-08-01',
+      maxDate: '2026-08-31',
+    });
+
+    expect(noOverlap).not.toEqual({});
+    expect(noOverlap).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-01',
+    });
+    expect(validateExportFilters(noOverlap)).toBeNull();
+  });
+
+  it('returns a valid empty range when only a minimum bound exists and the preset is earlier', () => {
+    const noOverlap = getPresetFilters('last-7-days', today, {
+      minDate: '2026-10-10',
+      maxDate: null,
+    });
+
+    expect(noOverlap).toEqual({
+      from: '2026-10-09',
+      to: '2026-10-09',
+    });
+    expect(validateExportFilters(noOverlap)).toBeNull();
+  });
+
+  it('returns no dates for all data and reports inverted ranges', () => {
+    expect(getPresetFilters('all', today, bounds)).toEqual({});
+    expect(validateExportFilters({ from: '2026-09-02', to: '2026-09-01' })).toBe(
+      'Start date must be on or before end date.',
+    );
+    expect(validateExportFilters({ from: '2026-09-01', to: '2026-09-01' })).toBeNull();
+  });
+});

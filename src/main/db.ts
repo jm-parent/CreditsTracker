@@ -4,6 +4,9 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import type {
   ConversationSummary,
+  ExportReport,
+  ExportSessionRow,
+  ExportSummaryRow,
   FilterOptions,
   HourlyDetailParams,
   HourlyPoint,
@@ -289,6 +292,155 @@ export function getProjectDetail(
     totals: totalsRow,
     timeSeries,
     conversations,
+  };
+}
+
+function toSharePercent(value: number, total: number): number {
+  if (total === 0) {
+    return 0;
+  }
+
+  const percent = (value / total) * 100;
+  return Number.isFinite(percent) ? percent : 0;
+}
+
+export function getExportReport(db: Database.Database, filters: UsageFilters): ExportReport {
+  if (filters.from && filters.to && filters.from > filters.to) {
+    throw new Error('Invalid export date range');
+  }
+
+  const { sql: whereSql, params } = buildWhereClause(filters);
+  const baseFrom = `FROM assistant_usage_events e JOIN sessions s ON s.id = e.session_id ${whereSql}`;
+
+  const groupedRows = db
+    .prepare(
+      `SELECT
+         date(e.created_at) AS date,
+         COALESCE(s.repository, s.cwd, 'Unassigned') AS project,
+         e.model AS model,
+         COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits,
+         COALESCE(SUM(COALESCE(e.input_tokens, 0)), 0) AS inputTokens,
+         COALESCE(SUM(COALESCE(e.output_tokens, 0)), 0) AS outputTokens,
+         COALESCE(SUM(COALESCE(e.input_tokens, 0) + COALESCE(e.output_tokens, 0)), 0) AS tokens,
+         COUNT(*) AS requests
+       ${baseFrom}
+       GROUP BY date(e.created_at), COALESCE(s.repository, s.cwd, 'Unassigned'), e.model
+       ORDER BY date(e.created_at), project, e.model`,
+    )
+    .all(params) as Array<{
+    date: string;
+    project: string;
+    model: string;
+    aiuCredits: number;
+    inputTokens: number;
+    outputTokens: number;
+    tokens: number;
+    requests: number;
+  }>;
+
+  const dailyPreviewByDate = new Map<string, { aiuCredits: number; tokens: number; requests: number }>();
+  const dayTotals = new Map<string, number>();
+  const modelTotals = new Map<string, number>();
+  const projectTotals = new Map<string, number>();
+
+  let periodAiuCredits = 0;
+  let periodTokens = 0;
+  let periodRequests = 0;
+
+  for (const row of groupedRows) {
+    periodAiuCredits += row.aiuCredits;
+    periodTokens += row.tokens;
+    periodRequests += row.requests;
+
+    dayTotals.set(row.date, (dayTotals.get(row.date) ?? 0) + row.aiuCredits);
+    modelTotals.set(row.model, (modelTotals.get(row.model) ?? 0) + row.aiuCredits);
+    projectTotals.set(row.project, (projectTotals.get(row.project) ?? 0) + row.aiuCredits);
+
+    const dailyRow = dailyPreviewByDate.get(row.date) ?? { aiuCredits: 0, tokens: 0, requests: 0 };
+    dailyRow.aiuCredits += row.aiuCredits;
+    dailyRow.tokens += row.tokens;
+    dailyRow.requests += row.requests;
+    dailyPreviewByDate.set(row.date, dailyRow);
+  }
+
+  const summaryRows: ExportSummaryRow[] = groupedRows.map((row) => {
+    const dayTotalAiuCredits = dayTotals.get(row.date) ?? 0;
+    const modelTotalAiuCredits = modelTotals.get(row.model) ?? 0;
+    const projectTotalAiuCredits = projectTotals.get(row.project) ?? 0;
+
+    return {
+      date: row.date,
+      project: row.project,
+      model: row.model,
+      aiuCredits: row.aiuCredits,
+      inputTokens: row.inputTokens,
+      outputTokens: row.outputTokens,
+      tokens: row.tokens,
+      requests: row.requests,
+      dayTotalAiuCredits,
+      modelTotalAiuCredits,
+      modelSharePercent: toSharePercent(modelTotalAiuCredits, periodAiuCredits),
+      projectTotalAiuCredits,
+      projectSharePercent: toSharePercent(projectTotalAiuCredits, periodAiuCredits),
+    };
+  });
+
+  const byModel = Array.from(modelTotals.entries())
+    .sort(([leftModel], [rightModel]) => leftModel.localeCompare(rightModel))
+    .map(([model, aiuCredits]) => ({
+      model,
+      aiuCredits,
+      sharePercent: toSharePercent(aiuCredits, periodAiuCredits),
+    }));
+
+  const daily = Array.from(dailyPreviewByDate.entries())
+    .sort(([leftDate], [rightDate]) => leftDate.localeCompare(rightDate))
+    .map(([date, row]) => ({
+      date,
+      aiuCredits: row.aiuCredits,
+      tokens: row.tokens,
+      requests: row.requests,
+    }));
+
+  const rawSessionRows = db
+    .prepare(
+      `SELECT
+         s.id AS sessionId,
+         s.created_at AS createdAt,
+         MIN(date(e.created_at)) AS date,
+         COALESCE(s.repository, s.cwd, 'Unassigned') AS project,
+         COALESCE(s.summary, '') AS summary,
+         GROUP_CONCAT(e.model) AS models,
+         COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits,
+         COALESCE(SUM(COALESCE(e.input_tokens, 0)), 0) AS inputTokens,
+         COALESCE(SUM(COALESCE(e.output_tokens, 0)), 0) AS outputTokens,
+         COALESCE(SUM(COALESCE(e.input_tokens, 0) + COALESCE(e.output_tokens, 0)), 0) AS tokens,
+         COUNT(*) AS requests
+       ${baseFrom}
+       GROUP BY s.id, s.created_at, COALESCE(s.repository, s.cwd, 'Unassigned'), COALESCE(s.summary, '')
+       ORDER BY s.created_at DESC, s.id`,
+    )
+    .all(params) as Array<ExportSessionRow & { models: string | null }>;
+
+  const sessionRows: ExportSessionRow[] = rawSessionRows.map((row) => ({
+    ...row,
+    models: Array.from(new Set((row.models ?? '').split(',').filter(Boolean))).sort().join(', '),
+  }));
+
+  return {
+    preview: {
+      totals: {
+        aiuCredits: periodAiuCredits,
+        tokens: periodTokens,
+        requests: periodRequests,
+      },
+      sessionCount: sessionRows.length,
+      activeDays: daily.length,
+      byModel,
+      daily,
+    },
+    summaryRows,
+    sessionRows,
   };
 }
 
