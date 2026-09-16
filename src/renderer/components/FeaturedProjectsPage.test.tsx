@@ -80,6 +80,22 @@ const expectedProjects = [
     iconClass: 'lucide-file-text',
     tags: ['Spec-driven', 'Developer tools', 'AI coding'],
   },
+  {
+    repository: 'usestrix/strix',
+    url: 'https://github.com/usestrix/strix',
+    title: 'Strix',
+    description: 'An open-source AI penetration testing tool that finds and fixes application vulnerabilities.',
+    iconClass: 'lucide-shield-check',
+    tags: ['AI coding', 'Security', 'Developer tools'],
+  },
+  {
+    repository: 'headroomlabs-ai/headroom',
+    url: 'https://github.com/headroomlabs-ai/headroom',
+    title: 'Headroom',
+    description: 'A compression layer for tool outputs, logs, files, and RAG chunks before they reach the LLM.',
+    iconClass: 'lucide-gauge',
+    tags: ['AI coding', 'Developer tools', 'Performance'],
+  },
 ] as const;
 
 beforeEach(() => {
@@ -121,7 +137,7 @@ describe('FeaturedProjectsPage', () => {
     );
 
     const cards = screen.getAllByTestId('featured-project-card');
-    expect(cards).toHaveLength(9);
+    expect(cards).toHaveLength(11);
     expect(cards[0].parentElement).toHaveClass(
       'grid',
       'grid-cols-1',
@@ -168,7 +184,7 @@ describe('FeaturedProjectsPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'All' }));
 
-    expect(screen.getAllByTestId('featured-project-card')).toHaveLength(9);
+    expect(screen.getAllByTestId('featured-project-card')).toHaveLength(11);
     expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
   });
 
