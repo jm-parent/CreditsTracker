@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/jm-parent/CreditsTracker/compare/v1.15.0...v1.15.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* enlarge update release-notes popup ([99cc7dc](https://github.com/jm-parent/CreditsTracker/commit/99cc7dc2ff2ef3f4cf243338f535cc7641698f78))
+
 # [1.15.0](https://github.com/jm-parent/CreditsTracker/compare/v1.14.0...v1.15.0) (2026-09-16)
 
 
