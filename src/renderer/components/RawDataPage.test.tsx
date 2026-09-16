@@ -30,6 +30,7 @@ beforeEach(() => {
     ),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn(),
+    openExternalUrl: vi.fn().mockResolvedValue(undefined),
   };
 });
 

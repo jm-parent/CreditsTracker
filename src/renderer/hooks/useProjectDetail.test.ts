@@ -28,6 +28,7 @@ beforeEach(() => {
     getRawTablePage: vi.fn(),
     getHourlyDetail: vi.fn(),
     getMonthlyActivity: vi.fn(),
+    openExternalUrl: vi.fn().mockResolvedValue(undefined),
   };
 });
 

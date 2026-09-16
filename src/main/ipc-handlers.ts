@@ -37,6 +37,35 @@ import type {
 } from '../shared/types';
 import type { VscodeUsageData } from './vscode-chat-store';
 
+function validateExternalRepositoryUrl(value: unknown): string {
+  if (typeof value !== 'string') {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  const segments = parsed.pathname.split('/').filter(Boolean);
+  if (
+    parsed.protocol !== 'https:'
+    || parsed.hostname !== 'github.com'
+    || parsed.username
+    || parsed.password
+    || parsed.port
+    || parsed.search
+    || parsed.hash
+    || segments.length !== 2
+  ) {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  return value;
+}
+
 /**
  * Opens the Copilot CLI database (falling back to an empty in-memory schema
  * if it doesn't exist, so VS Code-only usage can still populate the
@@ -228,6 +257,10 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
       logWarn('logs', 'No log file configured, cannot reveal it in the file explorer');
     }
     return filePath;
+  });
+
+  handle('open-external-url', async (_event: unknown, value: unknown) => {
+    return shell.openExternal(validateExternalRepositoryUrl(value));
   });
 
   handle('log-message', (_event: unknown, entry: RendererLogInput) => {

@@ -13,6 +13,7 @@ beforeEach(() => {
     getRawTablePage: vi.fn(),
     getHourlyDetail: vi.fn().mockResolvedValue(points),
     getMonthlyActivity: vi.fn(),
+    openExternalUrl: vi.fn().mockResolvedValue(undefined),
   };
 });
 

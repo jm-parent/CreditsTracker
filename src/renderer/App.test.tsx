@@ -74,6 +74,7 @@ beforeEach(() => {
     getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),
+    openExternalUrl: vi.fn().mockResolvedValue(undefined),
     log: vi.fn().mockResolvedValue(undefined),
   };
 });

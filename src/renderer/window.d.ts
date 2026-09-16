@@ -34,6 +34,7 @@ declare global {
       getLogs: () => Promise<LogsSnapshot>;
       clearLogs: () => Promise<LogsSnapshot>;
       openLogFile: () => Promise<string | null>;
+      openExternalUrl: (url: string) => Promise<void>;
       log: (entry: RendererLogInput) => Promise<void>;
     };
   }
