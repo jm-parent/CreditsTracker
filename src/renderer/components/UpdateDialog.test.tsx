@@ -60,4 +60,11 @@ describe('UpdateDialog', () => {
     expect(screen.getByText(/no RELEASES file/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
   });
+
+  it('uses a larger responsive surface for release notes', () => {
+    renderDialog({ latestVersion: '1.6.0', releaseNotes: 'New badge' });
+
+    expect(screen.getByRole('dialog').className).toContain('max-w-2xl');
+    expect(screen.getByText('New badge').className).toContain('max-h-[min(16rem,50vh)]');
+  });
 });
