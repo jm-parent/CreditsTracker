@@ -61,10 +61,18 @@ describe('UpdateDialog', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
   });
 
-  it('uses a larger responsive surface for release notes', () => {
+  it('uses a larger responsive surface for release notes and preserves formatting classes', () => {
     renderDialog({ latestVersion: '1.6.0', releaseNotes: 'New badge' });
 
-    expect(screen.getByRole('dialog').className).toContain('max-w-2xl');
-    expect(screen.getByText('New badge').className).toContain('max-h-[min(16rem,50vh)]');
+    const dialog = screen.getByRole('dialog');
+    const pre = screen.getByText('New badge').closest('pre');
+
+    expect(dialog.className).toContain('max-w-2xl');
+    expect(pre).toBeTruthy();
+    // ensure height limit and retained padding, overflow, and whitespace handling classes
+    expect(pre!.className).toContain('max-h-[min(16rem,50vh)]');
+    expect(pre!.className).toContain('p-3');
+    expect(pre!.className).toContain('overflow-y-auto');
+    expect(pre!.className).toContain('whitespace-pre-wrap');
   });
 });
