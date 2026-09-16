@@ -67,6 +67,7 @@ contextBridge.exposeInMainWorld('api', {
   getLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('get-logs'),
   clearLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('clear-logs'),
   openLogFile: (): Promise<string | null> => ipcRenderer.invoke('open-log-file'),
+  openExternalUrl: (url: string): Promise<void> => ipcRenderer.invoke('open-external-url', url),
   log: (entry: RendererLogInput): Promise<void> =>
     ipcRenderer.invoke('log-message', {
       level: entry.level,

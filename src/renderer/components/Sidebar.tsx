@@ -9,10 +9,19 @@ import {
   FolderKanban,
   RotateCcw,
   ScrollText,
+  Sparkles,
 } from 'lucide-react';
 import type { UpdateState } from '../../shared/types';
 
-export type DashboardTab = 'daily' | 'monthly' | 'projects' | 'models' | 'raw' | 'export' | 'logs';
+export type DashboardTab =
+  | 'daily'
+  | 'monthly'
+  | 'projects'
+  | 'models'
+  | 'raw'
+  | 'export'
+  | 'logs'
+  | 'featured';
 
 interface SidebarProps {
   activeTab: DashboardTab;
@@ -31,6 +40,7 @@ const ENTRIES: Array<{ id: DashboardTab; label: string; icon: typeof CalendarDay
   { id: 'raw', label: 'Raw data', icon: Database },
   { id: 'export', label: 'CSV export', icon: Download },
   { id: 'logs', label: 'Logs', icon: ScrollText },
+  { id: 'featured', label: 'Featured projects', icon: Sparkles },
 ];
 
 export function Sidebar({

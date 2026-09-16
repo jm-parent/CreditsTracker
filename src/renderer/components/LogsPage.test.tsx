@@ -32,6 +32,7 @@ beforeEach(() => {
     getLogs: vi.fn().mockResolvedValue(snapshot),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: snapshot.filePath }),
     openLogFile: vi.fn().mockResolvedValue(snapshot.filePath),
+    openExternalUrl: vi.fn().mockResolvedValue(undefined),
     checkForUpdate: vi.fn().mockResolvedValue({ status: 'up-to-date', currentVersion: '1.6.0' }),
     log: vi.fn().mockResolvedValue(undefined),
   } as typeof window.api;

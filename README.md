@@ -20,7 +20,9 @@ checking for updates, not something to download by hand — only the
 
 ## Features
 
-A sidebar lets you switch between seven navigation entries:
+A sidebar lets you switch between eight navigation entries. Usage tabs are
+scoped to the current project/model/date filters, while Featured projects is a
+static, offline-friendly catalogue and CSV export has its own report filters:
 
 - **Daily consumption** — total AIU credits, tokens, and requests at a
   glance, with a stacked bar chart of credits over time broken down by
@@ -50,6 +52,9 @@ A sidebar lets you switch between seven navigation entries:
   `%APPDATA%\credits-tracker\logs\app.log` (rotated at 2 MB), and the page
   offers "Copy" and "Open log folder" so a broken screen can be reported with
   the underlying error attached.
+- **Featured projects** — a curated, offline-friendly collection of GitHub
+  projects with descriptions, tags, and one-click links to open each
+  repository in the system browser.
 
 Additional capabilities include:
 

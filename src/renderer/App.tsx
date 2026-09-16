@@ -11,6 +11,7 @@ import { ActivityHeatmapPage } from './components/ActivityHeatmapPage';
 import { ProjectsPage } from './components/ProjectsPage';
 import { ModelsPage } from './components/ModelsPage';
 import { LogsPage } from './components/LogsPage';
+import { FeaturedProjectsPage } from './components/FeaturedProjectsPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
@@ -118,6 +119,8 @@ export function App() {
         <ErrorBoundary scope={`tab:${activeTab}`}>
           {activeTab === 'logs' ? (
             <LogsPage />
+          ) : activeTab === 'featured' ? (
+            <FeaturedProjectsPage />
           ) : activeTab === 'export' ? (
             <ExportPage options={options} />
           ) : dataUnavailable ? (

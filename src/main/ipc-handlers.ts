@@ -43,6 +43,39 @@ import type {
 } from '../shared/types';
 import type { VscodeUsageData } from './vscode-chat-store';
 
+const CANONICAL_GITHUB_REPOSITORY_PATH = /^\/[^/%?#]+\/[^/%?#]+$/;
+
+function validateExternalRepositoryUrl(value: unknown): string {
+  if (typeof value !== 'string') {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  if (
+    parsed.protocol !== 'https:'
+    || parsed.hostname !== 'github.com'
+    || parsed.username
+    || parsed.password
+    || parsed.search
+    || parsed.hash
+    || !CANONICAL_GITHUB_REPOSITORY_PATH.test(parsed.pathname)
+  ) {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  if (value !== `https://github.com${parsed.pathname}`) {
+    throw new Error('Only GitHub repository URLs can be opened');
+  }
+
+  return value;
+}
+
 /**
  * Opens the Copilot CLI database (falling back to an empty in-memory schema
  * if it doesn't exist, so VS Code-only usage can still populate the
@@ -290,6 +323,10 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
       logWarn('logs', 'No log file configured, cannot reveal it in the file explorer');
     }
     return filePath;
+  });
+
+  handle('open-external-url', (_event: unknown, value: unknown) => {
+    return shell.openExternal(validateExternalRepositoryUrl(value));
   });
 
   handle('log-message', (_event: unknown, entry: RendererLogInput) => {

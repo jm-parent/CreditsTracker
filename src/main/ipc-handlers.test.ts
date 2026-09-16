@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { app, dialog, ipcMain } from 'electron';
+import { app, dialog, ipcMain, shell } from 'electron';
 import Database from 'better-sqlite3';
 import { getExportFilePaths, SESSION_HEADERS, SUMMARY_HEADERS } from './csv';
 import { registerIpcHandlers } from './ipc-handlers';
+import { getLogEntries, resetLoggerForTests } from './logger';
 
 const exportFilesMock = vi.hoisted(() => ({
   writeExportFiles: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('electron', () => {
     },
     shell: {
       showItemInFolder: vi.fn(),
+      openExternal: vi.fn().mockResolvedValue(undefined),
     },
     dialog: {
       showSaveDialog: vi.fn(),
@@ -54,16 +56,13 @@ vi.mock('./shortcut', () => ({
   createDesktopShortcut: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock('./logger', () => ({
-  clearLogs: vi.fn(),
-  getLogEntries: vi.fn(() => []),
-  getLogFilePath: vi.fn(() => null),
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logOnce: vi.fn(),
-  logWarn: vi.fn(),
-  recordRendererLog: vi.fn(),
-}));
+vi.mock('./logger', async () => {
+  const actual = await vi.importActual<typeof import('./logger')>('./logger');
+  return {
+    ...actual,
+    logError: vi.fn(actual.logError),
+  };
+});
 
 vi.mock('./export-files', async () => {
   const actual = await vi.importActual('./export-files').catch(() => ({}));
@@ -110,6 +109,7 @@ describe('registerIpcHandlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (ipcMain as unknown as { __handlers: Map<string, unknown> }).__handlers.clear();
+    resetLoggerForTests();
   });
 
   it('registers a get-filter-options and a get-usage handler', () => {
@@ -175,6 +175,65 @@ describe('registerIpcHandlers', () => {
     }).__handlers;
 
     await expect(handlers.get('create-desktop-shortcut')!({})).resolves.toBe(false);
+  });
+
+  it('opens canonical GitHub repository URLs in the external browser', async () => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+
+    await expect(
+      handlers.get('open-external-url')!({}, 'https://github.com/rtk-ai/rtk'),
+    ).resolves.toBeUndefined();
+    expect(shell.openExternal).toHaveBeenCalledWith('https://github.com/rtk-ai/rtk');
+  });
+
+  it.each([
+    'http://github.com/rtk-ai/rtk',
+    'https://github.com:443/rtk-ai/rtk',
+    'https://evil.example/rtk-ai/rtk',
+    'https://github.com/rtk-ai',
+    'https://github.com/rtk-ai/rtk/issues',
+    'https://github.com/rtk-ai/rtk/',
+    'https://GitHub.com/rtk-ai/rtk',
+    'https://github.com/rtk-ai/rtk%2Fissues',
+    'https://github.com/rtk-ai/rtk?redirect=https://evil.example',
+    'https://user:pass@github.com/rtk-ai/rtk',
+    'https://github.com/rtk-ai/rtk#overview',
+    'not a URL',
+  ])('rejects unsafe external URL %s', async (value) => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+
+    vi.mocked(shell.openExternal).mockClear();
+
+    expect(() => handlers.get('open-external-url')!({}, value)).toThrow(
+      'Only GitHub repository URLs can be opened',
+    );
+    expect(shell.openExternal).not.toHaveBeenCalled();
+  });
+
+  it('logs invalid external URL validation failures through the IPC wrapper', () => {
+    registerIpcHandlers('/fake/path.db');
+    const handlers = (ipcMain as unknown as {
+      __handlers: Map<string, (...args: unknown[]) => unknown>;
+    }).__handlers;
+    const entriesBefore = getLogEntries().length;
+
+    expect(() => handlers.get('open-external-url')!({}, 'https://github.com:443/rtk-ai/rtk')).toThrow(
+      'Only GitHub repository URLs can be opened',
+    );
+
+    expect(getLogEntries().slice(entriesBefore)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        level: 'error',
+        scope: 'ipc',
+        message: expect.stringContaining('open-external-url failed after'),
+      }),
+    ]));
   });
 
   it('get-usage handler forwards filters and returns a UsageResult shape', async () => {

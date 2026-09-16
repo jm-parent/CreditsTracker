@@ -48,6 +48,7 @@ export function createWindowApi(overrides: Partial<Window['api']> = {}): Window[
     getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: null }),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: null }),
     openLogFile: vi.fn().mockResolvedValue(null),
+    openExternalUrl: vi.fn().mockResolvedValue(undefined),
     log: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };

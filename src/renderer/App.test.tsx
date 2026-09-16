@@ -83,6 +83,7 @@ beforeEach(() => {
     getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),
+    openExternalUrl: vi.fn().mockResolvedValue(undefined),
     log: vi.fn().mockResolvedValue(undefined),
   });
 });
@@ -207,6 +208,20 @@ describe('App', () => {
     });
   });
 
+  it('navigates to featured projects without rendering usage filters', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'Featured projects' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Featured projects' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('rtk-ai/rtk')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Project path')).not.toBeInTheDocument();
+  });
+
   it('shows an empty state when the database is unreachable and no data has ever loaded', async () => {
     window.api.getFilterOptions = vi.fn().mockRejectedValue(new Error('db not found'));
     window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
@@ -255,6 +270,26 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'CSV export' })).toBeInTheDocument();
     expect(document.querySelector('#project-filter')).toBeNull();
     expect(window.api.getExportPreview).toHaveBeenCalledWith({});
+  });
+
+  it('keeps featured projects reachable when the database is unreachable', async () => {
+    window.api.getFilterOptions = vi.fn().mockRejectedValue(new Error('db not found'));
+    window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Couldn't load Copilot CLI usage data.");
+
+    await user.click(screen.getByRole('button', { name: 'Featured projects' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Featured projects' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('rtk-ai/rtk')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Project path')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Couldn't load Copilot CLI usage data."),
+    ).not.toBeInTheDocument();
   });
 
   it('logs failures and tab navigation through the bridge', async () => {
