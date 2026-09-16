@@ -1,20 +1,42 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Sidebar } from './Sidebar';
 
 describe('Sidebar', () => {
-  it('renders all eight navigation entries', () => {
+  it('renders navigation entries under their categories', () => {
     render(<Sidebar activeTab="daily" onTabChange={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Daily consumption' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Monthly activity' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'By project' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'By model' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Raw data' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'CSV export' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Logs' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Featured projects' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      'Overview',
+      'Analysis',
+      'Data & tools',
+      'Discovery',
+    ]);
+
+    const buttonsInGroup = (label: string) =>
+      within(screen.getByRole('group', { name: label }))
+        .getAllByRole('button')
+        .map((button) => button.textContent ?? '');
+
+    expect(buttonsInGroup('Overview')).toEqual([
+      'Daily consumption',
+      'Monthly activity',
+    ]);
+    expect(buttonsInGroup('Analysis')).toEqual([
+      'By project',
+      'By model',
+    ]);
+    expect(buttonsInGroup('Data & tools')).toEqual([
+      'Raw data',
+      'CSV export',
+      'Logs',
+    ]);
+    expect(buttonsInGroup('Discovery')).toEqual([
+      'Featured projects',
+    ]);
+
+    expect(screen.getByRole('button', { name: 'Logs' }).className).toContain('w-full');
   });
 
   it('highlights the active tab', () => {
