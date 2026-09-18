@@ -75,7 +75,7 @@ La publication conservera les garanties de l'export actuel : un échec lors de
 la publication ou du nettoyage sera remonté à l'appelant, et l'ancien fichier
 sera restauré quand cela est possible. Les erreurs renderer seront journalisées
 avec le contexte `HTML export failed` et présentées avec un message utilisateur
-en français.
+en anglais, cohérent avec l'interface existante.
 
 Le générateur ne fera confiance à aucune donnée textuelle issue de la base :
 les caractères HTML et les guillemets seront encodés. Les valeurs numériques
