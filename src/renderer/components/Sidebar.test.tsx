@@ -29,7 +29,7 @@ describe('Sidebar', () => {
     ]);
     expect(buttonsInGroup('Data & tools')).toEqual([
       'Raw data',
-      'CSV export',
+      'HTML export',
       'Logs',
     ]);
     expect(buttonsInGroup('Discovery')).toEqual([
@@ -49,10 +49,10 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: 'Daily consumption' }).className).not.toContain('bg-primary');
   });
 
-  it('highlights the CSV export tab', () => {
+  it('highlights the HTML export tab', () => {
     render(<Sidebar activeTab="export" onTabChange={vi.fn()} />);
 
-    const exportButton = screen.getByRole('button', { name: 'CSV export' });
+    const exportButton = screen.getByRole('button', { name: 'HTML export' });
 
     expect(exportButton.className).toContain('bg-primary');
     expect(exportButton).toHaveAttribute('aria-current', 'page');
@@ -64,7 +64,7 @@ describe('Sidebar', () => {
     const onTabChange = vi.fn();
     render(<Sidebar activeTab="daily" onTabChange={onTabChange} />);
 
-    await user.click(screen.getByRole('button', { name: 'CSV export' }));
+    await user.click(screen.getByRole('button', { name: 'HTML export' }));
 
     expect(onTabChange).toHaveBeenCalledWith('export');
   });

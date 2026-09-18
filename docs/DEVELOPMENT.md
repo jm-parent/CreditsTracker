@@ -21,15 +21,15 @@ and screenshots, see the [main README](../README.md).
 src/
   main/            Electron main process
     db.ts             SQLite queries + in-memory "merged database" builder
-    csv.ts            CSV serialization + paired export filename logic
-    export-files.ts   Main-process CSV file writes
+    html-report.ts    HTML report rendering helpers
+    export-files.ts   Main-process HTML file writes
     ipc-handlers.ts    Registers all renderer-facing IPC channels
     vscode-chat-store.ts  Reads VS Code Copilot Chat JSONL logs
   preload.ts        contextBridge API exposed to the renderer as `window.api`
   renderer/         React app
     App.tsx            Top-level layout: sidebar + active tab routing
     components/         Sidebar, per-tab pages, charts, tables
-      ExportPage.tsx      CSV export screen + save workflow
+      ExportPage.tsx      HTML export screen + save workflow
       ExportFilters.tsx   Export-only project/model/date controls + shortcuts
     hooks/               useUsageData, useHourlyDetail, etc.
       useExportPreview.ts Fetches export preview cards/tables from IPC
@@ -90,10 +90,10 @@ database** built by `buildMergedDatabase()` in `src/main/db.ts`. It combines:
 Both are normalized into the same `sessions` / `assistant_usage_events`
 schema and copied into a single in-memory `:memory:` SQLite database, so all
 query functions (`getUsage`, `getFilterOptions`, `getProjectDetail`,
-`getExportReport`, ...) only ever need to know about one schema. The CSV
-export preview and final extraction both read from this merged in-memory
-database, so a report can span Copilot CLI and VS Code Copilot Chat usage in
-one pass without touching two storage backends separately.
+`getExportReport`, ...) only ever need to know about one schema. The HTML
+export preview and final report generation both read from this merged
+in-memory database, so a report can span Copilot CLI and VS Code Copilot Chat
+usage in one pass without touching two storage backends separately.
 
 ### Live refresh
 
@@ -128,8 +128,8 @@ All renderer ↔ main communication goes through `contextBridge` in
 | `get-raw-table-page`  | Paginated raw `sessions`/`assistant_usage_events` rows |
 | `get-hourly-detail`   | Hour-by-hour breakdown for a single date             |
 | `get-monthly-activity` | Day-by-day activity points for the monthly activity heatmap |
-| `get-export-preview`  | Preview totals, by-model rows, and by-day rows for the CSV export page |
-| `export-csv`          | Runs Save As, derives `*-summary.csv` / `*-sessions.csv`, and writes both files from the main process |
+| `get-export-preview`  | Preview totals, by-model rows, and by-day rows for the HTML export page |
+| `export-html`         | Runs Save As, renders a standalone `.html` report, and writes it from the main process |
 
 ### Sidebar navigation
 
@@ -150,16 +150,15 @@ filters, calls `get-export-preview`, and ignores stale responses after the
 user changes filters. If a refresh fails for the current filters,
 `ExportPage` hides the preview until a later retry succeeds.
 
-When the user clicks **Export 2 CSV files**, the renderer sends `export-csv`
+When the user clicks **Export HTML report**, the renderer sends `export-html`
 with the current export filters and suggested basename. The main process
 recomputes the report from the merged in-memory database, opens the Save As
-dialog, expands the selected path into `*-summary.csv` and
-`*-sessions.csv`, and writes both files via `writeExportFiles()`.
+dialog, and writes the selected `.html` file via `writeExportFile()`.
 
-Privacy boundary: the summary CSV is aggregate-only (day/project/model
-metrics), and the per-session CSV stops at session metadata plus the existing
-session `summary`. Neither file includes prompt text, assistant responses, or
-raw conversation transcripts.
+Privacy boundary: the HTML report includes aggregate metrics and
+session-level details for the selection, but it stops at session metadata plus
+the existing session `summary`. It does not include prompt text, assistant
+responses, or raw conversation transcripts.
 
 ## CI/CD workflows
 

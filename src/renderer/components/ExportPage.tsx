@@ -89,9 +89,9 @@ export function ExportPage({ options }: ExportPageProps) {
     setExportError(null);
 
     try {
-      const result = await window.api.exportCsv({
+      const result = await window.api.exportHtml({
         filters,
-        suggestedName: 'copilot-usage.csv',
+        suggestedName: 'copilot-usage.html',
       });
 
       if (result.cancelled) {
@@ -99,11 +99,11 @@ export function ExportPage({ options }: ExportPageProps) {
       }
 
       setExportMessage(
-        `Exported ${result.summaryPath ?? 'summary.csv'} (${result.summaryRows ?? 0} rows) and ${result.sessionsPath ?? 'sessions.csv'} (${result.sessionRows ?? 0} rows).`,
+        `Exported ${result.htmlPath ?? 'copilot-usage.html'} (${result.summaryRows ?? 0} summary rows, ${result.sessionRows ?? 0} session rows).`,
       );
     } catch (err) {
-      logError('ExportPage', 'CSV export failed', err);
-      setExportError('Could not export the CSV files. Please try again.');
+      logError('ExportPage', 'HTML export failed', err);
+      setExportError('Could not export the HTML report. Please try again.');
     } finally {
       setExporting(false);
     }
@@ -111,7 +111,7 @@ export function ExportPage({ options }: ExportPageProps) {
 
   return (
     <div className="export-page flex flex-col gap-6">
-      <h2 className="text-xl font-semibold text-foreground">CSV export</h2>
+      <h2 className="text-xl font-semibold text-foreground">HTML export</h2>
 
       <ExportFilters
         options={options}
@@ -275,7 +275,7 @@ export function ExportPage({ options }: ExportPageProps) {
           disabled={exportDisabled}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {exporting ? 'Exporting…' : 'Export 2 CSV files'}
+          {exporting ? 'Exporting…' : 'Export HTML report'}
         </button>
       </div>
     </div>

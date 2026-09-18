@@ -62,7 +62,7 @@ const NAV_GROUPS: NavigationGroup[] = [
     label: 'Data & tools',
     entries: [
       { id: 'raw', label: 'Raw data', icon: Database },
-      { id: 'export', label: 'CSV export', icon: Download },
+      { id: 'export', label: 'HTML export', icon: Download },
       { id: 'logs', label: 'Logs', icon: ScrollText },
     ],
   },

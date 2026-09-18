@@ -109,8 +109,7 @@ export interface ExportRequest {
 
 export interface ExportResult {
   cancelled: boolean;
-  summaryPath?: string;
-  sessionsPath?: string;
+  htmlPath?: string;
   summaryRows?: number;
   sessionRows?: number;
 }

@@ -33,10 +33,9 @@ beforeEach(() => {
   resetLogDedupeForTests();
   window.api = createWindowApi({
     getExportPreview: vi.fn().mockResolvedValue(preview),
-    exportCsv: vi.fn().mockResolvedValue({
+    exportHtml: vi.fn().mockResolvedValue({
       cancelled: false,
-      summaryPath: 'C:\\reports\\usage-summary.csv',
-      sessionsPath: 'C:\\reports\\usage-sessions.csv',
+      htmlPath: 'C:\\reports\\usage.html',
       summaryRows: 2,
       sessionRows: 2,
     }),
@@ -44,7 +43,7 @@ beforeEach(() => {
 });
 
 describe('ExportPage', () => {
-  it('renders the preview cards and exports the current filters', async () => {
+  it('renders the preview cards and exports the current filters in an HTML report', async () => {
     const user = userEvent.setup();
 
     render(<ExportPage options={options} />);
@@ -57,18 +56,16 @@ describe('ExportPage', () => {
     expect(screen.getByText('2026-09-01')).toBeInTheDocument();
     expect(screen.getByText('2026-09-03')).toBeInTheDocument();
 
-    const exportButton = screen.getByRole('button', { name: 'Export 2 CSV files' });
+    const exportButton = screen.getByRole('button', { name: 'Export HTML report' });
     expect(exportButton).toBeEnabled();
 
     await user.click(exportButton);
 
-    expect(window.api.exportCsv).toHaveBeenCalledWith({
+    expect(window.api.exportHtml).toHaveBeenCalledWith({
       filters: {},
-      suggestedName: 'copilot-usage.csv',
+      suggestedName: 'copilot-usage.html',
     });
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      /usage-summary\.csv \(2 rows\).*usage-sessions\.csv \(2 rows\)/,
-    );
+    expect(await screen.findByRole('status')).toHaveTextContent(/usage\.html \(2 summary rows, 2 session rows\)\./);
   });
 
   it('shows an empty-state message and keeps export disabled when the preview is empty', async () => {
@@ -83,7 +80,7 @@ describe('ExportPage', () => {
     render(<ExportPage options={options} />);
 
     expect(await screen.findByText('No usage for this selection.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Export 2 CSV files' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export HTML report' })).toBeDisabled();
   });
 
   it('shows a validation message and does not request another preview for an invalid custom range', async () => {
@@ -98,7 +95,7 @@ describe('ExportPage', () => {
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-09-07' } });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Start date must be on or before end date.');
-    expect(screen.getByRole('button', { name: 'Export 2 CSV files' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export HTML report' })).toBeDisabled();
     expect(window.api.getExportPreview).toHaveBeenCalledTimes(2);
   });
 
@@ -136,33 +133,35 @@ describe('ExportPage', () => {
     expect(screen.queryByText('6.00')).not.toBeInTheDocument();
     expect(screen.queryByText('Usage by model')).not.toBeInTheDocument();
     expect(screen.queryByText('2026-09-01')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Export 2 CSV files' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export HTML report' })).toBeDisabled();
   });
 
-  it('shows an export error alert when the CSV export fails', async () => {
+  it('shows an export error alert when the HTML export fails', async () => {
     const boom = new Error('disk full');
-    window.api.exportCsv = vi.fn().mockRejectedValue(boom);
+    window.api.exportHtml = vi.fn().mockRejectedValue(boom);
     const logError = vi.spyOn(logger, 'logError').mockImplementation(() => undefined);
     const user = userEvent.setup();
 
     render(<ExportPage options={options} />);
 
-    await user.click(await screen.findByRole('button', { name: 'Export 2 CSV files' }));
+    await user.click(await screen.findByRole('button', { name: 'Export HTML report' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not export the CSV files. Please try again.');
-    expect(logError).toHaveBeenCalledWith('ExportPage', 'CSV export failed', boom);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not export the HTML report. Please try again.',
+    );
+    expect(logError).toHaveBeenCalledWith('ExportPage', 'HTML export failed', boom);
   });
 
   it('does not show a success message when the export is cancelled', async () => {
-    window.api.exportCsv = vi.fn().mockResolvedValue({ cancelled: true });
+    window.api.exportHtml = vi.fn().mockResolvedValue({ cancelled: true });
     const user = userEvent.setup();
 
     render(<ExportPage options={options} />);
 
-    await user.click(await screen.findByRole('button', { name: 'Export 2 CSV files' }));
+    await user.click(await screen.findByRole('button', { name: 'Export HTML report' }));
 
-    await waitFor(() => expect(window.api.exportCsv).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText(/usage-summary\.csv/)).not.toBeInTheDocument();
+    await waitFor(() => expect(window.api.exportHtml).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/usage\.html/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -185,17 +184,17 @@ describe('ExportPage', () => {
     expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Previous month' })).toHaveAttribute('aria-pressed', 'false');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Export 2 CSV files' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export HTML report' }));
 
     await waitFor(() =>
-      expect(window.api.exportCsv).toHaveBeenCalledWith({
+      expect(window.api.exportHtml).toHaveBeenCalledWith({
         filters: {
           project: 'org/repo-a',
           model: 'gpt-5.4',
           from: matchingRange.from,
           to: matchingRange.to,
         },
-        suggestedName: 'copilot-usage.csv',
+        suggestedName: 'copilot-usage.html',
       }),
     );
   });

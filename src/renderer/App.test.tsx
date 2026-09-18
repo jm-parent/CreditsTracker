@@ -69,7 +69,7 @@ beforeEach(() => {
       byModel: [],
       daily: [],
     }),
-    exportCsv: vi.fn().mockResolvedValue({ cancelled: true }),
+    exportHtml: vi.fn().mockResolvedValue({ cancelled: true }),
     getHourlyDetail: vi.fn().mockResolvedValue([]),
     getMonthlyActivity: vi.fn().mockResolvedValue([]),
     getAppVersion: vi.fn().mockResolvedValue('1.4.1'),
@@ -258,16 +258,16 @@ describe('App', () => {
     expect(screen.getByText('db not found')).toBeInTheDocument();
   });
 
-  it('keeps the CSV export page reachable when the initial dashboard usage load fails', async () => {
+  it('keeps the HTML export page reachable when the initial dashboard usage load fails', async () => {
     window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
 
     const user = userEvent.setup();
     render(<App />);
     await screen.findByText("Couldn't load Copilot CLI usage data.");
 
-    await user.click(screen.getByRole('button', { name: 'CSV export' }));
+    await user.click(screen.getByRole('button', { name: 'HTML export' }));
 
-    expect(await screen.findByRole('heading', { name: 'CSV export' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'HTML export' })).toBeInTheDocument();
     expect(document.querySelector('#project-filter')).toBeNull();
     expect(window.api.getExportPreview).toHaveBeenCalledWith({});
   });
@@ -398,19 +398,19 @@ describe('App', () => {
     expect(screen.queryByRole('heading', { name: 'Raw data' })).not.toBeInTheDocument();
   });
 
-  it('opens the independent CSV export page from the sidebar', async () => {
+  it('opens the independent HTML export page from the sidebar', async () => {
     const user = userEvent.setup();
     render(<App />);
     await screen.findByText('3.00');
 
-    await user.click(screen.getByRole('button', { name: 'CSV export' }));
+    await user.click(screen.getByRole('button', { name: 'HTML export' }));
 
-    expect(await screen.findByRole('heading', { name: 'CSV export' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'HTML export' })).toBeInTheDocument();
     expect(document.querySelector('#project-filter')).toBeNull();
     expect(window.api.getExportPreview).toHaveBeenCalledWith({});
   });
 
-  it('clears the project detail overlay when switching to CSV export', async () => {
+  it('clears the project detail overlay when switching to HTML export', async () => {
     const user = userEvent.setup();
     render(<App />);
     await screen.findByText('3.00');
@@ -426,9 +426,9 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'CSV export' }));
+    await user.click(screen.getByRole('button', { name: 'HTML export' }));
 
-    expect(await screen.findByRole('heading', { name: 'CSV export' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'HTML export' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'org/repo-a' })).not.toBeInTheDocument();
     expect(document.querySelector('#project-filter')).toBeNull();
   });

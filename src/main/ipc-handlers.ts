@@ -13,8 +13,8 @@ import {
   getHourlyDetail,
   getMonthlyActivity,
 } from './db';
-import { getExportFilePaths } from './csv';
-import { writeExportFiles } from './export-files';
+import { writeExportFile, getExportFilePath } from './export-files';
+import { renderHtmlReport } from './html-report';
 import { loadVscodeUsage } from './vscode-chat-store';
 import { checkForUpdate, downloadUpdate, getUpdateState, restartToUpdate } from './updater';
 import {
@@ -250,19 +250,19 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
     return getExportReport(currentDb(), filters ?? {}).preview;
   });
 
-  handle('export-csv', async (_event: unknown, request: ExportRequest) => {
+  handle('export-html', async (_event: unknown, request: ExportRequest) => {
     const report = getExportReport(currentDb(), request?.filters ?? {});
     const save = await dialog.showSaveDialog({
       title: 'Export Copilot usage',
-      defaultPath: request?.suggestedName ?? 'copilot-usage.csv',
-      filters: [{ name: 'CSV files', extensions: ['csv'] }],
+      defaultPath: request?.suggestedName ?? 'copilot-usage.html',
+      filters: [{ name: 'HTML files', extensions: ['html'] }],
     });
     if (save.canceled || !save.filePath) {
       return { cancelled: true } satisfies ExportResult;
     }
 
-    const paths = getExportFilePaths(save.filePath);
-    const existing = [paths.summaryPath, paths.sessionsPath].filter((filePath) => fs.existsSync(filePath));
+    const htmlPath = getExportFilePath(save.filePath);
+    const existing = [htmlPath].filter((filePath) => fs.existsSync(filePath));
     if (existing.length > 0) {
       const confirmation = await dialog.showMessageBox({
         type: 'warning',
@@ -270,7 +270,7 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
         defaultId: 1,
         cancelId: 1,
         title: 'Files already exist',
-        message: 'Overwrite the existing CSV files?',
+        message: 'Overwrite the existing HTML report?',
         detail: existing.join('\n'),
       });
       if (confirmation.response !== 0) {
@@ -278,11 +278,15 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
       }
     }
 
-    const counts = await writeExportFiles(paths, report);
+    const html = renderHtmlReport(report, {
+      filters: request?.filters ?? {},
+    });
+    await writeExportFile(htmlPath, html);
     return {
       cancelled: false,
-      ...paths,
-      ...counts,
+      htmlPath,
+      summaryRows: report.summaryRows.length,
+      sessionRows: report.sessionRows.length,
     } satisfies ExportResult;
   });
 
