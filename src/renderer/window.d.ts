@@ -28,7 +28,6 @@ declare global {
       getMonthlyActivity: (params: MonthlyActivityParams) => Promise<TimeSeriesPoint[]>;
       getExportPreview: (filters: UsageFilters) => Promise<ExportPreview>;
       exportHtml: (request: ExportRequest) => Promise<ExportResult>;
-      exportCsv: (request: ExportRequest) => Promise<ExportResult>;
       getAppVersion: () => Promise<string>;
       getUpdateState: () => Promise<UpdateState>;
       checkForUpdate: () => Promise<UpdateState>;
