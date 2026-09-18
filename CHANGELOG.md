@@ -1,3 +1,17 @@
+# [1.17.0](https://github.com/jm-parent/CreditsTracker/compare/v1.16.0...v1.17.0) (2026-09-18)
+
+
+### Bug Fixes
+
+* address HTML export review findings ([ee657c3](https://github.com/jm-parent/CreditsTracker/commit/ee657c3b661a0e62b5ba950200bda9f041ef6cd6))
+
+
+### Features
+
+* expose HTML export in the renderer ([6888376](https://github.com/jm-parent/CreditsTracker/commit/6888376e3b047882180cb0365a0bb9c70355dc98))
+* render standalone HTML usage reports ([986f746](https://github.com/jm-parent/CreditsTracker/commit/986f74689be0c85c3d6b5aeade27a3f0146d767f))
+* replace CSV export transport with HTML ([5b073b1](https://github.com/jm-parent/CreditsTracker/commit/5b073b1a31436f2e2798c619b4340bee90c48720))
+
 # [1.16.0](https://github.com/jm-parent/CreditsTracker/compare/v1.15.1...v1.16.0) (2026-09-16)
 
 
