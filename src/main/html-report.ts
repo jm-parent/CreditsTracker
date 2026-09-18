@@ -385,6 +385,8 @@ function renderExecutionDetails(report: ExportReport): string {
           <th>Project</th>
           <th>Models</th>
           <th>AIU</th>
+          <th>Input tokens</th>
+          <th>Output tokens</th>
           <th>Tokens</th>
           <th>Requests</th>
           <th>Summary</th>
@@ -399,6 +401,8 @@ function renderExecutionDetails(report: ExportReport): string {
               <td>${escapeHtml(row.project)}</td>
               <td>${escapeHtml(row.models)}</td>
               <td>${escapeHtml(formatCredits(row.aiuCredits))}</td>
+              <td>${escapeHtml(formatTokens(row.inputTokens))}</td>
+              <td>${escapeHtml(formatTokens(row.outputTokens))}</td>
               <td>${escapeHtml(formatTokens(row.tokens))}</td>
               <td>${escapeHtml(formatTokens(row.requests))}</td>
               <td class="summary-cell">${escapeHtml(row.summary)}</td>
@@ -763,7 +767,7 @@ function buildStyles(): string {
       table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 820px;
+        min-width: 960px;
       }
 
       th,

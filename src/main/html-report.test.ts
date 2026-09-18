@@ -269,6 +269,19 @@ describe('renderHtmlReport', () => {
     expectSafeStandaloneHtml(html);
   });
 
+  it('renders input and output token columns in the execution details table', () => {
+    const html = render(REPORT);
+
+    expect(html).toContain('<th>Input tokens</th>');
+    expect(html).toContain('<th>Output tokens</th>');
+    expect(html).toContain(
+      '<td>2026-09-15</td>\n              <td>2026-09-15 09:10:00</td>\n              <td>org/repo-a</td>\n              <td>gpt-5.4</td>\n              <td>6</td>\n              <td>180</td>\n              <td>60</td>\n              <td>240</td>\n              <td>3</td>',
+    );
+    expect(html).toContain(
+      '<td>2026-09-16</td>\n              <td>2026-09-16 14:45:00</td>\n              <td>org/repo-b</td>\n              <td>claude-sonnet-5, gpt-5.4</td>\n              <td>12</td>\n              <td>360</td>\n              <td>120</td>\n              <td>480</td>\n              <td>9</td>',
+    );
+  });
+
   it('escapes HTML-sensitive session content', () => {
     const html = render(REPORT);
 

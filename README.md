@@ -2,7 +2,7 @@
 
 A local desktop app that shows your GitHub Copilot CLI credit (AIU) and token
 consumption, with shared dashboard filters for project and model plus a
-dedicated CSV export page for date-range reporting.
+dedicated HTML export page for date-range reporting.
 
 🔒 **Privacy-first**: everything runs on your machine. It reads
 `~/.copilot/session-store.db` read-only — no network calls, no GitHub
@@ -22,7 +22,7 @@ checking for updates, not something to download by hand — only the
 
 A sidebar lets you switch between eight navigation entries. Usage tabs are
 scoped to the current project/model/date filters, while Featured projects is a
-static, offline-friendly catalogue and CSV export has its own report filters:
+static, offline-friendly catalogue and HTML export has its own report filters:
 
 - **Daily consumption** — total AIU credits, tokens, and requests at a
   glance, with a stacked bar chart of credits over time broken down by
@@ -39,13 +39,12 @@ static, offline-friendly catalogue and CSV export has its own report filters:
 - **Raw data** — a sortable table of every session with date, summary,
   model(s) used, AIU credits, tokens, and request count, for drilling into
   the underlying data.
-- **CSV export** — an export workspace with its own project, model, and date
-  filters plus period shortcuts for **All dates**, **Last 7 days**, **This
-  month**, and **Previous month**. Each export writes two files with the
-  chosen base name: `*-summary.csv` for aggregated day/project/model rows and
-  `*-sessions.csv` for per-session rows. The most detailed text field
-  exported is the existing session summary; prompts and responses are never
-  exported.
+- **Export HTML report** — an export workspace with its own project, model,
+  and date filters plus period shortcuts for **All dates**, **Last 7 days**,
+  **This month**, and **Previous month**. Each export writes a single
+  standalone `.html` report with the chosen base name. The report includes the
+  existing session summary and session-level detail; prompts and responses are
+  never exported.
 - **Logs** — the application's own diagnostic log (startup, database access,
   failed IPC calls, and any renderer crash with its stack trace), filterable
   by level and text. Logs are also written to
@@ -59,8 +58,8 @@ static, offline-friendly catalogue and CSV export has its own report filters:
 Additional capabilities include:
 
 - **Filtering** — the dashboard views share project/model filters for
-  exploration, while the CSV export page provides its own project, model, and
-  date-range export filters so report selection does not disturb the
+  exploration, while the HTML export page provides its own project, model,
+  and date-range export filters so report selection does not disturb the
   on-screen dashboard.
 - **Live updates** — the dashboard refreshes itself automatically every few
   seconds, so credits from a Copilot CLI (or Copilot Chat) session you just

@@ -128,7 +128,11 @@ function toCombinedError(originalError: unknown, followupErrors: readonly unknow
 
 export function getExportFilePath(selectedPath: string): string {
   const extension = path.extname(selectedPath);
-  if (!extension) {
+  if (
+    extension.toLowerCase() !== '.html' &&
+    extension.toLowerCase() !== '.htm' &&
+    extension.toLowerCase() !== '.csv'
+  ) {
     return `${selectedPath}.html`;
   }
 

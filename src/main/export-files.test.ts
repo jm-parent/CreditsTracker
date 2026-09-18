@@ -16,8 +16,14 @@ function createExportTestDirectory(): string {
 }
 
 describe('getExportFilePath', () => {
-  it('normalizes selected paths to one html destination', () => {
+  it('preserves dotted basenames that are not export extensions', () => {
+    expect(getExportFilePath('C:\\reports\\Rapport v1.2 final')).toBe('C:\\reports\\Rapport v1.2 final.html');
+    expect(getExportFilePath('C:\\reports\\usage.v2')).toBe('C:\\reports\\usage.v2.html');
+  });
+
+  it('normalizes known export extensions to html', () => {
     expect(getExportFilePath('C:\\reports\\usage.html')).toBe('C:\\reports\\usage.html');
+    expect(getExportFilePath('C:\\reports\\usage.htm')).toBe('C:\\reports\\usage.html');
     expect(getExportFilePath('C:\\reports\\usage.csv')).toBe('C:\\reports\\usage.html');
     expect(getExportFilePath('C:\\reports\\usage')).toBe('C:\\reports\\usage.html');
   });
