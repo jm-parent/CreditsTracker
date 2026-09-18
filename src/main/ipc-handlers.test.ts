@@ -3,12 +3,11 @@ import path from 'node:path';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { app, dialog, ipcMain, shell } from 'electron';
 import Database from 'better-sqlite3';
-import { getExportFilePaths, SESSION_HEADERS, SUMMARY_HEADERS } from './csv';
 import { registerIpcHandlers } from './ipc-handlers';
 import { getLogEntries, resetLoggerForTests } from './logger';
 
 const exportFilesMock = vi.hoisted(() => ({
-  writeExportFiles: vi.fn(),
+  writeExportFile: vi.fn(),
 }));
 
 function createExportTestDirectory(): string {
@@ -66,13 +65,13 @@ vi.mock('./logger', async () => {
 
 vi.mock('./export-files', async () => {
   const actual = await vi.importActual('./export-files').catch(() => ({}));
-  const actualWriteExportFiles = (actual as { writeExportFiles?: (...args: unknown[]) => unknown }).writeExportFiles;
-  if (actualWriteExportFiles) {
-    exportFilesMock.writeExportFiles.mockImplementation(actualWriteExportFiles as (...args: unknown[]) => unknown);
+  const actualWriteExportFile = (actual as { writeExportFile?: (...args: unknown[]) => unknown }).writeExportFile;
+  if (actualWriteExportFile) {
+    exportFilesMock.writeExportFile.mockImplementation(actualWriteExportFile as (...args: unknown[]) => unknown);
   }
   return {
     ...(actual as object),
-    writeExportFiles: exportFilesMock.writeExportFiles,
+    writeExportFile: exportFilesMock.writeExportFile,
   };
 });
 
@@ -121,7 +120,7 @@ describe('registerIpcHandlers', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('get-raw-table-page', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-hourly-detail', expect.any(Function));
     expect(ipcMain.handle).toHaveBeenCalledWith('get-export-preview', expect.any(Function));
-    expect(ipcMain.handle).toHaveBeenCalledWith('export-csv', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('export-html', expect.any(Function));
   });
 
   it('returns Electron application version through get-app-version', () => {
@@ -314,23 +313,22 @@ describe('registerIpcHandlers', () => {
       __handlers: Map<string, (...args: unknown[]) => unknown>;
     }).__handlers;
 
-    await expect(handlers.get('export-csv')!({}, { filters: {} })).resolves.toEqual({
+    await expect(handlers.get('export-html')!({}, { filters: {} })).resolves.toEqual({
       cancelled: true,
     });
     expect(dialog.showSaveDialog).toHaveBeenCalledWith({
       title: 'Export Copilot usage',
-      defaultPath: 'copilot-usage.csv',
-      filters: [{ name: 'CSV files', extensions: ['csv'] }],
+      defaultPath: 'copilot-usage.html',
+      filters: [{ name: 'HTML files', extensions: ['html'] }],
     });
-    expect(exportFilesMock.writeExportFiles).not.toHaveBeenCalled();
+    expect(exportFilesMock.writeExportFile).not.toHaveBeenCalled();
   });
 
-  it('writes both CSV files with BOM and headers after overwrite confirmation', async () => {
+  it('writes one HTML file after overwrite confirmation', async () => {
     const exportRoot = createExportTestDirectory();
     const selectedPath = path.join(exportRoot, 'usage.csv');
-    const paths = getExportFilePaths(selectedPath);
-    fs.writeFileSync(paths.summaryPath, 'old-summary', 'utf8');
-    fs.writeFileSync(paths.sessionsPath, 'old-sessions', 'utf8');
+    const htmlPath = path.join(exportRoot, 'usage.html');
+    fs.writeFileSync(htmlPath, 'old-html', 'utf8');
     (dialog.showSaveDialog as Mock).mockResolvedValueOnce({ canceled: false, filePath: selectedPath });
     (dialog.showMessageBox as Mock).mockResolvedValueOnce({ response: 0 });
 
@@ -339,13 +337,11 @@ describe('registerIpcHandlers', () => {
       const handlers = (ipcMain as unknown as {
         __handlers: Map<string, (...args: unknown[]) => unknown>;
       }).__handlers;
-
       await expect(
-        handlers.get('export-csv')!({}, { filters: {}, suggestedName: 'usage.csv' }),
+        handlers.get('export-html')!({}, { filters: {}, suggestedName: 'usage.html' }),
       ).resolves.toEqual({
         cancelled: false,
-        summaryPath: paths.summaryPath,
-        sessionsPath: paths.sessionsPath,
+        htmlPath,
         summaryRows: 0,
         sessionRows: 0,
       });
@@ -356,14 +352,14 @@ describe('registerIpcHandlers', () => {
         defaultId: 1,
         cancelId: 1,
         title: 'Files already exist',
-        message: 'Overwrite the existing CSV files?',
-        detail: [paths.summaryPath, paths.sessionsPath].join('\n'),
+        message: 'Overwrite the existing HTML report?',
+        detail: htmlPath,
       });
 
-      expect(fs.existsSync(paths.summaryPath)).toBe(true);
-      expect(fs.existsSync(paths.sessionsPath)).toBe(true);
-      expect(fs.readFileSync(paths.summaryPath, 'utf8')).toBe(`\uFEFF${SUMMARY_HEADERS.join(';')}\r\n`);
-      expect(fs.readFileSync(paths.sessionsPath, 'utf8')).toBe(`\uFEFF${SESSION_HEADERS.join(';')}\r\n`);
+      expect(fs.existsSync(htmlPath)).toBe(true);
+      expect(fs.readFileSync(htmlPath, 'utf8')).toContain('<!doctype html>');
+      expect(fs.existsSync(selectedPath)).toBe(false);
+      expect(fs.readdirSync(exportRoot)).toEqual(['usage.html']);
     } finally {
       fs.rmSync(exportRoot, { recursive: true, force: true });
     }
@@ -372,9 +368,8 @@ describe('registerIpcHandlers', () => {
   it('returns cancelled when overwrite confirmation is declined', async () => {
     const exportRoot = createExportTestDirectory();
     const selectedPath = path.join(exportRoot, 'usage.csv');
-    const paths = getExportFilePaths(selectedPath);
-    fs.writeFileSync(paths.summaryPath, 'keep-summary', 'utf8');
-    fs.writeFileSync(paths.sessionsPath, 'keep-sessions', 'utf8');
+    const htmlPath = path.join(exportRoot, 'usage.html');
+    fs.writeFileSync(htmlPath, 'keep-html', 'utf8');
     (dialog.showSaveDialog as Mock).mockResolvedValueOnce({ canceled: false, filePath: selectedPath });
     (dialog.showMessageBox as Mock).mockResolvedValueOnce({ response: 1 });
 
@@ -384,12 +379,12 @@ describe('registerIpcHandlers', () => {
         __handlers: Map<string, (...args: unknown[]) => unknown>;
       }).__handlers;
 
-      await expect(handlers.get('export-csv')!({}, { filters: {} })).resolves.toEqual({
+      await expect(handlers.get('export-html')!({}, { filters: {} })).resolves.toEqual({
         cancelled: true,
       });
-      expect(exportFilesMock.writeExportFiles).not.toHaveBeenCalled();
-      expect(fs.readFileSync(paths.summaryPath, 'utf8')).toBe('keep-summary');
-      expect(fs.readFileSync(paths.sessionsPath, 'utf8')).toBe('keep-sessions');
+      expect(exportFilesMock.writeExportFile).not.toHaveBeenCalled();
+      expect(fs.readFileSync(htmlPath, 'utf8')).toBe('keep-html');
+      expect(fs.existsSync(selectedPath)).toBe(false);
     } finally {
       fs.rmSync(exportRoot, { recursive: true, force: true });
     }
@@ -398,20 +393,20 @@ describe('registerIpcHandlers', () => {
   it('preserves export write failures and logs the async rejection with the channel name', async () => {
     const { logError } = await import('./logger');
     const writeFailed = new Error('write failed');
-    exportFilesMock.writeExportFiles.mockRejectedValueOnce(writeFailed);
+    exportFilesMock.writeExportFile.mockRejectedValueOnce(writeFailed);
     (dialog.showSaveDialog as Mock).mockResolvedValueOnce({
       canceled: false,
-      filePath: 'C:\\exports\\usage.csv',
+      filePath: 'C:\\exports\\usage.html',
     });
     registerIpcHandlers('/fake/path.db');
     const handlers = (ipcMain as unknown as {
       __handlers: Map<string, (...args: unknown[]) => unknown>;
     }).__handlers;
 
-    await expect(handlers.get('export-csv')!({}, { filters: {} })).rejects.toThrow('write failed');
+    await expect(handlers.get('export-html')!({}, { filters: {} })).rejects.toThrow('write failed');
     expect(logError).toHaveBeenCalledWith(
       'ipc',
-      expect.stringContaining('export-csv'),
+      expect.stringContaining('export-html'),
       writeFailed,
     );
   });

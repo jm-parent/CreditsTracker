@@ -1,12 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { ExportReport } from '../shared/types';
-import { sessionRowsToCsv, summaryRowsToCsv } from './csv';
-
-export interface ExportFilePaths {
-  summaryPath: string;
-  sessionsPath: string;
-}
 
 interface ExportTarget {
   destinationPath: string;
@@ -133,20 +126,27 @@ function toCombinedError(originalError: unknown, followupErrors: readonly unknow
   );
 }
 
-export async function writeExportFiles(
-  paths: ExportFilePaths,
-  report: ExportReport,
-): Promise<{ summaryRows: number; sessionRows: number }> {
+export function getExportFilePath(selectedPath: string): string {
+  const extension = path.extname(selectedPath);
+  if (!extension) {
+    return `${selectedPath}.html`;
+  }
+
+  return path.join(
+    path.dirname(selectedPath),
+    `${path.basename(selectedPath, extension)}.html`,
+  );
+}
+
+export async function writeExportFile(
+  destinationPath: string,
+  contents: string,
+): Promise<void> {
   const token = createTempToken();
-  const targets = [
-    createTarget(paths.summaryPath, summaryRowsToCsv(report.summaryRows), token),
-    createTarget(paths.sessionsPath, sessionRowsToCsv(report.sessionRows), token),
-  ];
+  const targets = [createTarget(destinationPath, contents, token)];
 
   try {
-    await Promise.all(
-      targets.map((target) => fs.writeFile(target.stagedPath, target.contents, 'utf8')),
-    );
+    await Promise.all(targets.map((target) => fs.writeFile(target.stagedPath, target.contents, 'utf8')));
 
     for (const target of targets) {
       if (await pathExists(target.destinationPath)) {
@@ -165,9 +165,4 @@ export async function writeExportFiles(
   if (cleanupErrors.length > 0) {
     throw toCombinedError(cleanupErrors[0], cleanupErrors.slice(1));
   }
-
-  return {
-    summaryRows: report.summaryRows.length,
-    sessionRows: report.sessionRows.length,
-  };
 }

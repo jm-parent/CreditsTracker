@@ -36,6 +36,7 @@ export function createWindowApi(overrides: Partial<Window['api']> = {}): Window[
       byModel: [],
       daily: [],
     }),
+    exportHtml: vi.fn().mockResolvedValue({ cancelled: true }),
     exportCsv: vi.fn().mockResolvedValue({ cancelled: true }),
     getAppVersion: vi.fn().mockResolvedValue('1.0.0'),
     getUpdateState: vi.fn().mockResolvedValue({ status: 'up-to-date', currentVersion: '1.0.0' }),

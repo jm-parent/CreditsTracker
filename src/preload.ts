@@ -46,8 +46,8 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-monthly-activity', params),
   getExportPreview: (filters: UsageFilters): Promise<ExportPreview> =>
     ipcRenderer.invoke('get-export-preview', filters),
-  exportCsv: (request: ExportRequest): Promise<ExportResult> =>
-    ipcRenderer.invoke('export-csv', request),
+  exportHtml: (request: ExportRequest): Promise<ExportResult> =>
+    ipcRenderer.invoke('export-html', request),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
   getUpdateState: (): Promise<UpdateState> => ipcRenderer.invoke('get-update-state'),
   checkForUpdate: (): Promise<UpdateState> => ipcRenderer.invoke('check-for-update'),
