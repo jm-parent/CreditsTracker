@@ -169,6 +169,12 @@ leur durée permet de visualiser les chevauchements. Un
 `gen_ai.tool.call.id` ou un autre identifiant explicite peut préciser le lien
 entre une requête modèle et son exécution d'outil.
 
+Lorsqu'un span du même `trace_id` ne porte pas lui-même l'identifiant de
+conversation, il peut hériter du contexte source/session de la racine de cette
+trace. Cet héritage ne crée pas de parent : tout span non-agent sans
+`parent_span_id`, ou dont le parent est absent, reste une racine non reliée et
+marque la session comme partielle.
+
 Des traces provenant de sources différentes ne sont pas regroupées simplement
 parce qu'elles se sont produites dans le même dépôt ou à une heure proche.
 Elles ne peuvent être réunies sous une même session qu'après validation d'un

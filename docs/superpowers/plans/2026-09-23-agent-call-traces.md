@@ -270,13 +270,15 @@ Avant l'implémentation du receiver, effectuer le petit test de faisabilité pr�
 
 - [ ] **Step 2: Écrire les tests du décodeur avant son implémentation**
 
-Importer `protobuf` depuis `protobufjs` et `path` depuis `node:path`. Définir `OTLP_FIXTURE` avec une ressource `copilot-chat`, un span racine `invoke_agent`, un span `chat` et un enfant `execute_tool`. La fixture ajoute `service.name`, `gen_ai.conversation.id`, `gen_ai.tool.name`, `gen_ai.tool.call.id`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `gen_ai.input.messages` et un timestamp fixe en nanosecondes. Charger le schéma racine `trace_service.proto` en remappant ses imports vers le dossier `src/main/agent-trace-proto`, puis encoder le corps et vérifier l'extraction des IDs, attributs et hiérarchie sans copier `gen_ai.input.messages` dans le résultat :
+Importer `protobuf` depuis `protobufjs` et `path` depuis `node:path`. Définir `OTLP_FIXTURE` avec une ressource `copilot-chat`, un span racine `invoke_agent`, un span `chat`, un outil enfant, un appel de skill et un outil non-parenté du même trace. La fixture ajoute `service.name`, `gen_ai.conversation.id`, `gen_ai.tool.name`, `gen_ai.tool.call.id`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `github.copilot.tool.parameters.skill_name`, `gen_ai.input.messages` et un timestamp fixe en nanosecondes. Charger le schéma racine `trace_service.proto` en remappant ses imports vers le dossier `src/main/agent-trace-proto`, puis encoder le corps et vérifier l'extraction des IDs, attributs et hiérarchie sans copier `gen_ai.input.messages` dans le résultat :
 
 ```ts
 const traceId = Buffer.from('00112233445566778899aabbccddeeff', 'hex');
 const rootSpanId = Buffer.from('1111222233334444', 'hex');
 const chatSpanId = Buffer.from('2222333344445555', 'hex');
 const toolSpanId = Buffer.from('5555666677778888', 'hex');
+const unlinkedSpanId = Buffer.from('6666777788889999', 'hex');
+const skillSpanId = Buffer.from('777788889999aaaa', 'hex');
 const start = '1780000000000000000';
 const end = '1780000000100000000';
 const OTLP_FIXTURE = {
@@ -323,6 +325,29 @@ const OTLP_FIXTURE = {
           ],
           status: { code: 1 },
         },
+        {
+          traceId,
+          spanId: unlinkedSpanId,
+          name: 'execute_tool unlinkedProbe',
+          startTimeUnixNano: start,
+          endTimeUnixNano: end,
+          attributes: [{ key: 'gen_ai.tool.name', value: { stringValue: 'unlinkedProbe' } }],
+          status: { code: 1 },
+        },
+        {
+          traceId,
+          spanId: skillSpanId,
+          parentSpanId: rootSpanId,
+          name: 'execute_tool loadSkill',
+          startTimeUnixNano: start,
+          endTimeUnixNano: end,
+          attributes: [
+            { key: 'gen_ai.tool.name', value: { stringValue: 'loadSkill' } },
+            { key: 'gen_ai.tool.call.id', value: { stringValue: 'call-skill' } },
+            { key: 'github.copilot.tool.parameters.skill_name', value: { stringValue: 'trace-probe' } },
+          ],
+          status: { code: 1 },
+        },
       ],
     }],
   }],
@@ -359,16 +384,32 @@ expect(decoded).toEqual(
     }),
     expect.objectContaining({
       spanId: '5555666677778888',
-      parentSpanId: '1111222233334444',
+      parentSpanId: '2222333344445555',
       name: 'execute_tool runCommand',
       toolCallId: 'call-1',
+    }),
+    expect.objectContaining({
+      spanId: '777788889999aaaa',
+      category: 'skill',
+      skillName: 'trace-probe',
+      toolCallId: 'call-skill',
+    }),
+  ]),
+);
+expect(decoded).toEqual(
+  expect.arrayContaining([
+    expect.objectContaining({
+      spanId: '6666777788889999',
+      source: 'vscode',
+      sessionId: 'vscode:conversation-1',
+      parentSpanId: null,
     }),
   ]),
 );
 expect(JSON.stringify(decoded)).not.toContain('synthetic prompt');
 ```
 
-Ajouter un cas timestamp dont la valeur en nanosecondes dépasse `Number.MAX_SAFE_INTEGER`, et des cas pour un corps Protobuf invalide, un ID de trace/span de taille invalide et une source non prise en charge.
+Ajouter un quatrième span `execute_tool` partageant le `traceId` mais sans `parentSpanId` ni `gen_ai.conversation.id` local ; vérifier qu'il reçoit la source/session de la racine tout en gardant `parentSpanId: null`. Ajouter aussi un cas timestamp dont la valeur en nanosecondes dépasse `Number.MAX_SAFE_INTEGER`, et des cas pour un corps Protobuf invalide, un ID de trace/span de taille invalide et une source non prise en charge.
 
 
 - [ ] **Step 3: Créer les factories de spans synthétiques**
@@ -385,9 +426,31 @@ Expected: FAIL parce que `decodeOtlpTraceRequest` n'existe pas.
 
 Utiliser le type généré `ExportTraceServiceRequest` pour décoder le `Uint8Array`. Parcourir `resource_spans`, `scope_spans` et `spans`; convertir les IDs binaires en hexadécimal minuscule; décoder les attributs `AnyValue` sans `any`; garder `start_time_unix_nano` et `end_time_unix_nano` en chaînes jusque-là.
 
-Convertir les nanosecondes avec `BigInt(value) / 1_000_000n` avant de créer un `Date`, puis calculer la durée avec `BigInt` pour éviter les pertes de précision. Grouper les spans du même `trace_id` avant d'affecter source/session : `service.name === 'copilot-chat'` classe la racine comme VS Code et `service.name === 'github-copilot'` comme Copilot CLI. Propager la source de la racine aux ressources enfants de la même trace. Lire `gen_ai.conversation.id` depuis la racine et appliquer l'ID de l'application avec le préfixe `vscode:` pour VS Code seulement. Si source ou conversation ne peut pas être déterminée, retourner `null` pour le champ manquant afin que le receiver puisse rejeter ces spans avec un résultat partiel explicite.
+Convertir les nanosecondes avec `BigInt(value) / 1_000_000n` avant de créer un `Date`, puis calculer la durée avec `BigInt` pour éviter les pertes de précision. Grouper les spans du même `trace_id` avant d'affecter source/session : `service.name === 'copilot-chat'` classe la racine comme VS Code et `service.name === 'github-copilot'` comme Copilot CLI. Lire `gen_ai.conversation.id` depuis la racine et appliquer l'ID de l'application avec le préfixe `vscode:` pour VS Code seulement. Propager source/session à tout span du même `trace_id`, mais conserver le `parentSpanId` exactement comme fourni ; l'association à la conversation n'invente pas une relation parent-enfant. Un span non racine sans parent restera une racine non reliée marquée `partial` dans la vue. Si source ou conversation ne peut pas être déterminée, retourner `null` pour le champ manquant afin que le receiver puisse rejeter ces spans avec un résultat partiel explicite.
 
-Classer `invoke_agent` en agent, `chat` en appel LLM, `execute_hook` en hook et `execute_tool` en outil ; si `github.copilot.tool.parameters.skill_name` est présent, classer le nœud en skill, sinon si `github.copilot.tool.parameters.command` est présent, le classer en shell. Lire `gen_ai.tool.name`, `gen_ai.tool.call.id`, `gen_ai.request.model`, `gen_ai.tool.call.arguments` et `gen_ai.tool.call.result` seulement lorsqu'ils sont présents. Une relation introuvable ou une source inconnue reste absente/partielle ; ne jamais en déduire une à partir des heures.
+Pour chaque Resource/Span, parcourir la liste `KeyValue` puis décoder `AnyValue` uniquement pour les clés autorisées ci-dessous ; ignorer avant conversion tous les messages prompt/réponse, instructions système, schémas et attributs inconnus :
+
+```ts
+const RESOURCE_ATTRIBUTE_ALLOWLIST = new Set(['service.name']);
+const SPAN_ATTRIBUTE_ALLOWLIST = new Set([
+  'gen_ai.agent.name',
+  'gen_ai.conversation.id',
+  'gen_ai.operation.name',
+  'gen_ai.request.model',
+  'gen_ai.response.model',
+  'gen_ai.tool.name',
+  'gen_ai.tool.call.id',
+  'gen_ai.tool.call.arguments',
+  'gen_ai.tool.call.result',
+  'gen_ai.error.type',
+  'github.copilot.agent.type',
+  'github.copilot.tool.parameters.command',
+  'github.copilot.tool.parameters.file_path',
+  'github.copilot.tool.parameters.skill_name',
+]);
+```
+
+Classer `invoke_agent` en agent, `chat` en appel LLM, `execute_hook` en hook et `execute_tool` en outil ; si `github.copilot.tool.parameters.skill_name` est présent, classer le nœud en skill, sinon si `github.copilot.tool.parameters.command` est présent, le classer en shell. Lire seulement les clés de l'allowlist lorsqu'elles sont présentes. Une relation introuvable ou une source inconnue reste absente/partielle ; ne jamais en déduire une à partir des heures.
 
 - [ ] **Step 6: Valider le format et committer**
 
@@ -536,7 +599,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_trace_session
 
 - [ ] **Step 4: Ajouter lecture, réglage de collecte et purge**
 
-`getSession` doit regrouper toutes les racines `trace_id` d'une même paire source/session, trier les spans par début, retourner `not-collected` avec une liste vide en l'absence de données, et signaler `partial` quand une référence parent est absente, qu'un span est incomplet ou qu'un appel d'outil n'a pas les payloads demandés. `pruneExpired(now)` supprime les lignes dont `received_at` précède `now - 30 jours`; appeler cette fonction au démarrage, à chaque lecture et toutes les 24 heures pendant que le service tourne. `clear()` supprime seulement `agent_trace_spans`.
+`getSession` doit regrouper toutes les racines `trace_id` d'une même paire source/session, trier les spans par début, retourner `not-collected` avec une liste vide en l'absence de données, et signaler `partial` quand une référence parent est absente, qu'un span non-agent n'a pas de parent, qu'un span est incomplet ou qu'un appel d'outil n'a pas les payloads demandés. Un tool span dont le `traceId` est connu mais le parent absent reste dans la session sous forme de racine non reliée ; ne pas inventer de parent. `pruneExpired(now)` supprime les lignes dont `received_at` précède `now - 30 jours`; appeler cette fonction au démarrage, à chaque lecture et toutes les 24 heures pendant que le service tourne. `clear()` supprime seulement `agent_trace_spans`.
 
 - [ ] **Step 5: Rejouer les tests et committer**
 
@@ -757,7 +820,7 @@ export interface AgentTraceTreeProps {
 
 - [ ] **Step 1: Tester la construction pure de l'arbre**
 
-Créer des spans synthétiques avec `makeAgentTraceSpan` depuis `src/test-utils/agent-trace-fixtures.ts` : un `traceId` pour plusieurs spans frères, un tool enfant avec `parentSpanId`, un parent manquant et un cycle invalide. Vérifier les tours triés par heure, les enfants attachés uniquement au parent attesté, l'ordre stable des frères et le marquage `unparented` pour les racines déconnectées.
+Créer des spans synthétiques avec `makeAgentTraceSpan` depuis `src/test-utils/agent-trace-fixtures.ts` : un `traceId` pour plusieurs spans frères, un tool enfant avec `parentSpanId`, un tool non-agent sans parent, un parent référencé mais manquant et un cycle invalide. Vérifier les tours triés par heure, les enfants attachés uniquement au parent attesté, l'ordre stable des frères et le marquage `unparented` pour les racines déconnectées.
 
 ```ts
 const root = makeAgentTraceSpan({ spanId: 'root', category: 'agent' });
@@ -773,14 +836,23 @@ const toolLater = makeAgentTraceSpan({
   category: 'shell',
   startedAt: '2026-09-23T10:00:00.200Z',
 });
+const unlinkedTool = makeAgentTraceSpan({
+  spanId: 'unlinked-tool',
+  category: 'shell',
+  parentSpanId: null,
+});
 const orphan = makeAgentTraceSpan({ spanId: 'orphan', parentSpanId: 'missing-parent' });
-const turns = buildAgentTraceTree([toolLater, root, siblingEarlier, orphan]);
+const turns = buildAgentTraceTree([toolLater, root, siblingEarlier, orphan, unlinkedTool]);
 
 expect(turns).toHaveLength(1);
-expect(turns[0].roots.map((node) => node.span.spanId)).toEqual(['root', 'orphan']);
+expect(turns[0].roots.map((node) => node.span.spanId))
+  .toEqual(expect.arrayContaining(['root', 'orphan', 'unlinked-tool']));
 expect(turns[0].roots[0].children.map((node) => node.span.spanId))
   .toEqual(['sibling-earlier', 'tool-later']);
 expect(turns[0].roots[1].unparented).toBe(true);
+expect(
+  turns[0].roots.find((node) => node.span.spanId === 'unlinked-tool')?.unparented,
+).toBe(true);
 ```
 
 Un deuxième test ajoute `makeAgentTraceSpan({ traceId: 'trace-2', spanId: 'root-2' })` et vérifie que deux traces racines d'un `sessionId` restent deux tours distincts et que le tri est déterministe à timestamp égal.
@@ -793,7 +865,7 @@ Expected: FAIL parce que `buildAgentTraceTree` n'existe pas.
 
 - [ ] **Step 3: Implémenter le regroupement sans fabriquer de parent**
 
-Indexer les spans par `(traceId, spanId)`, regrouper par `traceId`, puis attacher chaque nœud seulement si `parentSpanId` référence un span du même tour. Si la source fournit le même `toolCallId` sur la requête modèle et l'outil, utiliser ce lien explicite ; sinon conserver uniquement la relation parent OTel. Trier les enfants sur `startedAt`, avec `spanId` comme bris d'égalité. Détecter les cycles et les références vers un parent manquant ; placer les spans concernés comme racines `unparented` au lieu de boucler ou d'inventer une relation.
+Indexer les spans par `(traceId, spanId)`, regrouper par `traceId`, puis attacher chaque nœud seulement si `parentSpanId` référence un span du même tour. Si la source fournit le même `toolCallId` sur la requête modèle et l'outil, utiliser ce lien explicite ; sinon conserver uniquement la relation parent OTel. Un span non-agent sans `parentSpanId`, une référence parent manquante ou un cycle est une racine `unparented`; il conserve sa source/session si son `traceId` appartient à la conversation et force l'état `partial`. Trier les enfants sur `startedAt`, avec `spanId` comme bris d'égalité ; ne jamais inventer une relation.
 
 - [ ] **Step 4: Tester les états du hook IPC**
 
@@ -906,7 +978,7 @@ La page montre la trace sélectionnée avec `AgentTraceTree`, les états `not-co
 }
 ```
 
-Pour Copilot CLI, afficher les variables `COPILOT_OTEL_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` et `COPILOT_OTEL_CAPTURE_CONTENT=true`. L'onglet ne modifie aucun réglage VS Code/CLI automatiquement. Les libellés suivent les noms approuvés **Traces agents** et **Voir la trace**.
+Pour Copilot CLI, afficher les variables `COPILOT_OTEL_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` et `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`. L'onglet ne modifie aucun réglage VS Code/CLI automatiquement. Les libellés suivent les noms approuvés **Traces agents** et **Voir la trace**.
 
 - [ ] **Step 4: Brancher Sidebar, App et détail projet**
 
