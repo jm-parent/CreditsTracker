@@ -475,7 +475,7 @@ rtk git commit -m "feat: decode Copilot OpenTelemetry spans" -m "Co-authored-by:
 - Consumes: `DecodedAgentTraceSpan` de Task 2.
 - Produces: `sanitizeAgentTraceSpan(span: DecodedAgentTraceSpan): AgentTraceSpan | null`; seul le résultat non-null de cette fonction peut être passé au store. Le résultat est `null` si la source ou la session ne peut pas être reliée à une conversation.
 
-- [ ] **Step 1: Ajouter des tests de masquage, d'allowlist et d'échec fermé**
+- [ ] **Step 1: Ajouter des tests de masquage, de conservation des clés d'outil et d'échec fermé**
 
 Les tests utilisent uniquement des valeurs synthétiques. Couvrir au minimum GitHub tokens (`gh[pousr]_...`, `github_pat_...`), IDs de clés AWS (`AKIA...`, `ASIA...`), `Bearer`, blocs PEM privés et valeurs dont le nom de clé contient `token`, `secret`, `password`, `api_key` ou `authorization`.
 
@@ -502,7 +502,7 @@ expect(bearerResult.resultText).not.toContain('TEST_SECRET_VALUE');
 
 `makeDecodedAgentTraceSpan` est la factory créée dans `src/test-utils/agent-trace-fixtures.ts`; elle renseigne source, conversation, IDs, catégorie, timestamps, statut et valeurs vides par défaut. Les overrides du test ne contiennent que les arguments et résultats synthétiques.
 
-Tester également l'UTF-8 multi-octet jusqu'à 32 KiB après masquage, la troncature visible, une valeur binaire ou illisible qui omet le contenu et conserve les métadonnées, et le filtrage des messages, schémas et attributs non autorisés.
+Tester également l'UTF-8 multi-octet jusqu'à 32 KiB après masquage, la troncature visible, une valeur binaire ou illisible qui omet le contenu et conserve les métadonnées, la conservation d'une clé d'outil synthétique non sensible, et le filtrage des messages, schémas et attributs non autorisés.
 
 - [ ] **Step 2: Vérifier l'échec des tests de sécurité**
 
@@ -512,9 +512,9 @@ Expected: FAIL parce que le sanitizer n'existe pas.
 
 - [ ] **Step 3: Implémenter les règles de sécurité**
 
-Créer une fonction pure qui ne reçoit que les champs d'arguments/résultats autorisés. Expurger les motifs de secrets avant de calculer `Buffer.byteLength`; couper chaque valeur qui dépasse 32 KiB UTF-8 et marquer `contentState` `truncated` ou `redacted-truncated`. Si un type n'est pas sérialisable, si le parsing échoue ou si le sanitizer lève une erreur, retourner les métadonnées avec `argumentsJson: null`, `resultText: null` et `contentState: 'omitted'`.
+Créer une fonction pure qui conserve les clés d'outil dynamiques à l'intérieur des objets d'arguments/résultats autorisés, mais qui exclut explicitement les champs `prompt`, `response`, `system`, `message`, `messages`, `schema` et `attributes` ainsi que les attributs OTLP non requis. Expurger les motifs de secrets avant de calculer `Buffer.byteLength`; couper chaque valeur qui dépasse 32 KiB UTF-8 et marquer `contentState` `truncated` ou `redacted-truncated`. Si un type n'est pas sérialisable, si le parsing échoue ou si le sanitizer lève une erreur, retourner les métadonnées avec `argumentsJson: null`, `resultText: null` et `contentState: 'omitted'`.
 
-N'inclure ni prompt, ni réponse, ni message système, ni schéma d'outil, ni attribut inconnu dans le résultat. Ne jamais joindre la valeur source dans une exception ou dans un message de log.
+Ne jamais joindre la valeur source dans une exception ou dans un message de log.
 
 - [ ] **Step 4: Rejouer les tests et committer**
 

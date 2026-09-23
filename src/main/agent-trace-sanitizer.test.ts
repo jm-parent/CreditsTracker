@@ -99,9 +99,50 @@ describe('sanitizeAgentTraceSpan', () => {
     expect(safe.resultText).not.toContain('attributes');
   });
 
+  it('retains non-sensitive tool-specific fields while filtering excluded content categories', () => {
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+    argumentsValue: {
+      command: 'echo ok',
+      toolSpecificConfig: {
+        mode: 'dry-run',
+        retryCount: 2,
+      },
+      prompt: 'secret prompt',
+      messages: [{ role: 'user', content: 'synthetic prompt' }],
+      schema: { name: 'tool-schema' },
+      attributes: { unknown: 'synthetic attribute' },
+    },
+    result: {
+      toolSpecificResult: {
+        accepted: true,
+        reason: 'synthetic',
+      },
+      response: 'secret response',
+      system: 'secret system',
+      message: 'secret message',
+      attributes: { unknown: 'synthetic attribute' },
+    },
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.argumentsJson).toContain('"toolSpecificConfig":{"mode":"dry-run","retryCount":2}');
+    expect(safe.resultText).toContain('"toolSpecificResult":{"accepted":true,"reason":"synthetic"}');
+    expect(safe.argumentsJson).toContain('echo ok');
+    expect(safe.argumentsJson).not.toContain('secret prompt');
+    expect(safe.argumentsJson).not.toContain('messages');
+    expect(safe.argumentsJson).not.toContain('schema');
+    expect(safe.argumentsJson).not.toContain('attributes');
+    expect(safe.resultText).not.toContain('secret response');
+    expect(safe.resultText).not.toContain('secret system');
+    expect(safe.resultText).not.toContain('secret message');
+    expect(safe.resultText).not.toContain('attributes');
+    expect(safe.contentState).toBe('redacted');
+  });
+
   it('marks spans without content as unavailable', () => {
     const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
-      argumentsValue: null,
+    argumentsValue: null,
       result: null,
     }));
 

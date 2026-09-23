@@ -195,9 +195,11 @@ d'une corrélation exacte.
 ## Confidentialité et conservation
 
 - La collecte de contenu est opt-in et l'export reste local.
-- Le stockage utilise une liste autorisée de champs d'outil ; prompts,
-  réponses, messages système, schémas d'outils et attributs inconnus sont
-  exclus.
+- Le stockage limite les champs de contexte non sensibles aux arguments et
+  résultats d'outil connus ; prompts, réponses, messages système, messages,
+  schémas d'outils et attributs OTLP inconnus sont exclus. Les clés
+  dynamiques propres à l'outil restent conservées à l'intérieur de ces
+  arguments/résultats après masquage et troncature.
 - Les champs autorisés sont parcourus pour expurger les secrets connus. La
   première version doit reconnaître au minimum les formats de jetons GitHub,
   les identifiants de clés AWS, les valeurs `Bearer`, les blocs de clés
