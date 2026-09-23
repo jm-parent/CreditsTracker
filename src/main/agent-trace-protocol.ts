@@ -12,6 +12,27 @@ interface DecodedSpanEnvelope {
   decoded: DecodedAgentTraceSpan;
 }
 
+const RESOURCE_ATTRIBUTE_ALLOWLIST = new Set([
+  'service.name',
+]);
+
+const SPAN_ATTRIBUTE_ALLOWLIST = new Set([
+  'gen_ai.agent.name',
+  'gen_ai.conversation.id',
+  'gen_ai.operation.name',
+  'gen_ai.request.model',
+  'gen_ai.response.model',
+  'gen_ai.tool.name',
+  'gen_ai.tool.call.id',
+  'gen_ai.tool.call.arguments',
+  'gen_ai.tool.call.result',
+  'gen_ai.error.type',
+  'github.copilot.agent.type',
+  'github.copilot.tool.parameters.command',
+  'github.copilot.tool.parameters.file_path',
+  'github.copilot.tool.parameters.skill_name',
+]);
+
 export interface DecodedAgentTraceSpan {
   source: AgentTraceSource | null;
   conversationId: string | null;
@@ -54,7 +75,10 @@ export function decodeOtlpTraceRequest(body: Uint8Array): DecodedAgentTraceSpan[
 }
 
 function decodeResourceSpans(resourceSpans: ResourceSpans): DecodedSpanEnvelope[] {
-  const resourceAttributes = collectAttributes(resourceSpans.resource?.attributes ?? []);
+  const resourceAttributes = collectAttributes(
+    resourceSpans.resource?.attributes ?? [],
+    RESOURCE_ATTRIBUTE_ALLOWLIST,
+  );
   const resourceServiceName = asString(resourceAttributes.get('service.name'));
 
   return (resourceSpans.scopeSpans ?? []).flatMap((scopeSpans) => (
@@ -66,7 +90,7 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
   const traceId = decodeRequiredId(span.traceId, 16, 'trace');
   const spanId = decodeRequiredId(span.spanId, 8, 'span');
   const parentSpanId = decodeOptionalId(span.parentSpanId, 8, 'parent span');
-  const attributes = collectAttributes(span.attributes ?? []);
+  const attributes = collectAttributes(span.attributes ?? [], SPAN_ATTRIBUTE_ALLOWLIST);
   const skillName = asString(attributes.get('github.copilot.tool.parameters.skill_name'));
   const category = classifySpan(span.name, attributes, skillName);
   const startedAtNs = normalizeNanoseconds(span.startTimeUnixNano);
@@ -88,11 +112,12 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
       category,
       toolName: asString(attributes.get('gen_ai.tool.name')),
       skillName,
-      model: asString(attributes.get('gen_ai.request.model')),
+      model: asString(attributes.get('gen_ai.request.model'))
+        ?? asString(attributes.get('gen_ai.response.model')),
       startedAtNs,
       endedAtNs,
       status: decodeStatus(span.status?.code),
-      errorType: asString(attributes.get('error.type')),
+      errorType: asString(attributes.get('gen_ai.error.type')),
       toolCallId: asString(attributes.get('gen_ai.tool.call.id')),
       argumentsValue: attributes.has('gen_ai.tool.call.arguments')
         ? attributes.get('gen_ai.tool.call.arguments')
@@ -124,10 +149,27 @@ function findRootSpan(group: DecodedSpanEnvelope[]): DecodedSpanEnvelope | undef
     || !spanIds.has(entry.decoded.parentSpanId)
   ));
 
-  return rootCandidates.find((entry) => classifySource(entry.resourceServiceName) !== null)
+  return rootCandidates.find((entry) => isRecognizedConversationRoot(entry))
+    ?? rootCandidates.find((entry) => isConversationRoot(entry))
+    ?? rootCandidates.find((entry) => (
+      classifySource(entry.resourceServiceName) !== null
+      && entry.attributes.has('gen_ai.conversation.id')
+    ))
     ?? rootCandidates.find((entry) => entry.attributes.has('gen_ai.conversation.id'))
+    ?? rootCandidates.find((entry) => entry.decoded.category === 'agent')
+    ?? rootCandidates.find((entry) => classifySource(entry.resourceServiceName) !== null)
     ?? rootCandidates[0]
     ?? group[0];
+}
+
+function isRecognizedConversationRoot(entry: DecodedSpanEnvelope): boolean {
+  return classifySource(entry.resourceServiceName) !== null
+    && isConversationRoot(entry);
+}
+
+function isConversationRoot(entry: DecodedSpanEnvelope): boolean {
+  return entry.decoded.category === 'agent'
+    && asString(entry.attributes.get('gen_ai.conversation.id')) !== null;
 }
 
 function classifySource(serviceName: string | null): AgentTraceSource | null {
@@ -186,11 +228,14 @@ function decodeStatus(code: number | null | undefined): 'unset' | 'ok' | 'error'
   return 'unset';
 }
 
-function collectAttributes(attributes: readonly KeyValue[]): Map<string, unknown> {
+function collectAttributes(
+  attributes: readonly KeyValue[],
+  allowlist: ReadonlySet<string>,
+): Map<string, unknown> {
   const map = new Map<string, unknown>();
 
   for (const attribute of attributes) {
-    if (!attribute.key) {
+    if (!attribute.key || !allowlist.has(attribute.key)) {
       continue;
     }
     map.set(attribute.key, decodeAnyValue(attribute.value));

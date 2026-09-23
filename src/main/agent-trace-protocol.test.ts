@@ -6,6 +6,8 @@ const traceId = Buffer.from('00112233445566778899aabbccddeeff', 'hex');
 const rootSpanId = Buffer.from('1111222233334444', 'hex');
 const chatSpanId = Buffer.from('2222333344445555', 'hex');
 const toolSpanId = Buffer.from('5555666677778888', 'hex');
+const inheritedContextSpanId = Buffer.from('6666777788889999', 'hex');
+const skillSpanId = Buffer.from('777788889999aaaa', 'hex');
 const start = '1780000000000000000';
 const end = '1780000000100000000';
 
@@ -50,6 +52,31 @@ const OTLP_FIXTURE = {
             { key: 'gen_ai.tool.call.id', value: { stringValue: 'call-1' } },
             { key: 'gen_ai.tool.call.arguments', value: { stringValue: '{"command":"echo trace-probe"}' } },
             { key: 'gen_ai.tool.call.result', value: { stringValue: 'trace-probe' } },
+          ],
+          status: { code: 1 },
+        },
+        {
+          traceId,
+          spanId: inheritedContextSpanId,
+          name: 'execute_tool inheritedContext',
+          startTimeUnixNano: start,
+          endTimeUnixNano: end,
+          attributes: [
+            { key: 'gen_ai.tool.name', value: { stringValue: 'inheritedContext' } },
+          ],
+          status: { code: 1 },
+        },
+        {
+          traceId,
+          spanId: skillSpanId,
+          parentSpanId: rootSpanId,
+          name: 'execute_tool loadSkill',
+          startTimeUnixNano: start,
+          endTimeUnixNano: end,
+          attributes: [
+            { key: 'gen_ai.tool.name', value: { stringValue: 'loadSkill' } },
+            { key: 'gen_ai.tool.call.id', value: { stringValue: 'call-skill' } },
+            { key: 'github.copilot.tool.parameters.skill_name', value: { stringValue: 'trace-probe' } },
           ],
           status: { code: 1 },
         },
@@ -123,9 +150,41 @@ describe('decodeOtlpTraceRequest', () => {
           result: 'trace-probe',
           status: 'ok',
         }),
+        expect.objectContaining({
+          spanId: '777788889999aaaa',
+          parentSpanId: '1111222233334444',
+          category: 'skill',
+          skillName: 'trace-probe',
+          toolCallId: 'call-skill',
+        }),
       ]),
     );
     expect(JSON.stringify(decoded)).not.toContain('synthetic prompt');
+  });
+
+  it('inherits source and session from the recognized trace root without fabricating a parent span', async () => {
+    const fixture = structuredClone(OTLP_FIXTURE);
+    fixture.resourceSpans[0].scopeSpans[0].spans = [
+      fixture.resourceSpans[0].scopeSpans[0].spans[3],
+      fixture.resourceSpans[0].scopeSpans[0].spans[0],
+      fixture.resourceSpans[0].scopeSpans[0].spans[1],
+      fixture.resourceSpans[0].scopeSpans[0].spans[2],
+    ];
+
+    const decoded = await decodePayload(encodeFixture(fixture));
+
+    expect(decoded).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          spanId: '6666777788889999',
+          source: 'vscode',
+          conversationId: 'conversation-1',
+          sessionId: 'vscode:conversation-1',
+          parentSpanId: null,
+          toolName: 'inheritedContext',
+        }),
+      ]),
+    );
   });
 
   it('preserves nanosecond timestamps beyond Number.MAX_SAFE_INTEGER', async () => {
@@ -272,6 +331,38 @@ describe('decodeOtlpTraceRequest', () => {
         expect.objectContaining({ name: 'execute_tool runShell', category: 'shell' }),
       ]),
     );
+  });
+
+  it('materializes only allowlisted attributes from resource and span payloads', async () => {
+    const fixture = structuredClone(OTLP_FIXTURE);
+    fixture.resourceSpans[0].resource.attributes.push({
+      key: 'service.version',
+      value: { stringValue: '1.2.3' },
+    });
+    fixture.resourceSpans[0].scopeSpans[0].spans[2].attributes.push(
+      { key: 'gen_ai.error.type', value: { stringValue: 'tool_failure' } },
+      { key: 'gen_ai.output.messages', value: { stringValue: 'synthetic response' } },
+      {
+        key: 'unknown.map',
+        value: {
+          kvlistValue: {
+            values: [{ key: 'prompt', value: { stringValue: 'secret prompt' } }],
+          },
+        },
+      },
+    );
+
+    const decoded = await decodePayload(encodeFixture(fixture));
+    const toolSpan = decoded.find((span) => span.spanId === '5555666677778888');
+
+    expect(toolSpan).toMatchObject({
+      errorType: 'tool_failure',
+      argumentsValue: '{"command":"echo trace-probe"}',
+      result: 'trace-probe',
+    });
+    expect(JSON.stringify(decoded)).not.toContain('synthetic response');
+    expect(JSON.stringify(decoded)).not.toContain('secret prompt');
+    expect(JSON.stringify(decoded)).not.toContain('1.2.3');
   });
 
   it('throws for an invalid protobuf body', async () => {
