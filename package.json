@@ -10,6 +10,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "test": "vitest run",
+    "generate:agent-trace-proto": "pbjs -t static-module -w es6 -p src/main/agent-trace-proto -o src/main/agent-trace-proto.generated.js src/main/agent-trace-proto/opentelemetry/proto/collector/trace/v1/trace_service.proto && pbts -o src/main/agent-trace-proto.generated.d.ts src/main/agent-trace-proto.generated.js",
     "release:dry-run": "semantic-release --dry-run --no-ci"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.42.0",
+    "protobufjs": "^8.8.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1",
@@ -45,6 +47,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.2.0",
     "jsdom": "^30.0.1",
+    "protobufjs-cli": "^2.7.0",
     "semantic-release": "^25.0.9",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
