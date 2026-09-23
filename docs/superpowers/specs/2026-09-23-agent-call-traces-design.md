@@ -66,10 +66,14 @@ propres traces, sous forme de traces racines indépendantes.
 
 ## Expérience utilisateur
 
-Une action **Voir la trace** est disponible depuis une conversation. Elle
-ouvre un détail de session qui présente un arbre de spans, avec les appels
-frères ordonnés chronologiquement et leurs durées. Les appels parallèles
-restent des branches distinctes et leur chevauchement temporel est visible.
+Un onglet dédié **Traces agents** fournit l'état de collecte, les instructions
+de configuration et l'accès aux traces conservées. Une action **Voir la
+trace** est disponible depuis chaque conversation ; elle ouvre cet onglet sur
+la session sélectionnée.
+
+Le détail de session présente un arbre de spans, avec les appels frères
+ordonnés chronologiquement et leurs durées. Les appels parallèles restent des
+branches distinctes et leur chevauchement temporel est visible.
 
 Chaque nœud peut afficher :
 
