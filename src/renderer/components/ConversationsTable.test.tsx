@@ -5,6 +5,7 @@ import type { ConversationSummary } from '../../shared/types';
 
 const conversations: ConversationSummary[] = [
   {
+    source: 'copilot-cli',
     sessionId: 's1',
     createdAt: '2026-09-01 10:00:00',
     summary: 'Fixed the login bug',
@@ -14,6 +15,7 @@ const conversations: ConversationSummary[] = [
     requests: 2,
   },
   {
+    source: 'copilot-cli',
     sessionId: 's2',
     createdAt: '2026-09-03 10:00:00',
     summary: null,

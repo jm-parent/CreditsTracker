@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -350,6 +350,13 @@ describe('getMonthlyActivity', () => {
 });
 
 describe('getProjectDetail', () => {
+  let provenanceDb: Database.Database | undefined;
+
+  afterEach(() => {
+    provenanceDb?.close();
+    provenanceDb = undefined;
+  });
+
   function seedWithSummaryAndSecondEvent(db: Database.Database): void {
     db.exec(`
       CREATE TABLE sessions (
@@ -396,6 +403,38 @@ describe('getProjectDetail', () => {
     ).run('s3', 'gpt-5.4', 9_000_000_000, 900, 90, '2026-09-02 10:00:05');
   }
 
+  it('reports the source of each conversation row from the session id prefix', () => {
+    provenanceDb = new Database(':memory:');
+    provenanceDb.exec(`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY, cwd TEXT, repository TEXT, summary TEXT, created_at TEXT
+      );
+      CREATE TABLE assistant_usage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        model TEXT NOT NULL,
+        total_nano_aiu INTEGER,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        created_at TEXT
+      );
+      INSERT INTO sessions VALUES
+        ('cli-session-1', 'C:/repo', 'org/repo-a', 'CLI', '2026-09-01 10:00:00'),
+        ('vscode:vscode-session-1', 'C:/repo', 'org/repo-a', 'VS Code', '2026-09-02 10:00:00');
+      INSERT INTO assistant_usage_events
+        (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+        VALUES ('cli-session-1', 'gpt-5.4', 1000000000, 5, 5, '2026-09-01 10:00:00'),
+               ('vscode:vscode-session-1', 'gpt-5.4', 1000000000, 5, 5, '2026-09-02 10:00:00');
+    `);
+
+    const result = getProjectDetail(provenanceDb, { project: 'org/repo-a' });
+
+    expect(result.conversations.map(({ sessionId, source }) => ({ sessionId, source }))).toEqual([
+      { sessionId: 'vscode:vscode-session-1', source: 'vscode' },
+      { sessionId: 'cli-session-1', source: 'copilot-cli' },
+    ]);
+  });
+
   it('returns totals and conversations scoped to the given project, most recent first', () => {
     const db = new Database(':memory:');
     seedWithSummaryAndSecondEvent(db);
@@ -406,6 +445,7 @@ describe('getProjectDetail', () => {
     expect(result.totals).toEqual({ aiuCredits: 3.5, tokens: 215, requests: 3 });
     expect(result.conversations).toEqual([
       {
+        source: 'copilot-cli',
         sessionId: 's2',
         createdAt: '2026-09-03 10:00:00',
         summary: 'Added tests',
@@ -415,6 +455,7 @@ describe('getProjectDetail', () => {
         requests: 1,
       },
       {
+        source: 'copilot-cli',
         sessionId: 's1',
         createdAt: '2026-09-01 10:00:00',
         summary: 'Fixed the login bug',
@@ -792,6 +833,7 @@ describe('buildMergedDatabase', () => {
     const projectDetail = getProjectDetail(merged, { project: 'C:/Devs/MyProject' });
     expect(projectDetail.conversations).toEqual([
       {
+        source: 'vscode',
         sessionId: 'vscode:vs-session-1',
         createdAt: '2026-09-05 09:00:00',
         summary: 'Explained a bug',

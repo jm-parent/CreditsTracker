@@ -38,6 +38,7 @@ const projectDetail: ProjectDetailResult = {
   timeSeries: [{ date: '2026-09-01', aiuCredits: 1.5 }],
   conversations: [
     {
+      source: 'copilot-cli',
       sessionId: 's1',
       createdAt: '2026-09-01 10:00:00',
       summary: 'Fixed the login bug',

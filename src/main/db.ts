@@ -274,6 +274,10 @@ export function getProjectDetail(
   const conversations = db
     .prepare(
       `SELECT
+         CASE
+           WHEN s.id LIKE 'vscode:%' THEN 'vscode'
+           ELSE 'copilot-cli'
+         END AS source,
          s.id AS sessionId,
          s.created_at AS createdAt,
          s.summary AS summary,
