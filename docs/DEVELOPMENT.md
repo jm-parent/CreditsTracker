@@ -10,8 +10,9 @@ and screenshots, see the [main README](../README.md).
 - **Renderer**: React 19 + TypeScript, styled with Tailwind CSS v4, charts via
   Recharts.
 - **Main process**: reads a local SQLite database (`better-sqlite3`) and
-  exposes data to the renderer over IPC. No network calls, no GitHub API
-  usage.
+  exposes data to the renderer over IPC. The app does not use the GitHub API;
+  the update checker makes a release-availability request, and featured
+  project links open externally only after the user chooses one.
 - **Tests**: Vitest + Testing Library, run against both main- and
   renderer-process code.
 
@@ -62,6 +63,13 @@ npm test
 Vitest runs every `*.test.ts`/`*.test.tsx` file under `src/`, covering both
 main-process logic (SQLite queries, IPC handlers, VS Code log parsing) and
 renderer components/hooks.
+
+## Spec Kit
+
+Feature specifications and the Copilot Spec Kit workflow are documented in
+the [Spec Kit contributor guide](SPECKIT.md) and indexed in
+[`specs/README.md`](../specs/README.md). These living specifications describe
+current behavior; update the relevant `spec.md` when a feature changes.
 
 ## Building the Windows installer bundle
 
@@ -133,14 +141,15 @@ All renderer ↔ main communication goes through `contextBridge` in
 
 ### Sidebar navigation
 
-`App.tsx` holds `activeTab: DashboardTab`
-(`'daily' | 'monthly' | 'projects' | 'models' | 'raw' | 'export' | 'logs'`)
-and routes to seven sidebar entries: `DailyConsumptionPage`,
+`App.tsx` holds `activeTab: DashboardTab` (`daily`, `monthly`, `projects`,
+`models`, `raw`, `export`, `logs`, and `featured`) and routes to eight sidebar
+entries: `DailyConsumptionPage`,
 `ActivityHeatmapPage`, `ProjectsPage`, `ModelsPage`, `RawDataPage`,
-`ExportPage`, and `LogsPage`. Switching tabs clears any open overlay
-(`selectedProject` project-detail drill-down, `selectedDate` hourly panel).
-`FilterBar` is shared across the dashboard views and hidden on `raw`,
-`export`, and `logs`.
+`ExportPage`, `LogsPage`, and `FeaturedProjectsPage`. Switching tabs clears
+any open overlay (`selectedProject` project-detail drill-down,
+`selectedDate` hourly panel).
+`FilterBar` is shared across the usage dashboard views and is not rendered on
+`raw`, `export`, `logs`, or `featured`.
 
 `ExportPage` deliberately does **not** reuse the shared dashboard filter
 state. Instead, it owns independent project/model/date filters plus the

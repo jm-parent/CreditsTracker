@@ -4,9 +4,12 @@ A local desktop app that shows your GitHub Copilot CLI credit (AIU) and token
 consumption, with shared dashboard filters for project and model plus a
 dedicated HTML export page for date-range reporting.
 
-🔒 **Privacy-first**: everything runs on your machine. It reads
-`~/.copilot/session-store.db` read-only — no network calls, no GitHub
-permissions required, nothing ever leaves your computer.
+🔒 **Privacy-first**: usage data stays on your machine. The app reads
+`~/.copilot/session-store.db` read-only and does not send usage records,
+prompts, responses, or transcripts to a service. It checks a release feed for
+update availability; it downloads nothing until you accept. Featured GitHub
+links open externally only when you choose them. No GitHub permissions are
+required.
 
 ## Download
 
@@ -49,8 +52,8 @@ static, offline-friendly catalogue and HTML export has its own report filters:
   failed IPC calls, and any renderer crash with its stack trace), filterable
   by level and text. Logs are also written to
   `%APPDATA%\credits-tracker\logs\app.log` (rotated at 2 MB), and the page
-  offers "Copy" and "Open log folder" so a broken screen can be reported with
-  the underlying error attached.
+  offers "Copy", "Open log folder", and "Clear" so a broken screen can be
+  reported with the underlying error attached or old diagnostics removed.
 - **Featured projects** — a curated, offline-friendly collection of GitHub
   projects with descriptions, tags, and one-click links to open each
   repository in the system browser.
