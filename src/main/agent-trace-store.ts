@@ -112,7 +112,7 @@ export function openAgentTraceStore(dbPath: string): AgentTraceStore {
         parent_span_id: span.parentSpanId,
         started_at: span.startedAt,
         received_at: receivedAt,
-        span_json: JSON.stringify(span),
+        span_json: JSON.stringify(projectStoredSpan(span)),
       });
     }
   });
@@ -260,10 +260,34 @@ function parseStoredSpan(row: SpanRow): AgentTraceSpan | null {
       return null;
     }
 
-    return parsed;
+    return projectStoredSpan(parsed);
   } catch {
     return null;
   }
+}
+
+function projectStoredSpan(span: AgentTraceSpan): AgentTraceSpan {
+  return {
+    source: span.source,
+    sessionId: span.sessionId,
+    traceId: span.traceId,
+    spanId: span.spanId,
+    parentSpanId: span.parentSpanId,
+    name: span.name,
+    category: span.category,
+    toolName: span.toolName,
+    skillName: span.skillName,
+    model: span.model,
+    startedAt: span.startedAt,
+    endedAt: span.endedAt,
+    durationMs: span.durationMs,
+    status: span.status,
+    errorType: span.errorType,
+    toolCallId: span.toolCallId,
+    argumentsJson: span.argumentsJson,
+    resultText: span.resultText,
+    contentState: span.contentState,
+  };
 }
 
 function isStoredAgentTraceSpan(value: unknown): value is AgentTraceSpan {

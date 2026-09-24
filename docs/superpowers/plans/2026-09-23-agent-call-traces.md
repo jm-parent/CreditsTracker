@@ -599,7 +599,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_trace_session
 
 - [ ] **Step 4: Ajouter lecture, réglage de collecte et purge**
 
-`getSession` doit regrouper toutes les racines `trace_id` d'une même paire source/session, trier les spans par début, retourner `not-collected` avec une liste vide en l'absence de données, et signaler `partial` quand une référence parent est absente, qu'un span non-agent n'a pas de parent, qu'un span est incomplet ou qu'un appel d'outil n'a pas les payloads demandés. Un tool span dont le `traceId` est connu mais le parent absent reste dans la session sous forme de racine non reliée ; ne pas inventer de parent. `pruneExpired(now)` supprime les lignes dont `received_at` précède `now - 30 jours`; appeler cette fonction au démarrage, à chaque lecture et toutes les 24 heures pendant que le service tourne. `clear()` supprime seulement `agent_trace_spans`.
+`getSession` doit regrouper toutes les racines `trace_id` d'une même paire source/session, trier les spans par début, retourner `not-collected` avec une liste vide en l'absence de données, et signaler `partial` quand une référence parent est absente, qu'un span non-agent n'a pas de parent, qu'un span est incomplet ou qu'un appel d'outil n'a pas les payloads demandés. Un tool span dont le `traceId` est connu mais le parent absent reste dans la session sous forme de racine non reliée ; ne pas inventer de parent. `pruneExpired(now)` supprime les lignes dont `received_at` précède `now - 30 jours`; appeler cette fonction au démarrage et à chaque lecture. Le timer périodique de 24 heures est démarré et arrêté par le service de Task 6, pas par le store. `clear()` supprime seulement `agent_trace_spans`.
 
 - [ ] **Step 5: Rejouer les tests et committer**
 
@@ -719,7 +719,7 @@ Expected: FAIL parce que `AgentTraceService` n'existe pas.
 
 - [ ] **Step 3: Implémenter le service**
 
-Initialiser le store avec `app.getPath('userData')` fourni par `main.ts`; purger les entrées expirées au démarrage et toutes les 24 heures pendant l'exécution. Si le réglage opt-in persistant est activé, démarrer le récepteur. Si son bind échoue, conserver la collecte désactivée, exposer `errorMessage` sans données brutes et journaliser l'erreur. Si des spans sont rejetés faute de source/session, conserver un état de couverture partielle visible dans `errorMessage`, sans convertir les spans rejetés en session.
+Initialiser le store avec `app.getPath('userData')` fourni par `main.ts`; purger les entrées expirées au démarrage et toutes les 24 heures pendant l'exécution via un timer possédé par `AgentTraceService` et arrêté dans `shutdown()`. Si le réglage opt-in persistant est activé, démarrer le récepteur. Si son bind échoue, conserver la collecte désactivée, exposer `errorMessage` sans données brutes et journaliser l'erreur. Si des spans sont rejetés faute de source/session, conserver un état de couverture partielle visible dans `errorMessage`, sans convertir les spans rejetés en session.
 
 `setEnabled(true)` doit démarrer le récepteur avant d'écrire la préférence ; en cas d'échec, la préférence reste `false`. `setEnabled(false)` ferme le serveur puis enregistre `false`. `getSession` retourne explicitement `not-collected` plutôt qu'une session complète vide. `clear()` retire uniquement les spans.
 

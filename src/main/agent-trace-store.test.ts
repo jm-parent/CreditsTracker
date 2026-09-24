@@ -91,6 +91,96 @@ describe('openAgentTraceStore', () => {
     expect(session.spans.map((span) => span.spanId)).toEqual(['root-span', 'tool-span', 'second-root']);
   });
 
+  it('persists and rehydrates only allowlisted span fields while preserving nested payload JSON keys', () => {
+    const { dbPath, store } = createPersistentStore();
+    const argumentsJson = JSON.stringify({
+      command: 'echo trace-probe',
+      nested: {
+        keepMe: true,
+        extraConfig: {
+          retries: 2,
+          mode: 'fast',
+        },
+      },
+    });
+    const resultText = JSON.stringify({
+      ok: true,
+      nested: {
+        keepMe: ['alpha', 'beta'],
+        metadata: {
+          dynamic: 'value',
+        },
+      },
+    });
+    const spanWithRuntimeExtra = {
+      ...makeAgentTraceSpan({
+        traceId: 'trace-runtime-extra',
+        spanId: 'span-runtime-extra',
+        argumentsJson,
+        resultText,
+      }),
+      runtimeExtra: {
+        shouldNotPersist: true,
+      },
+    };
+
+    store.insertSpans([spanWithRuntimeExtra]);
+
+    const inspector = new Database(dbPath, { readonly: true });
+    const stored = inspector.prepare('SELECT span_json FROM agent_trace_spans WHERE span_id = ?').get(
+      'span-runtime-extra',
+    ) as { span_json: string };
+    inspector.close();
+
+    expect(JSON.parse(stored.span_json)).toEqual({
+      source: 'vscode',
+      sessionId: 'vscode:conversation-1',
+      traceId: 'trace-runtime-extra',
+      spanId: 'span-runtime-extra',
+      parentSpanId: null,
+      name: 'invoke_agent copilot',
+      category: 'agent',
+      toolName: null,
+      skillName: null,
+      model: 'gpt-5.4',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      endedAt: '2026-01-01T00:00:00.100Z',
+      durationMs: 100,
+      status: 'ok',
+      errorType: null,
+      toolCallId: 'call-1',
+      argumentsJson,
+      resultText,
+      contentState: 'stored',
+    });
+
+    const session = store.getSession(SESSION);
+
+    expect(session.spans).toHaveLength(1);
+    expect(session.spans[0]).toEqual({
+      source: 'vscode',
+      sessionId: 'vscode:conversation-1',
+      traceId: 'trace-runtime-extra',
+      spanId: 'span-runtime-extra',
+      parentSpanId: null,
+      name: 'invoke_agent copilot',
+      category: 'agent',
+      toolName: null,
+      skillName: null,
+      model: 'gpt-5.4',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      endedAt: '2026-01-01T00:00:00.100Z',
+      durationMs: 100,
+      status: 'ok',
+      errorType: null,
+      toolCallId: 'call-1',
+      argumentsJson,
+      resultText,
+      contentState: 'stored',
+    });
+    expect(session.spans[0]).not.toHaveProperty('runtimeExtra');
+  });
+
   it('marks the session partial when tool spans are unparented or reference a missing parent', () => {
     const store = openMemoryStore();
     const rootSpan = makeAgentTraceSpan({
