@@ -115,7 +115,7 @@ export interface ExportResult {
 }
 
 export type AgentTraceSource = 'vscode' | 'copilot-cli';
-export type AgentTraceCategory = 'agent' | 'llm' | 'tool' | 'skill' | 'shell' | 'hook' | 'other';
+export type AgentTraceCategory = 'agent' | 'llm' | 'tool' | 'skill' | 'shell' | 'mcp' | 'hook' | 'other';
 export type AgentTraceContentState =
   | 'unavailable'
   | 'stored'

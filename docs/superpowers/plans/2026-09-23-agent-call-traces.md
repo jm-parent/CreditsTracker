@@ -37,6 +37,7 @@
 - `src/main/agent-trace-sanitizer.ts` / `.test.ts` — allowlist, masquage, troncature et échec fermé des payloads.
 - `src/main/agent-trace-store.ts` / `.test.ts` — base SQLite locale des spans et préférences de collecte, purge TTL, lecture par conversation.
 - `src/main/agent-trace-receiver.ts` / `.test.ts` — serveur OTLP/HTTP loopback, limites de requête et réponse Protobuf.
+- `src/main/agent-trace-correlator.ts` / `.test.ts` — attribution des spans entre requêtes OTLP : racine mémorisée, attente bornée des spans expurgés et repli sur le contexte explicite.
 - `src/main/agent-trace-service.ts` / `.test.ts` — cycle de vie collecte/store, opt-in persistant, purge périodique et état d'erreur.
 - `src/test-utils/agent-trace-fixtures.ts` — factories typées pour les spans décodés et expurgés utilisés par les tests main et renderer.
 - `src/renderer/hooks/useAgentTrace.ts` / `.test.ts` — chargement et état IPC de la page de traces.
@@ -112,7 +113,7 @@ Ajouter aussi les types sans valeurs `any` :
 
 ```ts
 export type AgentTraceSource = 'vscode' | 'copilot-cli';
-export type AgentTraceCategory = 'agent' | 'llm' | 'tool' | 'skill' | 'shell' | 'hook' | 'other';
+export type AgentTraceCategory = 'agent' | 'llm' | 'tool' | 'skill' | 'shell' | 'mcp' | 'hook' | 'other';
 export type AgentTraceContentState =
   | 'unavailable'
   | 'stored'
@@ -439,18 +440,24 @@ const SPAN_ATTRIBUTE_ALLOWLIST = new Set([
   'gen_ai.request.model',
   'gen_ai.response.model',
   'gen_ai.tool.name',
+  'gen_ai.tool.type',
   'gen_ai.tool.call.id',
   'gen_ai.tool.call.arguments',
   'gen_ai.tool.call.result',
   'gen_ai.error.type',
+  'error.type',
+  'copilot_chat.parent_chat_session_id',
   'github.copilot.agent.type',
   'github.copilot.tool.parameters.command',
   'github.copilot.tool.parameters.file_path',
   'github.copilot.tool.parameters.skill_name',
+  'github.copilot.tool.parameters.mcp_tool_name',
 ]);
 ```
 
-Classer `invoke_agent` en agent, `chat` en appel LLM, `execute_hook` en hook et `execute_tool` en outil ; si `github.copilot.tool.parameters.skill_name` est présent, classer le nœud en skill, sinon si `github.copilot.tool.parameters.command` est présent, le classer en shell. Lire seulement les clés de l'allowlist lorsqu'elles sont présentes. Une relation introuvable ou une source inconnue reste absente/partielle ; ne jamais en déduire une à partir des heures.
+Classer `invoke_agent` en agent, `chat` en appel LLM, `execute_hook` en hook et `execute_tool` en outil ; si `github.copilot.tool.parameters.skill_name` est présent, classer le nœud en skill, sinon si `github.copilot.tool.parameters.mcp_tool_name` est présent ou si `gen_ai.tool.type` vaut `mcp`, le classer en MCP, sinon si `github.copilot.tool.parameters.command` est présent, le classer en shell. Lire `errorType` depuis `gen_ai.error.type`, puis `error.type`. Une valeur `bytesValue` reste binaire afin que le sanitizer l'omette. Lire seulement les clés de l'allowlist lorsqu'elles sont présentes. Une relation introuvable ou une source inconnue reste absente/partielle ; ne jamais en déduire une à partir des heures.
+
+Seul un span agent sans `parentSpanId` sert de racine de trace : un sous-agent dont le parent manque dans la requête ne définit pas la conversation. Sans racine dans la requête, le décodeur laisse source/session à `null` (`traceRootInRequest: false`) et expose la source et la conversation propres au span (`spanSource`, `spanConversationId`, `spanParentConversationId`) ; le receiver de Task 5 résout ces spans entre requêtes.
 
 - [ ] **Step 6: Valider le format et committer**
 
@@ -513,6 +520,8 @@ Expected: FAIL parce que le sanitizer n'existe pas.
 - [ ] **Step 3: Implémenter les règles de sécurité**
 
 Créer une fonction pure qui conserve les clés d'outil dynamiques à l'intérieur des objets d'arguments/résultats autorisés, mais qui exclut explicitement les champs `prompt`, `response`, `system`, `message`, `messages`, `schema` et `attributes` ainsi que les attributs OTLP non requis. Expurger les motifs de secrets avant de calculer `Buffer.byteLength`; couper chaque valeur qui dépasse 32 KiB UTF-8 et marquer `contentState` `truncated` ou `redacted-truncated`. Si un type n'est pas sérialisable, si le parsing échoue ou si le sanitizer lève une erreur, retourner les métadonnées avec `argumentsJson: null`, `resultText: null` et `contentState: 'omitted'`.
+
+Les paires clé/valeur textuelles reconnaissent les clés préfixées, suffixées ou entre guillemets (`GITHUB_TOKEN=`, `DB_PASSWORD=`, `client_secret:`, `"password": "…"`, `authorization=`, `$env:…`, `--password …`, identifiants d'URL) ; les clés JSON sont normalisées sans ponctuation ni casse (`apiKey`, `Client-Secret`) et le JSON encodé dans une chaîne est expurgé structurellement. Un en-tête ou pied `PRIVATE KEY` sans sa borne correspondante omet le contenu. L'expurgation lit au plus 256 KiB par valeur avant la coupe à 32 KiB. `sanitizeUnattributedAgentTraceSpan` produit le span expurgé sans source/session et `attributeAgentTraceSpan` l'attribue ensuite, pour que le receiver ne garde en attente que du contenu expurgé.
 
 Ne jamais joindre la valeur source dans une exception ou dans un message de log.
 
@@ -654,6 +663,10 @@ Expected: FAIL parce que le récepteur n'existe pas.
 Utiliser `node:http`. N'écouter que sur `127.0.0.1`; l'adresse et le port ne viennent jamais d'une URL renderer. N'accepter que `POST /v1/traces` en `application/x-protobuf`, avec un corps borné à 8 MiB. Le receiver ne relit jamais la préférence opt-in persistée : il suppose que Task 6 l’a démarré uniquement pendant l’opt-in explicite. Décoder le batch, propager un état typé de résolution de source (`supported` / `unsupported` / `missing`) depuis la racine de trace sélectionnée, sanitizer chaque span accepté et écrire le lot expurgé dans une transaction. Les spans d’une source non supportée et les spans sans source/session déterminée ne sont pas stockés ; les compter dans `ExportTraceServiceResponse.partial_success.rejected_spans` avec des raisons génériques distinctes, sans jamais conserver ou journaliser le nom brut d’un service inconnu. Répondre `200` avec un `ExportTraceServiceResponse` vide lorsque tous les spans sont acceptés.
 
 Refuser les requêtes non prises en charge avec un statut HTTP explicite. Les erreurs de décodage/stockage sont journalisées avec route, statut et contexte seulement ; aucune valeur de payload n'est enregistrée. `close()` doit être idempotent et attendre la fermeture de la socket.
+
+Refuser en `403`, avant tout routage, une requête dont l'en-tête `Host` n'est pas `127.0.0.1` ou `localhost` avec le port d'écoute, ou qui porte un en-tête `Origin`. Les refus `415` (content-type, par exemple un export JSON) et `413` sont journalisés sans valeur de payload et notifiés au service par `onExportRejected` pour être affichés dans `errorMessage` jusqu'au prochain export entièrement accepté.
+
+Le receiver résout le contexte entre requêtes via `agent-trace-correlator.ts` : racine de trace dans la requête ou mémorisée, sinon attente en mémoire des spans déjà expurgés pendant au plus 30 s (2 000 spans, 16 MiB) avec une réponse `200` sans rejet. À expiration, dépassement des bornes ou fermeture, un span garde le contexte explicite de son ascendance attestée, sinon il est abandonné et signalé par `onPartialSuccess` (`unresolvedTraceRootSpans`). `discardPending()` oublie les spans en attente lors d'une suppression manuelle.
 
 - [ ] **Step 4: Exécuter les tests de réception et committer**
 
@@ -973,12 +986,13 @@ La page montre la trace sélectionnée avec `AgentTraceTree`, les états `not-co
 {
   "github.copilot.chat.otel.enabled": true,
   "github.copilot.chat.otel.exporterType": "otlp-http",
+  "github.copilot.chat.otel.protocol": "http/protobuf",
   "github.copilot.chat.otel.otlpEndpoint": "http://127.0.0.1:4318",
   "github.copilot.chat.otel.captureContent": true
 }
 ```
 
-Pour Copilot CLI, afficher les variables `COPILOT_OTEL_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` et `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`. L'onglet ne modifie aucun réglage VS Code/CLI automatiquement. Les libellés suivent les noms approuvés **Traces agents** et **Voir la trace**.
+Ce bloc est présenté comme des **User settings** VS Code : ces réglages ont une portée application, sont ignorés dans les réglages de workspace et nécessitent un rechargement de VS Code. Pour Copilot CLI, afficher les variables `COPILOT_OTEL_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318`, `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` et `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true` ; les deux clients exportent en JSON par défaut. L'onglet ne modifie aucun réglage VS Code/CLI automatiquement. Les libellés suivent les noms approuvés **Traces agents** et **Voir la trace** ; chaque action **Voir la trace** a un nom accessible distinct qui commence par ce libellé.
 
 - [ ] **Step 4: Brancher Sidebar, App et détail projet**
 

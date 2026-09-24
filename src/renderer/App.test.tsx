@@ -549,7 +549,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Voir la trace' }));
+    await user.click(screen.getByRole('button', { name: /^Voir la trace/ }));
 
     expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
     expect(screen.getAllByText('copilot-cli').length).toBeGreaterThan(0);

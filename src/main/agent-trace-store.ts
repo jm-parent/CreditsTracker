@@ -12,7 +12,7 @@ import { resolveDefaultDbPath } from './db';
 const COLLECTION_ENABLED_KEY = 'collectionEnabled';
 const RETENTION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const VALID_SOURCES = new Set(['vscode', 'copilot-cli']);
-const VALID_CATEGORIES = new Set(['agent', 'llm', 'tool', 'skill', 'shell', 'hook', 'other']);
+const VALID_CATEGORIES = new Set(['agent', 'llm', 'tool', 'skill', 'shell', 'mcp', 'hook', 'other']);
 const VALID_CONTENT_STATES = new Set([
   'unavailable',
   'stored',
@@ -332,7 +332,11 @@ function isIncompleteToolSpan(span: AgentTraceSpan): boolean {
 }
 
 function isToolLikeCategory(category: AgentTraceCategory): boolean {
-  return category === 'tool' || category === 'shell' || category === 'skill' || category === 'hook';
+  return category === 'tool'
+    || category === 'shell'
+    || category === 'skill'
+    || category === 'mcp'
+    || category === 'hook';
 }
 
 function compareSpans(left: AgentTraceSpan, right: AgentTraceSpan): number {

@@ -25,21 +25,33 @@ const SPAN_ATTRIBUTE_ALLOWLIST = new Set([
   'gen_ai.request.model',
   'gen_ai.response.model',
   'gen_ai.tool.name',
+  'gen_ai.tool.type',
   'gen_ai.tool.call.id',
   'gen_ai.tool.call.arguments',
   'gen_ai.tool.call.result',
   'gen_ai.error.type',
+  'error.type',
+  'copilot_chat.parent_chat_session_id',
   'github.copilot.agent.type',
   'github.copilot.tool.parameters.command',
   'github.copilot.tool.parameters.file_path',
   'github.copilot.tool.parameters.skill_name',
+  'github.copilot.tool.parameters.mcp_tool_name',
 ]);
 
 export interface DecodedAgentTraceSpan {
+  /** Trace context taken from the trace root (parentless agent span) decoded in the same request. */
   source: AgentTraceSource | null;
   sourceResolution: DecodedAgentTraceSourceResolution;
   conversationId: string | null;
   sessionId: string | null;
+  /** Whether the trace root that provides the context above was part of the same request. */
+  traceRootInRequest: boolean;
+  /** Source and conversation carried by the span itself, used only when no trace root arrives. */
+  spanSource: AgentTraceSource | null;
+  spanSourceResolution: DecodedAgentTraceSourceResolution;
+  spanConversationId: string | null;
+  spanParentConversationId: string | null;
   traceId: string;
   spanId: string;
   parentSpanId: string | null;
@@ -98,6 +110,7 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
   const category = classifySpan(span.name ?? '', attributes, skillName);
   const startedAtNs = normalizeNanoseconds(span.startTimeUnixNano);
   const endedAtNs = normalizeNanoseconds(span.endTimeUnixNano);
+  const spanSource = resolveSource(resourceServiceName);
 
   validateSpanRange(startedAtNs, endedAtNs);
 
@@ -106,9 +119,14 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
     attributes,
     decoded: {
       source: null,
-      sourceResolution: 'missing',
+      sourceResolution: spanSource.resolution,
       conversationId: null,
       sessionId: null,
+      traceRootInRequest: false,
+      spanSource: spanSource.source,
+      spanSourceResolution: spanSource.resolution,
+      spanConversationId: asNonEmptyString(attributes.get('gen_ai.conversation.id')),
+      spanParentConversationId: asNonEmptyString(attributes.get('copilot_chat.parent_chat_session_id')),
       traceId,
       spanId,
       parentSpanId,
@@ -121,7 +139,7 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
       startedAtNs,
       endedAtNs,
       status: decodeStatus(span.status?.code),
-      errorType: asString(attributes.get('gen_ai.error.type')),
+      errorType: asString(attributes.get('gen_ai.error.type')) ?? asString(attributes.get('error.type')),
       toolCallId: asString(attributes.get('gen_ai.tool.call.id')),
       argumentsValue: attributes.has('gen_ai.tool.call.arguments')
         ? attributes.get('gen_ai.tool.call.arguments')
@@ -134,51 +152,39 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
 }
 
 function applyTraceMetadata(group: DecodedSpanEnvelope[]): void {
-  const rootSpan = findRootSpan(group);
-  const { source, resolution } = resolveSource(rootSpan?.resourceServiceName ?? null);
-  const conversationId = asString(rootSpan?.attributes.get('gen_ai.conversation.id'));
-  const sessionId = buildSessionId(source, conversationId);
+  const traceRoot = findTraceRoot(group);
+  if (!traceRoot) {
+    return;
+  }
+
+  const { source, resolution } = resolveSource(traceRoot.resourceServiceName);
+  const conversationId = asNonEmptyString(traceRoot.attributes.get('gen_ai.conversation.id'));
+  const sessionId = buildAgentTraceSessionId(source, conversationId);
 
   for (const envelope of group) {
     envelope.decoded.source = source;
     envelope.decoded.sourceResolution = resolution;
     envelope.decoded.conversationId = conversationId;
     envelope.decoded.sessionId = sessionId;
+    envelope.decoded.traceRootInRequest = true;
   }
 }
 
-function findRootSpan(group: DecodedSpanEnvelope[]): DecodedSpanEnvelope | undefined {
-  const spanIds = new Set(group.map((entry) => entry.decoded.spanId));
-  const rootCandidates = group.filter((entry) => (
-    entry.decoded.parentSpanId === null
-    || !spanIds.has(entry.decoded.parentSpanId)
+// Only a parentless agent span anchors a trace. A span whose parent is merely absent from this
+// request (for example a subagent) must not define the conversation of the whole trace.
+function findTraceRoot(group: DecodedSpanEnvelope[]): DecodedSpanEnvelope | undefined {
+  const parentlessAgents = group.filter((entry) => (
+    entry.decoded.parentSpanId === null && entry.decoded.category === 'agent'
   ));
 
-  return rootCandidates.find((entry) => isRecognizedConversationRoot(entry))
-    ?? rootCandidates.find((entry) => isConversationRoot(entry))
-    ?? rootCandidates.find((entry) => (
-      hasSupportedSource(entry.resourceServiceName)
-      && entry.attributes.has('gen_ai.conversation.id')
-    ))
-    ?? rootCandidates.find((entry) => entry.attributes.has('gen_ai.conversation.id'))
-    ?? rootCandidates.find((entry) => entry.decoded.category === 'agent')
-    ?? rootCandidates.find((entry) => hasSupportedSource(entry.resourceServiceName))
-    ?? rootCandidates[0]
-    ?? group[0];
+  return parentlessAgents.find((entry) => isRecognizedConversationRoot(entry))
+    ?? parentlessAgents.find((entry) => asNonEmptyString(entry.attributes.get('gen_ai.conversation.id')) !== null)
+    ?? parentlessAgents[0];
 }
 
 function isRecognizedConversationRoot(entry: DecodedSpanEnvelope): boolean {
-  return hasSupportedSource(entry.resourceServiceName)
-    && isConversationRoot(entry);
-}
-
-function isConversationRoot(entry: DecodedSpanEnvelope): boolean {
-  return entry.decoded.category === 'agent'
-    && asString(entry.attributes.get('gen_ai.conversation.id')) !== null;
-}
-
-function hasSupportedSource(serviceName: string | null): boolean {
-  return resolveSource(serviceName).resolution === 'supported';
+  return resolveSource(entry.resourceServiceName).resolution === 'supported'
+    && asNonEmptyString(entry.attributes.get('gen_ai.conversation.id')) !== null;
 }
 
 function resolveSource(serviceName: string | null): {
@@ -196,7 +202,7 @@ function resolveSource(serviceName: string | null): {
     : { source: null, resolution: 'unsupported' };
 }
 
-function buildSessionId(
+export function buildAgentTraceSessionId(
   source: AgentTraceSource | null,
   conversationId: string | null,
 ): string | null {
@@ -224,12 +230,21 @@ function classifySpan(
     if (skillName !== null) {
       return 'skill';
     }
+    if (isMcpTool(attributes)) {
+      return 'mcp';
+    }
     if (typeof attributes.get('github.copilot.tool.parameters.command') === 'string') {
       return 'shell';
     }
     return 'tool';
   }
   return 'other';
+}
+
+function isMcpTool(attributes: Map<string, unknown>): boolean {
+  const toolType = asString(attributes.get('gen_ai.tool.type'));
+  return asNonEmptyString(attributes.get('github.copilot.tool.parameters.mcp_tool_name')) !== null
+    || toolType?.toLowerCase() === 'mcp';
 }
 
 function decodeStatus(code: number | null | undefined): 'unset' | 'ok' | 'error' {
@@ -281,7 +296,8 @@ function decodeAnyValue(value: AnyValue): unknown {
           .map((entry) => [entry.key as string, decodeAnyValue(entry.value)]),
       );
     case 'bytesValue':
-      return value.bytesValue == null ? null : Buffer.from(value.bytesValue).toString('base64');
+      // Binary payloads are kept as bytes so the sanitizer fails closed instead of storing an encoding.
+      return value.bytesValue == null ? null : Uint8Array.from(value.bytesValue);
     case 'stringValueStrindex':
       return value.stringValueStrindex ?? null;
     default:
@@ -370,6 +386,10 @@ function groupByTraceId(envelopes: readonly DecodedSpanEnvelope[]): Map<string, 
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 function longToString(value: number | { toString(): string }): string {

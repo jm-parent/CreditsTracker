@@ -140,6 +140,7 @@ describe('createAgentTraceService', () => {
       totalRejectedSpans: 2,
       unsupportedSourceSpans: 1,
       missingSourceSessionSpans: 1,
+      unresolvedTraceRootSpans: 0,
       errorMessage:
         'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
     });
@@ -199,6 +200,7 @@ describe('createAgentTraceService', () => {
       totalRejectedSpans: 2,
       unsupportedSourceSpans: 1,
       missingSourceSessionSpans: 1,
+      unresolvedTraceRootSpans: 0,
       errorMessage:
         'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
     });
@@ -213,6 +215,7 @@ describe('createAgentTraceService', () => {
       totalRejectedSpans: 1,
       unsupportedSourceSpans: 1,
       missingSourceSessionSpans: 0,
+      unresolvedTraceRootSpans: 0,
       errorMessage: 'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
     });
     expect(service.getStatus().errorMessage).toBe(
@@ -225,6 +228,73 @@ describe('createAgentTraceService', () => {
 
     reportPartialSuccess?.(null);
     expect(service.getStatus().errorMessage).toContain('persist failed');
+  });
+
+  it('surfaces export rejections until a clean export arrives, below independent lifecycle errors', async () => {
+    let options: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0] | undefined;
+    const store = makeStoreDouble();
+    const receiver = makeReceiverDouble();
+    const receiverFactory = vi.fn(async (receiverOptions: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0]) => {
+      options = receiverOptions;
+      return receiver;
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory,
+    });
+    const rejectionMessage =
+      'OTLP export rejected (HTTP 415): content type application/json is not supported; '
+      + 'set the exporter protocol to http/protobuf.';
+
+    await service.initialize();
+    await service.setEnabled(true);
+
+    options?.onExportRejected?.({ status: 415, errorMessage: rejectionMessage });
+    expect(service.getStatus()).toEqual({
+      enabled: true,
+      listening: true,
+      endpoint: receiver.endpoint,
+      errorMessage: rejectionMessage,
+    } satisfies AgentTraceCollectionStatus);
+
+    options?.onPartialSuccess?.({
+      totalRejectedSpans: 1,
+      unsupportedSourceSpans: 1,
+      missingSourceSessionSpans: 0,
+      unresolvedTraceRootSpans: 0,
+      errorMessage: 'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
+    });
+    expect(service.getStatus().errorMessage).toBe(rejectionMessage);
+
+    service.clear();
+    expect(service.getStatus().errorMessage).toBe(rejectionMessage);
+
+    options?.onPartialSuccess?.(null);
+    expect(service.getStatus().errorMessage).toBeNull();
+  });
+
+  it('discards spans held by the receiver when stored traces are cleared', async () => {
+    const calls: string[] = [];
+    const store = makeStoreDouble({
+      clear: vi.fn(() => {
+        calls.push('store.clear');
+      }),
+    });
+    const receiver = makeReceiverDouble({
+      discardPending: vi.fn(() => {
+        calls.push('receiver.discardPending');
+      }),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(async () => receiver),
+    });
+
+    await service.initialize();
+    await service.setEnabled(true);
+    service.clear();
+
+    expect(calls).toEqual(['receiver.discardPending', 'store.clear']);
   });
 
   it('auto-starts persisted opt-in, purges every 24 hours, and stops the timer during shutdown', async () => {
@@ -452,6 +522,7 @@ function makeReceiverDouble(overrides: Partial<AgentTraceReceiver> = {}): AgentT
   return {
     endpoint: 'http://127.0.0.1:4318',
     close: vi.fn(async () => undefined),
+    discardPending: vi.fn(),
     ...overrides,
   };
 }

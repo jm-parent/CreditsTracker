@@ -2,6 +2,7 @@ import path from 'node:path';
 import { openAgentTraceStore, type AgentTraceStore } from './agent-trace-store';
 import {
   startAgentTraceReceiver,
+  type AgentTraceExportRejection,
   type AgentTracePartialSuccess,
   type AgentTraceReceiver,
 } from './agent-trace-receiver';
@@ -34,6 +35,7 @@ export class AgentTraceService {
   private lifecycleQueue: Promise<void> = Promise.resolve();
   private shutdownPromise: Promise<void> | null = null;
   private lifecycleErrorMessage: string | null = null;
+  private exportRejectionMessage: string | null = null;
   private partialCoverageMessage: string | null = null;
   private isShutdown = false;
   private status: AgentTraceCollectionStatus = disabledStatus();
@@ -98,6 +100,7 @@ export class AgentTraceService {
     }
 
     try {
+      this.receiver?.discardPending();
       store.clear();
       this.partialCoverageMessage = null;
       this.status = {
@@ -219,6 +222,9 @@ export class AgentTraceService {
         onPartialSuccess: (partialSuccess) => {
           this.recordExportOutcome(partialSuccess);
         },
+        onExportRejected: (rejection) => {
+          this.recordExportRejection(rejection);
+        },
       });
       if (options.persistEnabled) {
         store.setCollectionEnabled(true);
@@ -333,6 +339,17 @@ export class AgentTraceService {
 
   private recordExportOutcome(partialSuccess: AgentTracePartialSuccess | null): void {
     this.partialCoverageMessage = partialSuccess?.errorMessage ?? null;
+    if (partialSuccess === null) {
+      this.exportRejectionMessage = null;
+    }
+    this.status = {
+      ...this.status,
+      errorMessage: this.currentErrorMessage(),
+    };
+  }
+
+  private recordExportRejection(rejection: AgentTraceExportRejection): void {
+    this.exportRejectionMessage = rejection.errorMessage;
     this.status = {
       ...this.status,
       errorMessage: this.currentErrorMessage(),
@@ -340,7 +357,7 @@ export class AgentTraceService {
   }
 
   private currentErrorMessage(): string | null {
-    return this.lifecycleErrorMessage ?? this.partialCoverageMessage;
+    return this.lifecycleErrorMessage ?? this.exportRejectionMessage ?? this.partialCoverageMessage;
   }
 
   private setStatus(status: Omit<AgentTraceCollectionStatus, 'errorMessage'>): void {

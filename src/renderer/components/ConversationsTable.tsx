@@ -12,6 +12,16 @@ export interface ConversationsTableProps {
 }
 
 const CREDIT_DELTA_DURATION_MS = 1_500;
+const SOURCE_LABELS: Record<ConversationSummary['source'], string> = {
+  vscode: 'VS Code',
+  'copilot-cli': 'Copilot CLI',
+};
+
+// Keeps the visible label first so each row's action has a distinct accessible name.
+function describeTraceAction(conversation: ConversationSummary): string {
+  const summary = conversation.summary ?? 'conversation sans résumé';
+  return `Voir la trace : ${summary} — ${SOURCE_LABELS[conversation.source]}, ${conversation.createdAt}`;
+}
 
 export function ConversationsTable({
   conversations,
@@ -67,6 +77,7 @@ export function ConversationsTable({
                 <TableCell>
                   <button
                     type="button"
+                    aria-label={describeTraceAction(conversation)}
                     onClick={() =>
                       onViewTrace({
                         source: conversation.source,

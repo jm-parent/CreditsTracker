@@ -143,6 +143,7 @@ describe('decodeOtlpTraceRequest', () => {
           sourceResolution: 'supported',
           conversationId: 'conversation-1',
           sessionId: 'vscode:conversation-1',
+          traceRootInRequest: true,
           category: 'agent',
           startedAtNs: start,
           endedAtNs: end,
@@ -454,6 +455,128 @@ describe('decodeOtlpTraceRequest', () => {
     await expect(decodePayload(Uint8Array.from([0xff, 0x01, 0x02]))).rejects.toThrow(
       /OTLP trace request/i,
     );
+  });
+
+  it('reads error.type when gen_ai.error.type is absent and classifies MCP tools', async () => {
+    const fixture = structuredClone(OTLP_FIXTURE);
+    fixture.resourceSpans[0].scopeSpans[0].spans = [
+      fixture.resourceSpans[0].scopeSpans[0].spans[0],
+      {
+        traceId,
+        spanId: toolSpanId,
+        parentSpanId: rootSpanId,
+        name: 'execute_tool mcp_github_list_issues',
+        startTimeUnixNano: start,
+        endTimeUnixNano: end,
+        attributes: [
+          { key: 'gen_ai.tool.name', value: { stringValue: 'mcp_github_list_issues' } },
+          { key: 'gen_ai.tool.type', value: { stringValue: 'extension' } },
+          { key: 'github.copilot.tool.parameters.mcp_tool_name', value: { stringValue: 'list_issues' } },
+          { key: 'error.type', value: { stringValue: 'TimeoutError' } },
+        ],
+        status: { code: 2 },
+      },
+      {
+        traceId,
+        spanId: skillSpanId,
+        parentSpanId: rootSpanId,
+        name: 'execute_tool remoteLookup',
+        startTimeUnixNano: start,
+        endTimeUnixNano: end,
+        attributes: [
+          { key: 'gen_ai.tool.name', value: { stringValue: 'remoteLookup' } },
+          { key: 'gen_ai.tool.type', value: { stringValue: 'MCP' } },
+          { key: 'gen_ai.error.type', value: { stringValue: 'tool_failure' } },
+          { key: 'error.type', value: { stringValue: 'Error' } },
+        ],
+      },
+    ];
+
+    const decoded = await decodePayload(encodeFixture(fixture));
+
+    expect(decoded).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        spanId: '5555666677778888',
+        category: 'mcp',
+        status: 'error',
+        errorType: 'TimeoutError',
+      }),
+      expect.objectContaining({
+        spanId: '777788889999aaaa',
+        category: 'mcp',
+        errorType: 'tool_failure',
+      }),
+    ]));
+  });
+
+  it('keeps binary tool payloads as bytes so they are never stored as an encoded string', async () => {
+    const fixture = structuredClone(OTLP_FIXTURE);
+    const toolSpan = fixture.resourceSpans[0].scopeSpans[0].spans[2];
+    toolSpan.attributes = [
+      { key: 'gen_ai.tool.name', value: { stringValue: 'runCommand' } },
+      { key: 'gen_ai.tool.call.result', value: { bytesValue: Buffer.from('binary-secret-bytes') } },
+    ];
+
+    const decoded = await decodePayload(encodeFixture(fixture));
+    const decodedTool = decoded.find((span) => span.spanId === '5555666677778888');
+
+    expect(decodedTool?.result).toBeInstanceOf(Uint8Array);
+    expect(JSON.stringify(decodedTool?.result)).not.toContain(
+      Buffer.from('binary-secret-bytes').toString('base64'),
+    );
+  });
+
+  it('leaves the trace context unresolved when the parentless agent root is not in the request', async () => {
+    const subagentSpanId = Buffer.from('aaaabbbbccccdddd', 'hex');
+    const fixture = structuredClone(OTLP_FIXTURE);
+    fixture.resourceSpans[0].scopeSpans[0].spans = [
+      {
+        traceId,
+        spanId: subagentSpanId,
+        parentSpanId: toolSpanId,
+        name: 'invoke_agent explore',
+        startTimeUnixNano: start,
+        endTimeUnixNano: end,
+        attributes: [
+          { key: 'gen_ai.conversation.id', value: { stringValue: 'subagent-conversation' } },
+          { key: 'copilot_chat.parent_chat_session_id', value: { stringValue: 'conversation-1' } },
+        ],
+      },
+      {
+        traceId,
+        spanId: chatSpanId,
+        parentSpanId: subagentSpanId,
+        name: 'chat gpt-5.4',
+        startTimeUnixNano: start,
+        endTimeUnixNano: end,
+      },
+    ];
+
+    const decoded = await decodePayload(encodeFixture(fixture));
+
+    expect(decoded).toEqual([
+      expect.objectContaining({
+        spanId: 'aaaabbbbccccdddd',
+        category: 'agent',
+        source: null,
+        conversationId: null,
+        sessionId: null,
+        traceRootInRequest: false,
+        spanSource: 'vscode',
+        spanSourceResolution: 'supported',
+        spanConversationId: 'subagent-conversation',
+        spanParentConversationId: 'conversation-1',
+      }),
+      expect.objectContaining({
+        spanId: '2222333344445555',
+        source: null,
+        sessionId: null,
+        traceRootInRequest: false,
+        spanSource: 'vscode',
+        spanConversationId: null,
+        spanParentConversationId: null,
+      }),
+    ]);
   });
 
   it('throws for invalid trace or span ID lengths', async () => {

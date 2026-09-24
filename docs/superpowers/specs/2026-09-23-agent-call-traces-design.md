@@ -104,12 +104,14 @@ Copilot fournis par la source :
 | Appel d'outil | `execute_tool`, `gen_ai.tool.name` |
 | Skill | `github.copilot.tool.parameters.skill_name` |
 | Shell | outil shell et attribut de commande, si fourni |
-| MCP | type d'outil et nom d'outil MCP, si fournis |
+| MCP | type d'outil et nom d'outil MCP, si fournis (`gen_ai.tool.type` = `mcp` ou `github.copilot.tool.parameters.mcp_tool_name`) |
 | Autre | opération ou outil non reconnu |
 | Hook | `execute_hook`, lorsqu'il fait partie de la trace collectée |
 
 Les appels LLM peuvent inclure un nombre de tokens de raisonnement si la source
-le fournit. Cette métrique n'est pas le contenu du raisonnement.
+le fournit. Cette métrique n'est pas le contenu du raisonnement. Le type
+d'erreur est lu dans `gen_ai.error.type`, puis dans `error.type` émis par
+Copilot Chat.
 
 ## Architecture et flux de données
 
@@ -119,10 +121,18 @@ le fournit. Cette métrique n'est pas le contenu du raisonnement.
 2. L'application démarre un récepteur OTLP HTTP lié uniquement à l'interface
    loopback. Elle fournit une configuration ou des instructions copiables pour
    VS Code et Copilot CLI ; elle ne modifie pas leurs réglages externes sans
-   consentement distinct.
+   consentement distinct. Le récepteur n'accepte que OTLP/HTTP Protobuf : les
+   instructions règlent donc `github.copilot.chat.otel.protocol` et
+   `OTEL_EXPORTER_OTLP_PROTOCOL` sur `http/protobuf`, car les deux clients
+   exportent en JSON par défaut. Les réglages `github.copilot.chat.otel.*` ne
+   sont lus que dans les User settings de VS Code (portée application) et
+   nécessitent un rechargement de VS Code.
 3. Les clients exportent leurs traces vers ce récepteur. La configuration de
    contenu est nécessaire pour recevoir les arguments/résultats, mais peut
-   également faire transiter des prompts/réponses complets.
+   également faire transiter des prompts/réponses complets. Un export refusé
+   avant décodage (format JSON, corps de plus de 8 MiB) est journalisé sans
+   valeur de payload et signalé dans l'état de collecte jusqu'au prochain
+   export entièrement accepté.
 4. Le récepteur transforme les attributs en un modèle interne à liste
    autorisée, supprime les champs non requis, masque les secrets connus et
    tronque les valeurs longues avant de les persister.
@@ -133,10 +143,14 @@ le fournit. Cette métrique n'est pas le contenu du raisonnement.
    l'arbre à partir des identifiants OTel.
 
 Le récepteur ne transmet pas les traces à un collecteur distant. Il ne stocke
-ni le corps OTLP brut ni les métriques OTel non nécessaires à l'arbre. Les
-appels d'outils issus des hooks CLI ne sont ajoutés qu'en complément d'une
-lacune confirmée. Si une même invocation est identifiée dans OTel et dans un
-hook, OTel reste l'enregistrement canonique et le hook ne crée pas un doublon.
+ni le corps OTLP brut ni les métriques OTel non nécessaires à l'arbre. Il
+refuse toute requête dont l'en-tête `Host` n'est pas `127.0.0.1` ou
+`localhost` (avec son port d'écoute) ainsi que toute requête portant un
+en-tête `Origin`, afin qu'une page web ne puisse pas injecter de spans par
+rebinding DNS. Les appels d'outils issus des hooks CLI ne sont ajoutés qu'en
+complément d'une lacune confirmée. Si une même invocation est identifiée dans
+OTel et dans un hook, OTel reste l'enregistrement canonique et le hook ne crée
+pas un doublon.
 
 ### Modèle normalisé
 
@@ -175,6 +189,21 @@ trace. Cet héritage ne crée pas de parent : tout span non-agent sans
 `parent_span_id`, ou dont le parent est absent, reste une racine non reliée et
 marque la session comme partielle.
 
+La racine d'une trace est le span agent sans `parent_span_id` ; un sous-agent
+dont le parent n'est pas encore reçu ne définit jamais la conversation de la
+trace. Les exporteurs envoient les spans par lots et la racine `invoke_agent`
+se termine en dernier : les spans reçus avant leur racine sont donc gardés en
+mémoire, déjà expurgés, au plus 30 secondes et dans des bornes de nombre
+(2 000 spans) et de taille (16 MiB). Le récepteur répond alors `200` sans span
+rejeté. À l'arrivée de la racine, ils héritent de son contexte, que le
+récepteur mémorise pour les spans plus tardifs de la même trace. À expiration
+ou dépassement des bornes, un span garde le contexte explicite porté par sa
+propre ascendance attestée (`gen_ai.conversation.id`, ou
+`copilot_chat.parent_chat_session_id` pour un sous-agent) ; sans contexte
+explicite, il est abandonné et la couverture partielle est signalée dans
+l'application. Désactiver la collecte ou fermer l'application applique cette
+même règle ; supprimer les traces oublie aussi les spans en attente.
+
 Des traces provenant de sources différentes ne sont pas regroupées simplement
 parce qu'elles se sont produites dans le même dépôt ou à une heure proche.
 Elles ne peuvent être réunies sous une même session qu'après validation d'un
@@ -204,7 +233,12 @@ d'une corrélation exacte.
   première version doit reconnaître au minimum les formats de jetons GitHub,
   les identifiants de clés AWS, les valeurs `Bearer`, les blocs de clés
   privées PEM et les paires clé/valeur dont la clé contient `token`, `secret`,
-  `password`, `api_key` ou `authorization`.
+  `password`, `api_key` ou `authorization`. Une clé est reconnue qu'elle soit
+  préfixée, suffixée ou entre guillemets (`GITHUB_TOKEN=`, `client_secret:`,
+  `"password": "…"`), et les clés JSON sont normalisées sans `_`, `-` ni casse
+  (`apiKey`). Le JSON encodé dans une chaîne est expurgé comme une structure.
+  Un en-tête ou pied de clé privée sans sa borne correspondante rend le
+  contenu omis. Les valeurs binaires sont omises, jamais encodées.
 - Après expurgation, chaque champ d'argument ou de résultat est limité à
   32 KiB UTF-8. Un contenu plus long est tronqué et marqué comme tel.
   Le masquage n'est pas considéré comme une garantie de détection de toute
@@ -269,6 +303,8 @@ complémentaires qu'ils peuvent fournir avec fiabilité.
   lorsque ces IDs ou le parent manquent.
 - Appels frères parallèles, ordre chronologique stable, spans d'échec,
   spans incomplets et spans reçus plusieurs fois.
+- Enfants exportés avant leur racine dans des requêtes distinctes, racine
+  reçue avant des spans tardifs, expiration et bornes de l'attente en mémoire.
 - Persistance idempotente dans le stockage local, sans écriture dans la base
   source du CLI.
 
@@ -282,7 +318,9 @@ complémentaires qu'ils peuvent fournir avec fiabilité.
   conservation des métadonnées non sensibles seulement.
 - Troncature explicite des contenus dépassant la limite configurée.
 - Purge des traces âgées de plus de 30 jours et suppression manuelle.
-- Vérification que le récepteur refuse un bind ou une destination non locale.
+- Vérification que le récepteur refuse un bind ou une destination non locale,
+  un en-tête `Host` non loopback, une requête portant `Origin`, et qu'il
+  signale les exports JSON (415) ou trop volumineux (413).
 
 ### Interface
 
@@ -290,6 +328,8 @@ complémentaires qu'ils peuvent fournir avec fiabilité.
 - Détails repliés pour arguments et résultats expurgés.
 - Traces non configurées, partielles, sans parent, en erreur et sans contenu.
 - Indication de masquage/troncature et absence de texte de prompt/réponse.
+- Hiérarchie exposée par des listes imbriquées natives et noms accessibles
+  distincts pour chaque action **Voir la trace** et chaque bouton de détail.
 
 ## Critères d'acceptation
 

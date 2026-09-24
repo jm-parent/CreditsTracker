@@ -33,35 +33,35 @@ export function AgentTraceTree({ session }: AgentTraceTreeProps) {
           {turns.length === 0 ? (
             <p className="text-sm text-muted-foreground">No spans stored for this session.</p>
           ) : (
-            <div role="tree" aria-label="Agent trace spans" className="flex flex-col gap-4">
+            <section aria-label="Agent trace spans" className="flex flex-col gap-4">
               {turns.map((turn) => {
                 const turnStart = turn.roots[0]?.span.startedAt ?? null;
+                const headingId = `agent-trace-turn-heading-${turn.traceId}`;
                 return (
-                  <section
+                  <div
                     key={turn.traceId}
                     data-testid={`agent-trace-turn-${turn.traceId}`}
                     className="rounded-lg border border-border bg-card p-4"
                   >
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-medium text-foreground">{turn.traceId}</h3>
+                      <h3 id={headingId} className="text-sm font-medium text-foreground">{turn.traceId}</h3>
                       <span className="text-xs text-muted-foreground">
                         {turn.roots.length} root{turn.roots.length === 1 ? '' : 's'}
                       </span>
                     </div>
-                    <ul className="flex flex-col gap-3">
+                    <ul aria-labelledby={headingId} className="flex flex-col gap-3">
                       {turn.roots.map((node) => (
                         <AgentTraceTreeNodeView
                           key={node.span.spanId}
                           node={node}
-                          depth={1}
                           turnStart={turnStart}
                         />
                       ))}
                     </ul>
-                  </section>
+                  </div>
                 );
               })}
-            </div>
+            </section>
           )}
         </CardContent>
       </Card>
@@ -71,11 +71,11 @@ export function AgentTraceTree({ session }: AgentTraceTreeProps) {
 
 interface AgentTraceTreeNodeViewProps {
   node: AgentTraceNode;
-  depth: number;
   turnStart: string | null;
 }
 
-function AgentTraceTreeNodeView({ node, depth, turnStart }: AgentTraceTreeNodeViewProps) {
+// Nested lists convey the hierarchy natively; an ARIA tree would also require roving keyboard focus.
+function AgentTraceTreeNodeView({ node, turnStart }: AgentTraceTreeNodeViewProps) {
   const { span } = node;
   const [expanded, setExpanded] = useState(false);
   const detailsId = `agent-trace-details-${span.traceId}-${span.spanId}`;
@@ -85,8 +85,6 @@ function AgentTraceTreeNodeView({ node, depth, turnStart }: AgentTraceTreeNodeVi
 
   return (
     <li
-      role="treeitem"
-      aria-level={depth}
       className={cn(
         'rounded-md border border-border/80 bg-background p-3',
         node.unparented && 'border-amber-500/50',
@@ -117,6 +115,7 @@ function AgentTraceTreeNodeView({ node, depth, turnStart }: AgentTraceTreeNodeVi
               type="button"
               aria-expanded={expanded}
               aria-controls={detailsId}
+              aria-label={`${span.name} details at ${offsetLabel}`}
               className="rounded-md border border-border px-2 py-1 text-xs text-foreground hover:bg-muted"
               onClick={() => setExpanded((current) => !current)}
             >
@@ -151,12 +150,14 @@ function AgentTraceTreeNodeView({ node, depth, turnStart }: AgentTraceTreeNodeVi
         )}
 
         {node.children.length > 0 && (
-          <ul role="group" className="ml-4 flex flex-col gap-3 border-l border-border pl-4">
+          <ul
+            aria-label={`Calls under ${span.name}`}
+            className="ml-4 flex flex-col gap-3 border-l border-border pl-4"
+          >
             {node.children.map((child) => (
               <AgentTraceTreeNodeView
                 key={child.span.spanId}
                 node={child}
-                depth={depth + 1}
                 turnStart={turnStart}
               />
             ))}

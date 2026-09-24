@@ -15,6 +15,7 @@ const EXPLICIT_TOOL_CHILD_CATEGORIES = new Set<AgentTraceCategory>([
   'tool',
   'skill',
   'shell',
+  'mcp',
   'hook',
   'other',
 ]);

@@ -14,12 +14,14 @@ const DEFAULT_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 const VSCODE_SNIPPET = `{
   "github.copilot.chat.otel.enabled": true,
   "github.copilot.chat.otel.exporterType": "otlp-http",
+  "github.copilot.chat.otel.protocol": "http/protobuf",
   "github.copilot.chat.otel.otlpEndpoint": "http://127.0.0.1:4318",
   "github.copilot.chat.otel.captureContent": true
 }`;
 
 const CLI_SNIPPET = `COPILOT_OTEL_ENABLED=true
 OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`;
 
 export function AgentTracesPage({ selection }: AgentTracesPageProps) {
@@ -121,12 +123,17 @@ export function AgentTracesPage({ selection }: AgentTracesPageProps) {
           <CardTitle className="text-base text-foreground">Configure local exporters</CardTitle>
           <p className="text-sm text-muted-foreground">
             Loopback-only instructions for VS Code and Copilot CLI. The app does not write these
-            settings for you.
+            settings for you. Both exporters must send OTLP/HTTP protobuf (http/protobuf): the
+            receiver rejects JSON exports and reports the rejection in the collection status.
           </p>
         </CardHeader>
         <CardContent className="grid gap-4 lg:grid-cols-2">
           <section className="space-y-2">
-            <h3 className="text-sm font-medium text-foreground">VS Code settings.json</h3>
+            <h3 className="text-sm font-medium text-foreground">VS Code User settings (settings.json)</h3>
+            <p className="text-xs text-muted-foreground">
+              Add these to your User settings (Preferences: Open User Settings (JSON)). VS Code
+              ignores these settings in workspace settings. Reload VS Code after changing them.
+            </p>
             <pre
               tabIndex={0}
               className="overflow-x-auto rounded-md border border-border bg-muted p-3 text-xs text-foreground"
@@ -136,6 +143,9 @@ export function AgentTracesPage({ selection }: AgentTracesPageProps) {
           </section>
           <section className="space-y-2">
             <h3 className="text-sm font-medium text-foreground">Copilot CLI environment</h3>
+            <p className="text-xs text-muted-foreground">
+              Set these environment variables before starting copilot.
+            </p>
             <pre
               tabIndex={0}
               className="overflow-x-auto rounded-md border border-border bg-muted p-3 text-xs text-foreground"

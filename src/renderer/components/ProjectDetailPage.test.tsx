@@ -285,7 +285,7 @@ describe('ProjectDetailPage', () => {
     );
 
     await screen.findByText('Fixed the login bug');
-    await user.click(screen.getByRole('button', { name: 'Voir la trace' }));
+    await user.click(screen.getByRole('button', { name: /^Voir la trace : Fixed the login bug/ }));
 
     expect(onViewTrace).toHaveBeenCalledWith({
       source: 'copilot-cli',

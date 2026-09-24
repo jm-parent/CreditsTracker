@@ -220,17 +220,71 @@ describe('startAgentTraceReceiver', () => {
     expect(await response.text()).toBe('');
   });
 
-  it('rejects unsupported content types', async () => {
-    const receiver = await startReceiver({ store: openMemoryStore(), port: 0 });
+  it('rejects unsupported content types and reports the wire-format mismatch without payload values', async () => {
+    const onExportRejected = vi.fn();
+    const onPartialSuccess = vi.fn();
+    const receiver = await startReceiver({ store: openMemoryStore(), port: 0, onExportRejected, onPartialSuccess });
 
     const response = await fetch(`${receiver.endpoint}/v1/traces`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: '{}',
+      body: '{"resourceSpans":[{"token":"json-payload-secret"}]}',
     });
 
     expect(response.status).toBe(415);
     expect(await response.text()).toBe('');
+    expect(onExportRejected).toHaveBeenCalledWith({
+      status: 415,
+      errorMessage:
+        'OTLP export rejected (HTTP 415): content type application/json is not supported; '
+        + 'set the exporter protocol to http/protobuf.',
+    });
+    expect(onPartialSuccess).not.toHaveBeenCalled();
+
+    const [entry] = getLogEntries();
+    expect(entry).toMatchObject({ level: 'warn', scope: 'agent-trace-receiver' });
+    expect(entry.detail).toContain('"status":415');
+    expect(entry.detail).toContain('"contentType":"application/json"');
+    expect(JSON.stringify(getLogEntries())).not.toContain('json-payload-secret');
+  });
+
+  it('rejects requests whose Host header is not a loopback name for this receiver', async () => {
+    const insertSpans = vi.fn();
+    const onExportRejected = vi.fn();
+    const receiver = await startReceiver({ store: makeStoreDouble({ insertSpans }), port: 0, onExportRejected });
+    const port = new URL(receiver.endpoint).port;
+
+    const rebound = await sendRawRequest(receiver.endpoint, {
+      headers: { host: `attacker.example:${port}`, 'content-type': 'application/x-protobuf' },
+      body: encodeRootOnlyRequestBytes('d0112233445566778899aabbccddeeff'),
+    });
+    const wrongPort = await sendRawRequest(receiver.endpoint, {
+      headers: { host: '127.0.0.1:1', 'content-type': 'application/json' },
+      body: Buffer.from('{}'),
+    });
+    const localhost = await sendRawRequest(receiver.endpoint, {
+      headers: { host: `localhost:${port}` },
+      method: 'GET',
+    });
+
+    expect(rebound.statusCode).toBe(403);
+    expect(wrongPort.statusCode).toBe(403);
+    expect(localhost.statusCode).toBe(405);
+    expect(insertSpans).not.toHaveBeenCalled();
+    expect(onExportRejected).not.toHaveBeenCalled();
+  });
+
+  it('rejects browser requests that carry an Origin header', async () => {
+    const insertSpans = vi.fn();
+    const receiver = await startReceiver({ store: makeStoreDouble({ insertSpans }), port: 0 });
+
+    const response = await sendRawRequest(receiver.endpoint, {
+      headers: { origin: 'https://attacker.example', 'content-type': 'application/x-protobuf' },
+      body: encodeRootOnlyRequestBytes('e0112233445566778899aabbccddeeff'),
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(insertSpans).not.toHaveBeenCalled();
   });
 
   it('returns 400 for malformed protobuf without logging payload values', async () => {
@@ -549,6 +603,7 @@ describe('startAgentTraceReceiver', () => {
       totalRejectedSpans: 2,
       unsupportedSourceSpans: 1,
       missingSourceSessionSpans: 1,
+      unresolvedTraceRootSpans: 0,
       errorMessage:
         'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
     });
@@ -588,7 +643,8 @@ describe('startAgentTraceReceiver', () => {
   });
 
   it('returns 413 when a chunked request body exceeds the 8 MiB limit', async () => {
-    const receiver = await startReceiver({ store: openMemoryStore(), port: 0 });
+    const onExportRejected = vi.fn();
+    const receiver = await startReceiver({ store: openMemoryStore(), port: 0, onExportRejected });
 
     const response = await sendChunkedRequest(receiver.endpoint, [
       Buffer.alloc(BODY_LIMIT_BYTES, 0x61),
@@ -597,6 +653,10 @@ describe('startAgentTraceReceiver', () => {
 
     expect(response.statusCode).toBe(413);
     expect(response.body.length).toBe(0);
+    expect(onExportRejected).toHaveBeenCalledWith({
+      status: 413,
+      errorMessage: 'OTLP export rejected (HTTP 413): the request body exceeded the 8 MiB limit.',
+    });
   });
 
   it('closes an oversized in-flight stream promptly so shutdown does not hang on the socket', async () => {
@@ -620,6 +680,226 @@ describe('startAgentTraceReceiver', () => {
       closedPromise.then(() => 'closed'),
       delay(500).then(() => 'timed-out'),
     ])).resolves.toBe('closed');
+  });
+
+  it('holds children exported before their trace root and stores them once the root arrives', async () => {
+    const store = openMemoryStore();
+    const onPartialSuccess = vi.fn();
+    const receiver = await startReceiver({ store, port: 0, onPartialSuccess });
+    const traceId = 'f0112233445566778899aabbccddeeff';
+
+    const childrenResponse = await postTraces(receiver, encodeTraceRequest({
+      serviceName: 'copilot-chat',
+      spans: [
+        makeSpan({
+          traceId,
+          spanId: '2222333344445555',
+          parentSpanId: '1111222233334444',
+          name: 'chat gpt-5.4',
+          attributes: [attribute('gen_ai.request.model', 'gpt-5.4')],
+        }),
+        makeSpan({
+          traceId,
+          spanId: '5555666677778888',
+          parentSpanId: '2222333344445555',
+          name: 'execute_tool runCommand',
+          attributes: [
+            attribute('gen_ai.tool.name', 'runCommand'),
+            attribute('gen_ai.tool.call.arguments', '{"command":"echo ok","token":"held-secret"}'),
+            attribute('gen_ai.tool.call.result', 'ok'),
+          ],
+        }),
+      ],
+    }));
+
+    expect(childrenResponse.status).toBe(200);
+    expect(decodeTraceResponse(new Uint8Array(await childrenResponse.arrayBuffer())).partialSuccess).toBeNull();
+    expect(store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' }).availability)
+      .toBe('not-collected');
+    expect(onPartialSuccess).not.toHaveBeenCalled();
+
+    const rootResponse = await postTraces(receiver, encodeRootOnlyRequest(traceId));
+
+    expect(rootResponse.status).toBe(200);
+    const session = store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' });
+    expect(session.availability).toBe('available');
+    expect(session.spans.map((span) => [span.spanId, span.parentSpanId])).toEqual([
+      ['1111222233334444', null],
+      ['2222333344445555', '1111222233334444'],
+      ['5555666677778888', '2222333344445555'],
+    ]);
+    expect(JSON.stringify(session.spans)).not.toContain('held-secret');
+    expect(onPartialSuccess).toHaveBeenCalledTimes(1);
+    expect(onPartialSuccess).toHaveBeenCalledWith(null);
+  });
+
+  it('attributes spans exported after their trace root to the remembered conversation', async () => {
+    const store = openMemoryStore();
+    const receiver = await startReceiver({ store, port: 0 });
+    const traceId = 'f1112233445566778899aabbccddeeff';
+
+    await postTraces(receiver, encodeRootOnlyRequest(traceId));
+    const lateResponse = await postTraces(receiver, encodeTraceRequest({
+      serviceName: 'copilot-chat',
+      spans: [
+        makeSpan({
+          traceId,
+          spanId: '9999aaaabbbbcccc',
+          parentSpanId: '1111222233334444',
+          name: 'execute_hook post_tool',
+          attributes: [],
+        }),
+      ],
+    }));
+
+    expect(lateResponse.status).toBe(200);
+    expect(store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' }).spans.map((span) => span.spanId))
+      .toEqual(['1111222233334444', '9999aaaabbbbcccc']);
+  });
+
+  it('stores held spans with their attested context and reports dropped spans when the root never arrives', async () => {
+    const store = openMemoryStore();
+    const onPartialSuccess = vi.fn();
+    const receiver = await startReceiver({
+      store,
+      port: 0,
+      onPartialSuccess,
+      correlation: { pendingTtlMs: 50 },
+    });
+    const traceId = 'f2112233445566778899aabbccddeeff';
+
+    const response = await postTraces(receiver, encodeTraceRequest({
+      serviceName: 'copilot-chat',
+      spans: [
+        makeSpan({
+          traceId,
+          spanId: '2222333344445555',
+          parentSpanId: '1111222233334444',
+          name: 'chat gpt-5.4',
+          attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+        }),
+        makeSpan({
+          traceId,
+          spanId: '5555666677778888',
+          parentSpanId: '2222333344445555',
+          name: 'execute_tool runCommand',
+          attributes: [attribute('gen_ai.tool.name', 'runCommand')],
+        }),
+        makeSpan({
+          traceId,
+          spanId: '6666777788889999',
+          name: 'execute_tool lonely',
+          attributes: [attribute('gen_ai.tool.name', 'lonely')],
+        }),
+      ],
+    }));
+
+    expect(response.status).toBe(200);
+    expect(decodeTraceResponse(new Uint8Array(await response.arrayBuffer())).partialSuccess).toBeNull();
+
+    await vi.waitFor(() => expect(onPartialSuccess).toHaveBeenCalled(), { timeout: 2_000 });
+
+    expect(onPartialSuccess).toHaveBeenCalledWith({
+      totalRejectedSpans: 1,
+      unsupportedSourceSpans: 0,
+      missingSourceSessionSpans: 0,
+      unresolvedTraceRootSpans: 1,
+      errorMessage:
+        'partial trace coverage: rejected 1 span(s): 1 without a trace root or conversation context after 50 ms',
+    });
+    const session = store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' });
+    expect(session.availability).toBe('partial');
+    expect(session.spans.map((span) => span.spanId)).toEqual(['2222333344445555', '5555666677778888']);
+  });
+
+  it('flushes held spans through the attested-context fallback when the receiver closes', async () => {
+    const store = openMemoryStore();
+    const receiver = await startReceiver({ store, port: 0 });
+    const traceId = 'f3112233445566778899aabbccddeeff';
+
+    await postTraces(receiver, encodeTraceRequest({
+      serviceName: 'copilot-chat',
+      spans: [
+        makeSpan({
+          traceId,
+          spanId: '2222333344445555',
+          parentSpanId: '1111222233334444',
+          name: 'chat gpt-5.4',
+          attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+        }),
+      ],
+    }));
+    expect(store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' }).spans).toHaveLength(0);
+
+    await receiver.close();
+
+    expect(store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' }).spans.map((span) => span.spanId))
+      .toEqual(['2222333344445555']);
+  });
+
+  it('discards held spans on demand so deleted traces do not reappear later', async () => {
+    const store = openMemoryStore();
+    const receiver = await startReceiver({ store, port: 0 });
+    const traceId = 'f4112233445566778899aabbccddeeff';
+
+    await postTraces(receiver, encodeTraceRequest({
+      serviceName: 'copilot-chat',
+      spans: [
+        makeSpan({
+          traceId,
+          spanId: '2222333344445555',
+          parentSpanId: '1111222233334444',
+          name: 'chat gpt-5.4',
+          attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+        }),
+      ],
+    }));
+    receiver.discardPending();
+    await postTraces(receiver, encodeRootOnlyRequest(traceId));
+
+    expect(store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' }).spans.map((span) => span.spanId))
+      .toEqual(['1111222233334444']);
+  });
+
+  it('omits binary tool payloads instead of storing an encoded copy', async () => {
+    const store = openMemoryStore();
+    const receiver = await startReceiver({ store, port: 0 });
+    const traceId = 'f5112233445566778899aabbccddeeff';
+    const binary = Buffer.from('binary-secret-value');
+
+    const response = await postTraces(receiver, encodeTraceRequest({
+      serviceName: 'copilot-chat',
+      spans: [
+        makeSpan({
+          traceId,
+          spanId: '1111222233334444',
+          name: 'invoke_agent copilot',
+          attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+        }),
+        makeSpan({
+          traceId,
+          spanId: '5555666677778888',
+          parentSpanId: '1111222233334444',
+          name: 'execute_tool readImage',
+          attributes: [
+            attribute('gen_ai.tool.name', 'readImage'),
+            attribute('gen_ai.tool.call.arguments', '{"path":"image.png"}'),
+            { key: 'gen_ai.tool.call.result', value: { bytesValue: Uint8Array.from(binary) } },
+          ],
+        }),
+      ],
+    }));
+
+    expect(response.status).toBe(200);
+    const [, toolSpan] = store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' }).spans;
+    expect(toolSpan).toMatchObject({
+      spanId: '5555666677778888',
+      argumentsJson: null,
+      resultText: null,
+      contentState: 'omitted',
+    });
+    expect(JSON.stringify(toolSpan)).not.toContain(binary.toString('base64'));
+    expect(JSON.stringify(toolSpan)).not.toContain('binary-secret-value');
   });
 
   it('fails to start when the requested loopback port is already in use', async () => {
@@ -693,6 +973,10 @@ function encodeTraceRequest(input: {
     scopeSpans: Array<{ spans: ReturnType<typeof makeSpan>[] }>;
   }>;
 }): BodyInit {
+  return encodeTraceRequestBytes(input) as unknown as BodyInit;
+}
+
+function encodeTraceRequestBytes(input: Parameters<typeof encodeTraceRequest>[0]): Buffer {
   const resourceSpans = input.resourceSpans ?? [{
     resource: {
       attributes: [attribute('service.name', input.serviceName ?? 'copilot-chat')],
@@ -703,7 +987,51 @@ function encodeTraceRequest(input: {
   const payload = ExportTraceServiceRequest.encode(
     ExportTraceServiceRequest.fromObject({ resourceSpans }),
   ).finish();
-  return Buffer.from(payload) as unknown as BodyInit;
+  return Buffer.from(payload);
+}
+
+function encodeRootOnlyRequest(traceId: string): BodyInit {
+  return encodeRootOnlyRequestBytes(traceId) as unknown as BodyInit;
+}
+
+function encodeRootOnlyRequestBytes(traceId: string): Buffer {
+  return encodeTraceRequestBytes({
+    serviceName: 'copilot-chat',
+    spans: [
+      makeSpan({
+        traceId,
+        spanId: '1111222233334444',
+        name: 'invoke_agent copilot',
+        attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+      }),
+    ],
+  });
+}
+
+function postTraces(receiver: Receiver, body: BodyInit): Promise<Response> {
+  return fetch(`${receiver.endpoint}/v1/traces`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-protobuf' },
+    body,
+  });
+}
+
+function sendRawRequest(endpoint: string, input: {
+  method?: string;
+  headers: Record<string, string>;
+  body?: Buffer;
+}): Promise<{ statusCode: number; body: Buffer }> {
+  const url = new URL(`${endpoint}/v1/traces`);
+  const request = http.request({
+    hostname: url.hostname,
+    port: url.port,
+    path: url.pathname,
+    method: input.method ?? 'POST',
+    headers: input.headers,
+  });
+  const responsePromise = readStreamingResponse(request);
+  request.end(input.body);
+  return responsePromise;
 }
 
 function makeSpan(input: {
@@ -711,7 +1039,7 @@ function makeSpan(input: {
   spanId: string;
   parentSpanId?: string;
   name: string;
-  attributes: ReturnType<typeof attribute>[];
+  attributes: OtlpAttribute[];
   startTimeUnixNano?: string;
   endTimeUnixNano?: string;
   statusCode?: number;
@@ -728,7 +1056,12 @@ function makeSpan(input: {
   };
 }
 
-function attribute(key: string, stringValue: string) {
+interface OtlpAttribute {
+  key: string;
+  value: { stringValue?: string; bytesValue?: Uint8Array };
+}
+
+function attribute(key: string, stringValue: string): OtlpAttribute {
   return {
     key,
     value: { stringValue },

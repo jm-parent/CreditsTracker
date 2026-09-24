@@ -90,15 +90,19 @@ function makeSession(): AgentTraceSession {
 }
 
 describe('AgentTraceTree', () => {
-  it('renders an accessible tree with collapsed content by default and toggles details on demand', () => {
+  it('renders nested lists with collapsed content by default and toggles details on demand', () => {
     render(<AgentTraceTree session={makeSession()} />);
 
-    expect(screen.getByRole('tree', { name: 'Agent trace spans' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Agent trace spans' })).toBeInTheDocument();
+    expect(screen.queryByRole('tree')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('treeitem')).toHaveLength(0);
+    expect(screen.getByRole('list', { name: 'trace-1' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Calls under invoke_agent copilot' })).toBeInTheDocument();
     expect(screen.getByText('Partial trace')).toBeInTheDocument();
     expect(screen.getByText('trace-1')).toBeInTheDocument();
     expect(screen.getByText('trace-2')).toBeInTheDocument();
 
-    const shellButton = screen.getByRole('button', { name: /execute_tool runCommand/i });
+    const shellButton = screen.getByRole('button', { name: 'execute_tool runCommand details at +80 ms' });
     expect(shellButton).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('{"command":"echo <script>alert(1)</script>"}')).not.toBeInTheDocument();
 
@@ -107,6 +111,29 @@ describe('AgentTraceTree', () => {
     expect(shellButton).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('{"command":"echo <script>alert(1)</script>"}')).toBeInTheDocument();
     expect(screen.getByText('done')).toBeInTheDocument();
+  });
+
+  it('gives repeated span names distinct accessible detail labels', () => {
+    const session = makeSession();
+    session.spans.push(makeAgentTraceSpan({
+      traceId: 'trace-1',
+      spanId: 'shell-2',
+      parentSpanId: 'root',
+      category: 'shell',
+      name: 'execute_tool runCommand',
+      startedAt: '2026-09-23T10:00:00.400Z',
+      durationMs: 20,
+    }));
+
+    render(<AgentTraceTree session={session} />);
+
+    const labels = screen
+      .getAllByRole('button', { name: /^execute_tool runCommand details/ })
+      .map((button) => button.getAttribute('aria-label'));
+    expect(labels).toEqual([
+      'execute_tool runCommand details at +80 ms',
+      'execute_tool runCommand details at +400 ms',
+    ]);
   });
 
   it('shows timing, status, and content-state labels without rendering llm prompt or response content', () => {

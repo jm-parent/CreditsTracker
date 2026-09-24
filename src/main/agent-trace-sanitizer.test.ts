@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { makeDecodedAgentTraceSpan } from '../test-utils/agent-trace-fixtures';
-import { sanitizeAgentTraceSpan } from './agent-trace-sanitizer';
+import {
+  attributeAgentTraceSpan,
+  sanitizeAgentTraceSpan,
+  sanitizeUnattributedAgentTraceSpan,
+} from './agent-trace-sanitizer';
 
 describe('sanitizeAgentTraceSpan', () => {
   it('redacts secret-like content before storage', () => {
@@ -151,5 +155,169 @@ describe('sanitizeAgentTraceSpan', () => {
     expect(safe.argumentsJson).toBeNull();
     expect(safe.resultText).toBeNull();
     expect(safe.contentState).toBe('unavailable');
+  });
+
+  it.each([
+    ['an environment token assignment', 'GITHUB_TOKEN=synthetic-value-01', 'GITHUB_TOKEN=[REDACTED]'],
+    ['a prefixed password assignment', 'DB_PASSWORD=synthetic-value-02', 'DB_PASSWORD=[REDACTED]'],
+    ['a prefixed API key assignment', 'OPENAI_API_KEY=synthetic-value-03', 'OPENAI_API_KEY=[REDACTED]'],
+    ['a secret with a suffix', 'AWS_SECRET_ACCESS_KEY=synthetic-value-04', 'AWS_SECRET_ACCESS_KEY=[REDACTED]'],
+    ['a YAML-style client secret', 'client_secret: synthetic-value-05', 'client_secret: [REDACTED]'],
+    [
+      'a quoted password inside text that is not JSON',
+      'config dump -> "password": "synthetic-value-06", "user": "bob"',
+      '"password": "[REDACTED]", "user": "bob"',
+    ],
+    ['an authorization assignment', 'authorization=synthetic-value-07', 'authorization=[REDACTED]'],
+    ['a camel-case key in text', 'accessToken: synthetic-value-08', 'accessToken: [REDACTED]'],
+    ['a header-style API key', 'x-api-key: synthetic-value-09', 'x-api-key: [REDACTED]'],
+    ['a PowerShell environment assignment', '$env:GITHUB_TOKEN = "synthetic-value-10"', '$env:GITHUB_TOKEN = "[REDACTED]"'],
+    ['an exported quoted key', "export OPENAI_API_KEY='synthetic-value-11'", "export OPENAI_API_KEY='[REDACTED]'"],
+    ['a command-line password flag', 'mysql --password synthetic-value-12 -h db', 'mysql --password [REDACTED] -h db'],
+    ['URL credentials', 'git remote -v https://user:synthetic-value-13@example.com/repo.git', 'https://user:[REDACTED]@example.com'],
+    ['a cookie header', 'Cookie: sid=synthetic-value-14; theme=synthetic-value-15', 'Cookie: [REDACTED]'],
+    ['an escaped JSON password', String.raw`{\"password\":\"synthetic-value-16\"}`, String.raw`{\"password\":[REDACTED]`],
+  ])('redacts %s from text payloads', (_label, input, expected) => {
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      argumentsValue: null,
+      result: input,
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.resultText).toContain(expected);
+    expect(safe.resultText).not.toMatch(/synthetic-value-\d+/);
+    expect(safe.contentState).toBe('redacted');
+  });
+
+  it('redacts a standalone bearer credential with the redaction marker', () => {
+    const scheme = ['Bear', 'er'].join('');
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      argumentsValue: null,
+      result: `curl -H "X-Custom: ${scheme} synthetic-value-17" https://example.com`,
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.resultText).toContain(`${scheme} [REDACTED]`);
+    expect(safe.resultText).not.toContain('synthetic-value-17');
+    expect(safe.contentState).toBe('redacted');
+  });
+
+  it('normalizes structured keys and sanitizes JSON nested inside JSON strings', () => {
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      argumentsValue: {
+        apiKey: 'synthetic-value-18',
+        'Client-Secret': 'synthetic-value-19',
+        private_key: 'synthetic-value-20',
+        auth: 'synthetic-value-21',
+        input: JSON.stringify({ password: 'synthetic-value-22', command: 'echo ok' }),
+        nestedText: JSON.stringify({ note: 'GITHUB_TOKEN=synthetic-value-23' }),
+        command: 'echo ok',
+      },
+      result: JSON.stringify({ stdout: JSON.stringify({ accessToken: 'synthetic-value-24' }) }),
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(JSON.stringify(safe)).not.toMatch(/synthetic-value-\d+/);
+    expect(safe.argumentsJson).toContain('"apiKey":"[REDACTED]"');
+    expect(safe.argumentsJson).toContain('"Client-Secret":"[REDACTED]"');
+    expect(safe.argumentsJson).toContain('"private_key":"[REDACTED]"');
+    expect(safe.argumentsJson).toContain('"auth":"[REDACTED]"');
+    expect(safe.argumentsJson).toContain('echo ok');
+    expect(safe.contentState).toBe('redacted');
+  });
+
+  it.each([
+    ['a private key header without its footer', '-----BEGIN RSA PRIVATE KEY-----\nMIIEsyntheticvalue25'],
+    ['a private key footer without its header', 'MIIEsyntheticvalue26\n-----END OPENSSH PRIVATE KEY-----'],
+  ])('omits all content when it contains %s', (_label, keyMaterial) => {
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      argumentsValue: { command: 'cat id_rsa' },
+      result: `head of file\n${keyMaterial}`,
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.argumentsJson).toBeNull();
+    expect(safe.resultText).toBeNull();
+    expect(safe.contentState).toBe('omitted');
+    expect(safe.toolCallId).toBe('call-1');
+    expect(JSON.stringify(safe)).not.toContain('syntheticvalue');
+  });
+
+  it('redacts complete private key blocks with extra header words', () => {
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      argumentsValue: null,
+      result: 'before\n-----BEGIN PGP PRIVATE KEY BLOCK-----\nsyntheticvalue27\n-----END PGP PRIVATE KEY BLOCK-----\nafter',
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.resultText).toBe('before\n[REDACTED]\nafter');
+    expect(safe.contentState).toBe('redacted');
+  });
+
+  it('keeps redaction and truncation visible together', () => {
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      argumentsValue: { token: 'synthetic-value-28' },
+      result: 'x'.repeat(40 * 1024),
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.contentState).toBe('redacted-truncated');
+    expect(Buffer.byteLength(safe.resultText ?? '', 'utf8')).toBe(32 * 1024);
+  });
+
+  it('redacts secrets and bounds the length of error types', () => {
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      errorType: `GITHUB_TOKEN=synthetic-value-29 ${'E'.repeat(400)}`,
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.errorType).toContain('GITHUB_TOKEN=[REDACTED]');
+    expect(safe.errorType).not.toContain('synthetic-value-29');
+    expect(Buffer.byteLength(safe.errorType ?? '', 'utf8')).toBeLessThanOrEqual(256);
+  });
+
+  it('sanitizes content without attributing the span to a conversation', () => {
+    const unattributed = sanitizeUnattributedAgentTraceSpan(makeDecodedAgentTraceSpan({
+      source: null,
+      sourceResolution: 'missing',
+      conversationId: null,
+      sessionId: null,
+      traceRootInRequest: false,
+      argumentsValue: { command: 'echo ok', password: 'synthetic-value-30' },
+    }));
+
+    expect(unattributed).not.toHaveProperty('source');
+    expect(unattributed).not.toHaveProperty('sessionId');
+    expect(unattributed.argumentsJson).toBe('{"command":"echo ok","password":"[REDACTED]"}');
+
+    expect(attributeAgentTraceSpan(unattributed, {
+      source: 'copilot-cli',
+      sessionId: 'cli-session-1',
+    })).toMatchObject({
+      source: 'copilot-cli',
+      sessionId: 'cli-session-1',
+      argumentsJson: '{"command":"echo ok","password":"[REDACTED]"}',
+      contentState: 'redacted',
+    });
+  });
+
+  it('keeps ordinary shell output unchanged', () => {
+    const output = 'total 3\n-rw-r--r-- 1 user user 42 README.md\nauthor: Jane Doe\ntokenizer ready';
+    const safe = sanitizeAgentTraceSpan(makeDecodedAgentTraceSpan({
+      argumentsValue: null,
+      result: output,
+    }));
+
+    if (!safe) throw new Error('The fixture must contain a supported source and conversation ID');
+
+    expect(safe.resultText).toBe(output);
+    expect(safe.contentState).toBe('stored');
   });
 });

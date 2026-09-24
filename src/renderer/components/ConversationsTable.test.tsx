@@ -123,8 +123,12 @@ describe('ConversationsTable', () => {
     await user.click(screen.getByText('VS Code work'));
     expect(onViewTrace).not.toHaveBeenCalled();
 
-    await user.click(within(vscodeRow).getByRole('button', { name: 'Voir la trace' }));
-    await user.click(within(cliRow).getByRole('button', { name: 'Voir la trace' }));
+    await user.click(within(vscodeRow).getByRole('button', {
+      name: 'Voir la trace : VS Code work — VS Code, 2026-09-23 10:00:00',
+    }));
+    await user.click(within(cliRow).getByRole('button', {
+      name: 'Voir la trace : CLI work — Copilot CLI, 2026-09-23 11:00:00',
+    }));
 
     expect(onViewTrace).toHaveBeenNthCalledWith(1, {
       source: 'vscode',

@@ -138,7 +138,7 @@ describe('buildAgentTraceTree', () => {
       startedAt: '2026-09-23T10:00:00.050Z',
     });
 
-    const childCategories = ['tool', 'skill', 'shell', 'hook', 'other'] as const;
+    const childCategories = ['tool', 'skill', 'shell', 'mcp', 'hook', 'other'] as const;
     const children = childCategories.map((category, index) =>
       makeAgentTraceSpan({
         traceId: 'trace-1',
@@ -165,6 +165,7 @@ describe('buildAgentTraceTree', () => {
       { spanId: 'tool-1', category: 'tool', unparented: false },
       { spanId: 'skill-1', category: 'skill', unparented: false },
       { spanId: 'shell-1', category: 'shell', unparented: false },
+      { spanId: 'mcp-1', category: 'mcp', unparented: false },
       { spanId: 'hook-1', category: 'hook', unparented: false },
       { spanId: 'other-1', category: 'other', unparented: false },
     ]);

@@ -75,8 +75,28 @@ describe('AgentTracesPage', () => {
     expect(screen.getByText(/Loopback only/i)).toBeInTheDocument();
     expect(screen.getByText(/captureContent can make prompts\/responses transit locally before filtering/i)).toBeInTheDocument();
     expect(screen.getByText(/github\.copilot\.chat\.otel\.enabled/)).toBeInTheDocument();
+    expect(screen.getByText(/"github\.copilot\.chat\.otel\.protocol": "http\/protobuf"/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'VS Code User settings (settings.json)' })).toBeInTheDocument();
+    expect(screen.getByText(/VS Code\s+ignores these settings in workspace settings/)).toBeInTheDocument();
     expect(screen.getByText(/OTEL_EXPORTER_OTLP_ENDPOINT=http:\/\/127\.0\.0\.1:4318/)).toBeInTheDocument();
+    expect(screen.getByText(/OTEL_EXPORTER_OTLP_PROTOCOL=http\/protobuf/)).toBeInTheDocument();
     expect(screen.getByText(/Stored sanitized agent traces are deleted after 30 days\./i)).toBeInTheDocument();
+  });
+
+  it('shows an exporter wire-format rejection reported by the receiver', async () => {
+    window.api.getAgentTraceCollectionStatus = vi.fn().mockResolvedValue({
+      ...listeningStatus,
+      errorMessage:
+        'OTLP export rejected (HTTP 415): content type application/json is not supported; '
+        + 'set the exporter protocol to http/protobuf.',
+    } satisfies AgentTraceCollectionStatus);
+
+    render(<AgentTracesPage selection={null} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'set the exporter protocol to http/protobuf',
+    );
+    expect(screen.getByText('Listening for local OTLP traces.')).toBeInTheDocument();
   });
 
   it('enables collection on demand, shows the listening endpoint, and never changes settings automatically', async () => {
