@@ -19,6 +19,13 @@ interface SpanRejectionCounts {
   missingSourceSession: number;
 }
 
+export interface AgentTracePartialSuccess {
+  totalRejectedSpans: number;
+  unsupportedSourceSpans: number;
+  missingSourceSessionSpans: number;
+  errorMessage: string;
+}
+
 export interface AgentTraceReceiver {
   endpoint: string;
   close(): Promise<void>;
@@ -27,10 +34,11 @@ export interface AgentTraceReceiver {
 export async function startAgentTraceReceiver(options: {
   store: AgentTraceStore;
   port?: number;
+  onPartialSuccess?(partialSuccess: AgentTracePartialSuccess): void;
 }): Promise<AgentTraceReceiver> {
-  const { store, port = DEFAULT_PORT } = options;
+  const { store, port = DEFAULT_PORT, onPartialSuccess } = options;
   const server = http.createServer((request, response) => {
-    void handleRequest(request, response, store);
+    void handleRequest(request, response, store, onPartialSuccess);
   });
 
   await listen(server, port);
@@ -58,6 +66,7 @@ async function handleRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   store: AgentTraceStore,
+  onPartialSuccess: ((partialSuccess: AgentTracePartialSuccess) => void) | undefined,
 ): Promise<void> {
   const route = getRoute(request);
 
@@ -109,7 +118,12 @@ async function handleRequest(
 
     store.insertSpans(acceptedSpans);
 
-    writeOtlpResponse(response, rejectedSpans);
+    const partialSuccess = buildPartialSuccess(rejectedSpans);
+    if (partialSuccess) {
+      onPartialSuccess?.(partialSuccess);
+    }
+
+    writeOtlpResponse(response, partialSuccess);
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500;
     logError('agent-trace-receiver', 'Failed to handle OTLP trace request', {
@@ -169,14 +183,16 @@ function readRequestBody(
   });
 }
 
-function writeOtlpResponse(response: http.ServerResponse, rejectedSpans: SpanRejectionCounts): void {
-  const totalRejectedSpans = rejectedSpans.unsupportedSource + rejectedSpans.missingSourceSession;
+function writeOtlpResponse(
+  response: http.ServerResponse,
+  partialSuccess: AgentTracePartialSuccess | null,
+): void {
   const payload = ExportTraceServiceResponse.encode(ExportTraceServiceResponse.create(
-    totalRejectedSpans > 0
+    partialSuccess
       ? {
         partialSuccess: {
-          rejectedSpans: totalRejectedSpans,
-          errorMessage: buildPartialSuccessErrorMessage(rejectedSpans, totalRejectedSpans),
+          rejectedSpans: partialSuccess.totalRejectedSpans,
+          errorMessage: partialSuccess.errorMessage,
         },
       }
       : {},
@@ -186,6 +202,20 @@ function writeOtlpResponse(response: http.ServerResponse, rejectedSpans: SpanRej
   response.setHeader('content-type', OTLP_CONTENT_TYPE);
   response.setHeader('content-length', String(payload.length));
   response.end(payload);
+}
+
+function buildPartialSuccess(rejectedSpans: SpanRejectionCounts): AgentTracePartialSuccess | null {
+  const totalRejectedSpans = rejectedSpans.unsupportedSource + rejectedSpans.missingSourceSession;
+  if (totalRejectedSpans === 0) {
+    return null;
+  }
+
+  return {
+    totalRejectedSpans,
+    unsupportedSourceSpans: rejectedSpans.unsupportedSource,
+    missingSourceSessionSpans: rejectedSpans.missingSourceSession,
+    errorMessage: buildPartialSuccessErrorMessage(rejectedSpans, totalRejectedSpans),
+  };
 }
 
 function buildPartialSuccessErrorMessage(

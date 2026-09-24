@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentTraceCollectionStatus, AgentTraceSession } from '../shared/types';
-import type { AgentTraceReceiver } from './agent-trace-receiver';
+import type { AgentTracePartialSuccess, AgentTraceReceiver } from './agent-trace-receiver';
 import type { AgentTraceStore } from './agent-trace-store';
-import { createAgentTraceService } from './agent-trace-service';
+import { createAgentTraceService, type AgentTraceServiceDependencies } from './agent-trace-service';
 
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
@@ -118,6 +118,58 @@ describe('createAgentTraceService', () => {
     expect(status).toEqual(disabledStatus());
   });
 
+  it('surfaces receiver partial-coverage updates in status and preserves them across disable and re-enable', async () => {
+    let reportPartialSuccess:
+      | ((partialSuccess: AgentTracePartialSuccess) => void)
+      | undefined;
+    const store = makeStoreDouble();
+    const receiver = makeReceiverDouble();
+    const receiverFactory = vi.fn(async (options: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0]) => {
+      reportPartialSuccess = options.onPartialSuccess;
+      return receiver;
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory,
+    });
+
+    await service.initialize();
+    await service.setEnabled(true);
+
+    reportPartialSuccess?.({
+      totalRejectedSpans: 2,
+      unsupportedSourceSpans: 1,
+      missingSourceSessionSpans: 1,
+      errorMessage:
+        'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
+    });
+
+    expect(service.getStatus()).toEqual({
+      enabled: true,
+      listening: true,
+      endpoint: receiver.endpoint,
+      errorMessage:
+        'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
+    } satisfies AgentTraceCollectionStatus);
+
+    expect(await service.setEnabled(false)).toEqual({
+      enabled: false,
+      listening: false,
+      endpoint: null,
+      errorMessage:
+        'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
+    } satisfies AgentTraceCollectionStatus);
+
+    expect(await service.setEnabled(true)).toEqual({
+      enabled: true,
+      listening: true,
+      endpoint: receiver.endpoint,
+      errorMessage:
+        'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
+    } satisfies AgentTraceCollectionStatus);
+    expect(receiverFactory).toHaveBeenCalledTimes(2);
+  });
+
   it('auto-starts persisted opt-in, purges every 24 hours, and stops the timer during shutdown', async () => {
     const receiver = makeReceiverDouble();
     const store = makeStoreDouble({
@@ -141,6 +193,73 @@ describe('createAgentTraceService', () => {
     expect(store.pruneExpired).toHaveBeenCalledTimes(2);
     expect(receiver.close).toHaveBeenCalledTimes(1);
     expect(store.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('serializes disable during an in-flight enable so the later opt-out closes the receiver and wins', async () => {
+    const calls: string[] = [];
+    const store = makeStoreDouble({
+      setCollectionEnabled: vi.fn((enabled: boolean) => {
+        calls.push(`persist:${String(enabled)}`);
+      }),
+    });
+    const receiver = makeReceiverDouble({
+      close: vi.fn(async () => {
+        calls.push('close');
+      }),
+    });
+    const { promise: receiverPromise, resolve: resolveReceiver } = deferred<AgentTraceReceiver>();
+    const receiverFactory = vi.fn(async () => {
+      calls.push('listen');
+      return receiverPromise;
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory,
+    });
+
+    await service.initialize();
+    const enablePromise = service.setEnabled(true);
+    const disablePromise = service.setEnabled(false);
+
+    resolveReceiver(receiver);
+
+    await expect(enablePromise).resolves.toEqual({
+      enabled: true,
+      listening: true,
+      endpoint: receiver.endpoint,
+      errorMessage: null,
+    } satisfies AgentTraceCollectionStatus);
+    await expect(disablePromise).resolves.toEqual(disabledStatus());
+    expect(service.getStatus()).toEqual(disabledStatus());
+    expect(calls).toEqual(['listen', 'persist:true', 'close', 'persist:false']);
+    expect(receiver.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for an in-flight enable during shutdown, closes the resulting receiver, and prevents re-enable after shutdown', async () => {
+    const receiver = makeReceiverDouble();
+    const store = makeStoreDouble();
+    const { promise: receiverPromise, resolve: resolveReceiver } = deferred<AgentTraceReceiver>();
+    const receiverFactory = vi.fn(async () => receiverPromise);
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory,
+    });
+
+    await service.initialize();
+    const enablePromise = service.setEnabled(true);
+    const shutdownPromise = service.shutdown();
+
+    resolveReceiver(receiver);
+
+    await enablePromise;
+    await shutdownPromise;
+
+    expect(receiver.close).toHaveBeenCalledTimes(1);
+    expect(store.close).toHaveBeenCalledTimes(1);
+    expect(service.getStatus()).toEqual(disabledStatus());
+
+    await expect(service.setEnabled(true)).resolves.toEqual(disabledStatus());
+    expect(receiverFactory).toHaveBeenCalledTimes(1);
   });
 
   it('captures initialization errors in the status without throwing', async () => {
@@ -287,4 +406,12 @@ function disabledStatus(): AgentTraceCollectionStatus {
     endpoint: null,
     errorMessage: null,
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
 }

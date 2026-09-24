@@ -1,6 +1,10 @@
 import path from 'node:path';
 import { openAgentTraceStore, type AgentTraceStore } from './agent-trace-store';
-import { startAgentTraceReceiver, type AgentTraceReceiver } from './agent-trace-receiver';
+import {
+  startAgentTraceReceiver,
+  type AgentTracePartialSuccess,
+  type AgentTraceReceiver,
+} from './agent-trace-receiver';
 import { logError } from './logger';
 import type {
   AgentTraceCollectionStatus,
@@ -27,8 +31,11 @@ export class AgentTraceService {
   private store: AgentTraceStore | null = null;
   private receiver: AgentTraceReceiver | null = null;
   private purgeTimer: NodeJS.Timeout | null = null;
-  private initializationPromise: Promise<void> | null = null;
+  private lifecycleQueue: Promise<void> = Promise.resolve();
   private shutdownPromise: Promise<void> | null = null;
+  private lifecycleErrorMessage: string | null = null;
+  private partialCoverageMessage: string | null = null;
+  private isShutdown = false;
   private status: AgentTraceCollectionStatus = disabledStatus();
 
   constructor(userDataPath: string, dependencies?: Partial<AgentTraceServiceDependencies>) {
@@ -37,18 +44,12 @@ export class AgentTraceService {
   }
 
   initialize(): Promise<void> {
-    if (this.shutdownPromise) {
-      return this.shutdownPromise.then(() => undefined);
-    }
-    if (this.initializationPromise) {
-      return this.initializationPromise;
-    }
-
-    this.initializationPromise = this.doInitialize().finally(() => {
-      this.initializationPromise = null;
+    return this.enqueueLifecycle(async () => {
+      if (this.isShutdown) {
+        return;
+      }
+      await this.doInitialize();
     });
-
-    return this.initializationPromise;
   }
 
   getStatus(): AgentTraceCollectionStatus {
@@ -56,18 +57,24 @@ export class AgentTraceService {
   }
 
   async setEnabled(enabled: boolean): Promise<AgentTraceCollectionStatus> {
-    const store = this.ensureStore();
-    if (!store) {
+    return this.enqueueLifecycle(async () => {
+      if (this.isShutdown) {
+        return this.getStatus();
+      }
+
+      const store = this.ensureStore();
+      if (!store) {
+        return this.getStatus();
+      }
+
+      if (enabled) {
+        await this.enableCollection(store, { persistEnabled: true, resetEnabledOnFailure: true });
+      } else {
+        await this.disableCollection(store, { persistDisabled: true });
+      }
+
       return this.getStatus();
-    }
-
-    if (enabled) {
-      await this.enableCollection(store, { persistEnabled: true, resetEnabledOnFailure: true });
-    } else {
-      await this.disableCollection(store, { persistDisabled: true });
-    }
-
-    return this.getStatus();
+    });
   }
 
   getSession(selection: AgentTraceSelection): AgentTraceSession {
@@ -92,6 +99,11 @@ export class AgentTraceService {
 
     try {
       store.clear();
+      this.partialCoverageMessage = null;
+      this.status = {
+        ...this.status,
+        errorMessage: this.currentErrorMessage(),
+      };
     } catch (error) {
       this.recordError('Failed to clear local agent trace data', error);
     }
@@ -102,7 +114,13 @@ export class AgentTraceService {
       return this.shutdownPromise;
     }
 
-    this.shutdownPromise = this.doShutdown().finally(() => {
+    this.shutdownPromise = this.enqueueLifecycle(async () => {
+      if (this.isShutdown) {
+        return;
+      }
+      this.isShutdown = true;
+      await this.doShutdown();
+    }).finally(() => {
       this.shutdownPromise = null;
     });
 
@@ -131,10 +149,14 @@ export class AgentTraceService {
       return;
     }
 
-    this.status = disabledStatus();
+    this.lifecycleErrorMessage = null;
+    this.setStatus(disabledStatusFields());
   }
 
   private ensureStore(): AgentTraceStore | null {
+    if (this.isShutdown) {
+      return null;
+    }
     if (this.store) {
       return this.store;
     }
@@ -146,9 +168,10 @@ export class AgentTraceService {
       store.pruneExpired(new Date());
       this.startPurgeTimer();
       this.store = store;
+      this.lifecycleErrorMessage = null;
       this.status = {
         ...this.status,
-        errorMessage: null,
+        errorMessage: this.currentErrorMessage(),
       };
       return this.store;
     } catch (error) {
@@ -179,19 +202,24 @@ export class AgentTraceService {
         }
       }
 
-      this.status = {
+      this.lifecycleErrorMessage = null;
+      this.setStatus({
         enabled: true,
         listening: true,
         endpoint: this.receiver.endpoint,
-        errorMessage: null,
-      };
+      });
       return;
     }
 
     let receiver: AgentTraceReceiver | null = null;
 
     try {
-      receiver = await this.dependencies.receiverFactory({ store });
+      receiver = await this.dependencies.receiverFactory({
+        store,
+        onPartialSuccess: (partialSuccess) => {
+          this.recordPartialCoverage(partialSuccess);
+        },
+      });
       if (options.persistEnabled) {
         store.setCollectionEnabled(true);
       }
@@ -214,22 +242,17 @@ export class AgentTraceService {
       }
 
       this.recordError('Failed to start the local agent trace receiver', error);
-      this.status = {
-        enabled: false,
-        listening: false,
-        endpoint: null,
-        errorMessage: this.status.errorMessage,
-      };
+      this.setStatus(disabledStatusFields());
       return;
     }
 
     this.receiver = receiver;
-    this.status = {
+    this.lifecycleErrorMessage = null;
+    this.setStatus({
       enabled: true,
       listening: true,
       endpoint: receiver.endpoint,
-      errorMessage: null,
-    };
+    });
   }
 
   private async disableCollection(
@@ -254,7 +277,7 @@ export class AgentTraceService {
       }
     }
 
-    this.status = disabledStatus(this.status.errorMessage);
+    this.setStatus(disabledStatusFields());
   }
 
   private startPurgeTimer(): void {
@@ -296,15 +319,44 @@ export class AgentTraceService {
       store.close();
     }
 
-    this.status = disabledStatus(this.status.errorMessage);
+    this.setStatus(disabledStatusFields());
   }
 
   private recordError(message: string, error: unknown): void {
     logError('agent-trace-service', message, error);
+    this.lifecycleErrorMessage = `${message}: ${getErrorMessage(error)}`;
     this.status = {
       ...this.status,
-      errorMessage: `${message}: ${getErrorMessage(error)}`,
+      errorMessage: this.currentErrorMessage(),
     };
+  }
+
+  private recordPartialCoverage(partialSuccess: AgentTracePartialSuccess): void {
+    this.partialCoverageMessage = partialSuccess.errorMessage;
+    this.status = {
+      ...this.status,
+      errorMessage: this.currentErrorMessage(),
+    };
+  }
+
+  private currentErrorMessage(): string | null {
+    return this.lifecycleErrorMessage ?? this.partialCoverageMessage;
+  }
+
+  private setStatus(status: Omit<AgentTraceCollectionStatus, 'errorMessage'>): void {
+    this.status = {
+      ...status,
+      errorMessage: this.currentErrorMessage(),
+    };
+  }
+
+  private enqueueLifecycle<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.lifecycleQueue.then(operation, operation);
+    this.lifecycleQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 }
 
@@ -321,6 +373,14 @@ function disabledStatus(errorMessage: string | null = null): AgentTraceCollectio
     listening: false,
     endpoint: null,
     errorMessage,
+  };
+}
+
+function disabledStatusFields(): Omit<AgentTraceCollectionStatus, 'errorMessage'> {
+  return {
+    enabled: false,
+    listening: false,
+    endpoint: null,
   };
 }
 

@@ -473,6 +473,86 @@ describe('startAgentTraceReceiver', () => {
     expect(session.spans.map((span) => span.spanId)).toEqual(['1111222233334444', '5555666677778888']);
   });
 
+  it('reports safe partial-coverage counts to the receiver callback without exposing payload values', async () => {
+    const store = openMemoryStore();
+    const onPartialSuccess = vi.fn();
+    const receiver = await startReceiver({ store, port: 0, onPartialSuccess });
+
+    const response = await fetch(`${receiver.endpoint}/v1/traces`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-protobuf' },
+      body: encodeTraceRequest({
+        resourceSpans: [
+          {
+            resource: {
+              attributes: [attribute('service.name', 'copilot-chat')],
+            },
+            scopeSpans: [{
+              spans: [
+                makeSpan({
+                  traceId: '90112233445566778899aabbccddeeff',
+                  spanId: '1111222233334444',
+                  name: 'invoke_agent copilot',
+                  attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+                }),
+                makeSpan({
+                  traceId: '90112233445566778899aabbccddeeff',
+                  spanId: '5555666677778888',
+                  parentSpanId: '1111222233334444',
+                  name: 'execute_tool runCommand',
+                  attributes: [
+                    attribute('gen_ai.tool.name', 'runCommand'),
+                    attribute('gen_ai.tool.call.arguments', '{"token":"do-not-expose"}'),
+                  ],
+                }),
+              ],
+            }],
+          },
+          {
+            resource: {
+              attributes: [attribute('service.name', 'unknown-client')],
+            },
+            scopeSpans: [{
+              spans: [
+                makeSpan({
+                  traceId: 'a0112233445566778899aabbccddeeff',
+                  spanId: 'aaaaaaaaaaaaaaaa',
+                  name: 'invoke_agent unsupported',
+                  attributes: [attribute('gen_ai.conversation.id', 'conversation-2')],
+                }),
+              ],
+            }],
+          },
+          {
+            resource: {
+              attributes: [attribute('service.name', 'copilot-chat')],
+            },
+            scopeSpans: [{
+              spans: [
+                makeSpan({
+                  traceId: 'b0112233445566778899aabbccddeeff',
+                  spanId: 'bbbbbbbbbbbbbbbb',
+                  name: 'invoke_agent missingContext',
+                  attributes: [attribute('gen_ai.agent.name', 'copilot')],
+                }),
+              ],
+            }],
+          },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(onPartialSuccess).toHaveBeenCalledTimes(1);
+    expect(onPartialSuccess).toHaveBeenCalledWith({
+      totalRejectedSpans: 2,
+      unsupportedSourceSpans: 1,
+      missingSourceSessionSpans: 1,
+      errorMessage:
+        'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
+    });
+  });
+
   it('returns 413 when a chunked request body exceeds the 8 MiB limit', async () => {
     const receiver = await startReceiver({ store: openMemoryStore(), port: 0 });
 
