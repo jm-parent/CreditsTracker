@@ -12,7 +12,15 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client", "node", "vitest/globals"]
+    "types": ["vite/client", "node"]
   },
-  "include": ["src", "vitest.setup.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-globals.d.ts",
+    "src/test-utils/**/*",
+    "src/renderer/test-utils/**/*",
+    "vitest.setup.ts"
+  ]
 }
