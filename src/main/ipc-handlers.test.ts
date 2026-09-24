@@ -3,8 +3,14 @@ import path from 'node:path';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { app, dialog, ipcMain, shell } from 'electron';
 import Database from 'better-sqlite3';
-import { registerIpcHandlers } from './ipc-handlers';
+import { registerAgentTraceIpcHandlers, registerIpcHandlers } from './ipc-handlers';
 import { getLogEntries, resetLoggerForTests } from './logger';
+import type {
+  AgentTraceCollectionStatus,
+  AgentTraceSelection,
+  AgentTraceSession,
+} from '../shared/types';
+import type { AgentTraceService } from './agent-trace-service';
 
 const exportFilesMock = vi.hoisted(() => ({
   writeExportFile: vi.fn(),
@@ -247,6 +253,153 @@ describe('registerIpcHandlers', () => {
       timeSeries: [],
       byProject: [],
       byModel: [],
+    });
+  });
+
+  describe('registerAgentTraceIpcHandlers', () => {
+    function createTraceServiceDouble(
+      overrides: Partial<AgentTraceService> = {},
+    ): Pick<AgentTraceService, 'getStatus' | 'setEnabled' | 'getSession' | 'clear'> {
+      return {
+        getStatus: vi.fn(() => ({
+          enabled: false,
+          listening: false,
+          endpoint: null,
+          errorMessage: null,
+        } satisfies AgentTraceCollectionStatus)),
+        setEnabled: vi.fn(async (enabled: boolean) => ({
+          enabled,
+          listening: enabled,
+          endpoint: enabled ? 'http://127.0.0.1:4318' : null,
+          errorMessage: null,
+        } satisfies AgentTraceCollectionStatus)),
+        getSession: vi.fn((selection: AgentTraceSelection) => ({
+          source: selection.source,
+          sessionId: selection.sessionId,
+          availability: 'not-collected',
+          spans: [],
+        } satisfies AgentTraceSession)),
+        clear: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      (ipcMain as unknown as { __handlers: Map<string, unknown> }).__handlers.clear();
+      resetLoggerForTests();
+    });
+
+    it('registers the trace collection status, opt-in, session, and clear channels', () => {
+      registerAgentTraceIpcHandlers(createTraceServiceDouble() as AgentTraceService);
+
+      expect(ipcMain.handle).toHaveBeenCalledWith('get-agent-trace-collection-status', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('set-agent-trace-collection-enabled', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('get-agent-trace-session', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('clear-agent-trace-data', expect.any(Function));
+    });
+
+    it('returns the current trace collection status', () => {
+      const service = createTraceServiceDouble();
+      registerAgentTraceIpcHandlers(service as AgentTraceService);
+      const handlers = (ipcMain as unknown as {
+        __handlers: Map<string, (...args: unknown[]) => unknown>;
+      }).__handlers;
+
+      expect(handlers.get('get-agent-trace-collection-status')!({})).toEqual({
+        enabled: false,
+        listening: false,
+        endpoint: null,
+        errorMessage: null,
+      });
+      expect(service.getStatus).toHaveBeenCalledTimes(1);
+    });
+
+    it('validates enabled before forwarding opt-in updates to the service', async () => {
+      const service = createTraceServiceDouble();
+      registerAgentTraceIpcHandlers(service as AgentTraceService);
+      const handlers = (ipcMain as unknown as {
+        __handlers: Map<string, (...args: unknown[]) => unknown>;
+      }).__handlers;
+
+      await expect(handlers.get('set-agent-trace-collection-enabled')!({}, true)).resolves.toEqual({
+        enabled: true,
+        listening: true,
+        endpoint: 'http://127.0.0.1:4318',
+        errorMessage: null,
+      });
+      expect(service.setEnabled).toHaveBeenCalledWith(true);
+
+      expect(() => handlers.get('set-agent-trace-collection-enabled')!({}, 'true')).toThrow(
+        'Agent trace collection opt-in must be a boolean',
+      );
+      expect(service.setEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it('validates session selection before reading agent trace sessions', () => {
+      const service = createTraceServiceDouble();
+      registerAgentTraceIpcHandlers(service as AgentTraceService);
+      const handlers = (ipcMain as unknown as {
+        __handlers: Map<string, (...args: unknown[]) => unknown>;
+      }).__handlers;
+
+      expect(
+        handlers.get('get-agent-trace-session')!({}, { source: 'vscode', sessionId: 'vscode:conversation-1' }),
+      ).toEqual({
+        source: 'vscode',
+        sessionId: 'vscode:conversation-1',
+        availability: 'not-collected',
+        spans: [],
+      });
+      expect(service.getSession).toHaveBeenCalledWith({
+        source: 'vscode',
+        sessionId: 'vscode:conversation-1',
+      });
+
+      expect(() => handlers.get('get-agent-trace-session')!({}, null)).toThrow(
+        'Agent trace selection must be an object',
+      );
+      expect(() => handlers.get('get-agent-trace-session')!({}, { source: 'other', sessionId: 'x' })).toThrow(
+        'Agent trace selection source must be "vscode" or "copilot-cli"',
+      );
+      expect(() => handlers.get('get-agent-trace-session')!({}, { source: 'vscode', sessionId: '' })).toThrow(
+        'Agent trace session id must be a non-empty string',
+      );
+      expect(service.getSession).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears persisted trace spans through the service', async () => {
+      const service = createTraceServiceDouble();
+      registerAgentTraceIpcHandlers(service as AgentTraceService);
+      const handlers = (ipcMain as unknown as {
+        __handlers: Map<string, (...args: unknown[]) => unknown>;
+      }).__handlers;
+
+      expect(handlers.get('clear-agent-trace-data')!({})).toBeUndefined();
+      expect(service.clear).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs and rethrows trace service failures through the shared ipc wrapper', async () => {
+      const failure = new Error('trace status unavailable');
+      const service = createTraceServiceDouble({
+        getStatus: vi.fn(() => {
+          throw failure;
+        }),
+      });
+      registerAgentTraceIpcHandlers(service as AgentTraceService);
+      const handlers = (ipcMain as unknown as {
+        __handlers: Map<string, (...args: unknown[]) => unknown>;
+      }).__handlers;
+      const entriesBefore = getLogEntries().length;
+
+      expect(() => handlers.get('get-agent-trace-collection-status')!({})).toThrow('trace status unavailable');
+      expect(getLogEntries().slice(entriesBefore)).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          level: 'error',
+          scope: 'ipc',
+          message: expect.stringContaining('get-agent-trace-collection-status failed after'),
+        }),
+      ]));
     });
   });
 

@@ -31,7 +31,9 @@ import {
   logWarn,
   recordRendererLog,
 } from './logger';
+import type { AgentTraceService } from './agent-trace-service';
 import type {
+  AgentTraceSelection,
   HourlyDetailParams,
   LogsSnapshot,
   MonthlyActivityParams,
@@ -208,6 +210,22 @@ function snapshot(): LogsSnapshot {
   return { entries: getLogEntries(), filePath: getLogFilePath() };
 }
 
+export function registerAgentTraceIpcHandlers(traceService: AgentTraceService): void {
+  handle('get-agent-trace-collection-status', () => traceService.getStatus());
+
+  handle('set-agent-trace-collection-enabled', (_event: unknown, enabled: unknown) => {
+    return traceService.setEnabled(validateAgentTraceCollectionEnabled(enabled));
+  });
+
+  handle('get-agent-trace-session', (_event: unknown, selection: unknown) => {
+    return traceService.getSession(validateAgentTraceSelection(selection));
+  });
+
+  handle('clear-agent-trace-data', () => {
+    traceService.clear();
+  });
+}
+
 export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string): void {
   logInfo('startup', 'Registering IPC handlers', { dbPath, workspaceStorageDir });
   let db = buildMergedDatabaseFromSources(dbPath, workspaceStorageDir);
@@ -336,4 +354,31 @@ export function registerIpcHandlers(dbPath: string, workspaceStorageDir?: string
   handle('log-message', (_event: unknown, entry: RendererLogInput) => {
     recordRendererLog(entry ?? { level: 'info', scope: 'renderer', message: '(empty message)' });
   });
+}
+
+function validateAgentTraceCollectionEnabled(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error('Agent trace collection opt-in must be a boolean');
+  }
+
+  return value;
+}
+
+function validateAgentTraceSelection(value: unknown): AgentTraceSelection {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Agent trace selection must be an object');
+  }
+
+  const { source, sessionId } = value as Partial<AgentTraceSelection>;
+  if (source !== 'vscode' && source !== 'copilot-cli') {
+    throw new Error('Agent trace selection source must be "vscode" or "copilot-cli"');
+  }
+  if (typeof sessionId !== 'string' || sessionId.trim().length === 0) {
+    throw new Error('Agent trace session id must be a non-empty string');
+  }
+
+  return {
+    source,
+    sessionId,
+  };
 }

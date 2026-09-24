@@ -1,5 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  AgentTraceCollectionStatus,
+  AgentTraceSelection,
+  AgentTraceSession,
   ExportPreview,
   ExportRequest,
   ExportResult,
@@ -64,6 +67,13 @@ contextBridge.exposeInMainWorld('api', {
   },
   shouldPromptDesktopShortcut: (): Promise<boolean> => ipcRenderer.invoke('should-prompt-desktop-shortcut'),
   createDesktopShortcut: (): Promise<boolean> => ipcRenderer.invoke('create-desktop-shortcut'),
+  getAgentTraceCollectionStatus: (): Promise<AgentTraceCollectionStatus> =>
+    ipcRenderer.invoke('get-agent-trace-collection-status'),
+  setAgentTraceCollectionEnabled: (enabled: boolean): Promise<AgentTraceCollectionStatus> =>
+    ipcRenderer.invoke('set-agent-trace-collection-enabled', enabled),
+  getAgentTraceSession: (selection: AgentTraceSelection): Promise<AgentTraceSession> =>
+    ipcRenderer.invoke('get-agent-trace-session', selection),
+  clearAgentTraceData: (): Promise<void> => ipcRenderer.invoke('clear-agent-trace-data'),
   getLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('get-logs'),
   clearLogs: (): Promise<LogsSnapshot> => ipcRenderer.invoke('clear-logs'),
   openLogFile: (): Promise<string | null> => ipcRenderer.invoke('open-log-file'),
