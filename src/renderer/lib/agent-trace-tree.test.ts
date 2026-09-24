@@ -121,4 +121,52 @@ describe('buildAgentTraceTree', () => {
     expect(turns[0].roots[0].children[0].children[0].unparented).toBe(false);
     expect(turns[1].roots.map((node) => node.span.spanId)).toEqual(['root-2']);
   });
+
+  it('reparents approved action categories to matching llm spans via explicit toolCallId links', () => {
+    const root = makeAgentTraceSpan({
+      traceId: 'trace-1',
+      spanId: 'root-1',
+      category: 'agent',
+      startedAt: '2026-09-23T10:00:00.000Z',
+    });
+    const llmRequest = makeAgentTraceSpan({
+      traceId: 'trace-1',
+      spanId: 'llm-1',
+      parentSpanId: 'root-1',
+      category: 'llm',
+      toolCallId: 'call-7',
+      startedAt: '2026-09-23T10:00:00.050Z',
+    });
+
+    const childCategories = ['tool', 'skill', 'shell', 'hook', 'other'] as const;
+    const children = childCategories.map((category, index) =>
+      makeAgentTraceSpan({
+        traceId: 'trace-1',
+        spanId: `${category}-1`,
+        parentSpanId: null,
+        category,
+        toolCallId: 'call-7',
+        startedAt: `2026-09-23T10:00:00.0${60 + index}Z`,
+      }),
+    );
+
+    const turns = buildAgentTraceTree([root, ...children, llmRequest]);
+
+    expect(turns).toHaveLength(1);
+    expect(turns[0].roots).toHaveLength(1);
+    expect(turns[0].roots[0].children.map((node) => node.span.spanId)).toEqual(['llm-1']);
+    expect(
+      turns[0].roots[0].children[0].children.map((node) => ({
+        spanId: node.span.spanId,
+        category: node.span.category,
+        unparented: node.unparented,
+      })),
+    ).toEqual([
+      { spanId: 'tool-1', category: 'tool', unparented: false },
+      { spanId: 'skill-1', category: 'skill', unparented: false },
+      { spanId: 'shell-1', category: 'shell', unparented: false },
+      { spanId: 'hook-1', category: 'hook', unparented: false },
+      { spanId: 'other-1', category: 'other', unparented: false },
+    ]);
+  });
 });

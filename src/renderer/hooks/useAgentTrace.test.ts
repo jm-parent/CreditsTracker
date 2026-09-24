@@ -224,4 +224,57 @@ describe('useAgentTrace', () => {
     await waitFor(() => expect(result.current.session).toEqual(notCollectedSessionA));
     expect(window.api.clearAgentTraceData).toHaveBeenCalledTimes(1);
   });
+
+  it('ignores stale clear-triggered reloads after the selection changes', async () => {
+    const staleReload = createDeferred<AgentTraceSession>();
+    const freshSession = createDeferred<AgentTraceSession>();
+    const selectionBSession: AgentTraceSession = {
+      ...partialSession,
+      sessionId: selectionB.sessionId,
+      availability: 'not-collected',
+      spans: [],
+    };
+
+    window.api.clearAgentTraceData = vi.fn().mockResolvedValue(undefined);
+    window.api.getAgentTraceSession = vi
+      .fn()
+      .mockResolvedValueOnce(partialSession)
+      .mockImplementationOnce(() => staleReload.promise)
+      .mockImplementationOnce(() => freshSession.promise);
+
+    const { result, rerender } = renderHook(
+      ({ selection }) => useAgentTrace(selection),
+      { initialProps: { selection: selectionA } },
+    );
+
+    await waitFor(() => expect(result.current.session).toEqual(partialSession));
+
+    let clearPromise!: Promise<void>;
+    await act(async () => {
+      clearPromise = result.current.clearTraceData();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(window.api.getAgentTraceSession).toHaveBeenNthCalledWith(2, selectionA));
+
+    rerender({ selection: selectionB });
+
+    await waitFor(() => expect(window.api.getAgentTraceSession).toHaveBeenNthCalledWith(3, selectionB));
+
+    await act(async () => {
+      freshSession.resolve(selectionBSession);
+      await freshSession.promise;
+    });
+
+    await waitFor(() => expect(result.current.session).toEqual(selectionBSession));
+
+    await act(async () => {
+      staleReload.resolve(notCollectedSessionA);
+      await staleReload.promise;
+      await clearPromise;
+    });
+
+    expect(result.current.session).toEqual(selectionBSession);
+    expect(result.current.sessionLoading).toBe(false);
+  });
 });

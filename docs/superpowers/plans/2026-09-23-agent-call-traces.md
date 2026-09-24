@@ -820,7 +820,7 @@ export interface AgentTraceTreeProps {
 
 - [ ] **Step 1: Tester la construction pure de l'arbre**
 
-Créer des spans synthétiques avec `makeAgentTraceSpan` depuis `src/test-utils/agent-trace-fixtures.ts` : un `traceId` pour plusieurs spans frères, un tool enfant avec `parentSpanId`, un tool non-agent sans parent, un parent référencé mais manquant et un cycle invalide. Vérifier les tours triés par heure, les enfants attachés uniquement au parent attesté, l'ordre stable des frères et le marquage `unparented` pour les racines déconnectées.
+Créer des spans synthétiques avec `makeAgentTraceSpan` depuis `src/test-utils/agent-trace-fixtures.ts` : un `traceId` pour plusieurs spans frères, un tool enfant avec `parentSpanId`, un tool non-agent sans parent, un parent référencé mais manquant et un cycle invalide. Ajouter aussi un test de régression où un span `llm` partage un `toolCallId` avec chacun des types d'action approuvés (`tool`, `skill`, `shell`, `hook`, `other`). Vérifier les tours triés par heure, les enfants attachés uniquement au parent attesté, l'ordre stable des frères et le marquage `unparented` pour les racines déconnectées.
 
 ```ts
 const root = makeAgentTraceSpan({ spanId: 'root', category: 'agent' });
@@ -865,13 +865,13 @@ Expected: FAIL parce que `buildAgentTraceTree` n'existe pas.
 
 - [ ] **Step 3: Implémenter le regroupement sans fabriquer de parent**
 
-Indexer les spans par `(traceId, spanId)`, regrouper par `traceId`, puis attacher chaque nœud seulement si `parentSpanId` référence un span du même tour. Si la source fournit le même `toolCallId` sur la requête modèle et l'outil, utiliser ce lien explicite ; sinon conserver uniquement la relation parent OTel. Un span non-agent sans `parentSpanId`, une référence parent manquante ou un cycle est une racine `unparented`; il conserve sa source/session si son `traceId` appartient à la conversation et force l'état `partial`. Trier les enfants sur `startedAt`, avec `spanId` comme bris d'égalité ; ne jamais inventer une relation.
+Indexer les spans par `(traceId, spanId)`, regrouper par `traceId`, puis attacher chaque nœud seulement si `parentSpanId` référence un span du même tour. Si la source fournit le même `toolCallId` entre un span `llm` et un span d'action de catégorie `tool`, `skill`, `shell`, `hook` ou `other`, conserver explicitement ce lien approuvé ; sinon conserver uniquement la relation parent OTel. Un span non-agent sans `parentSpanId`, une référence parent manquante ou un cycle est une racine `unparented`; il conserve sa source/session si son `traceId` appartient à la conversation et force l'état `partial`. Trier les enfants sur `startedAt`, avec `spanId` comme bris d'égalité ; ne jamais inventer une relation.
 
 - [ ] **Step 4: Tester les états du hook IPC**
 
-Dans `useAgentTrace.test.ts`, vérifier l'état initial, le chargement d'une sélection, l'annulation d'une réponse après démontage/changement de session, `not-collected`, le cas `partial`, l'erreur de lecture et l'activation/désactivation de collecte avec mise à jour du statut.
+Dans `useAgentTrace.test.ts`, vérifier l'état initial, le chargement d'une sélection, l'annulation d'une réponse après démontage/changement de session, `not-collected`, le cas `partial`, l'erreur de lecture, l'activation/désactivation de collecte avec mise à jour du statut, puis un scénario différé où `clearTraceData()` démarre un rechargement pour la sélection A, la sélection passe à B pendant que la réponse A reste en attente, et la réponse A tardive n'écrase jamais la session B affichée.
 
-Implémenter `useAgentTrace(selection)` sans polling continu : charger une fois au changement de sélection, garder le statut de collecte indépendant du détail de trace, et journaliser les erreurs par `logError('useAgentTrace', ...)`.
+Implémenter `useAgentTrace(selection)` sans polling continu : charger une fois au changement de sélection, garder le statut de collecte indépendant du détail de trace, utiliser le même garde de génération/annulation de requête pour les chargements normaux et les rechargements post-clear afin qu'aucun résultat ou aucune erreur périmés ne puissent modifier la session, l'erreur ou `sessionLoading` après un changement de sélection ou un démontage, et journaliser les erreurs par `logError('useAgentTrace', ...)`.
 
 - [ ] **Step 5: Rendre l'arbre accessible et préserver la confidentialité**
 

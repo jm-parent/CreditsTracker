@@ -25,6 +25,7 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
   const [sessionError, setSessionError] = useState<Error | null>(null);
   const selectionRef = useRef(selection);
   const mountedRef = useRef(true);
+  const sessionRequestGenerationRef = useRef(0);
 
   selectionRef.current = selection;
 
@@ -68,44 +69,17 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
 
   useEffect(() => {
     if (!selection) {
+      invalidateSessionRequest();
       setSession(null);
       setSessionLoading(false);
       setSessionError(null);
       return;
     }
 
-    let cancelled = false;
-
-    async function fetchSession(currentSelection: AgentTraceSelection): Promise<void> {
-      setSessionLoading(true);
-
-      try {
-        const nextSession = await window.api.getAgentTraceSession(currentSelection);
-        if (!cancelled) {
-          setSession(nextSession);
-          setSessionError(null);
-        }
-      } catch (err) {
-        logError(
-          'useAgentTrace',
-          `getAgentTraceSession failed for ${currentSelection.source}:${currentSelection.sessionId}`,
-          err,
-        );
-        if (!cancelled) {
-          setSession(null);
-          setSessionError(asError(err));
-        }
-      } finally {
-        if (!cancelled) {
-          setSessionLoading(false);
-        }
-      }
-    }
-
-    void fetchSession(selection);
+    void loadSession(selection);
 
     return () => {
-      cancelled = true;
+      invalidateSessionRequest();
     };
   }, [selection?.source, selection?.sessionId]);
 
@@ -134,34 +108,14 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
       }
 
       if (!currentSelection) {
+        invalidateSessionRequest();
         setSession(null);
+        setSessionLoading(false);
         setSessionError(null);
         return;
       }
 
-      setSessionLoading(true);
-
-      try {
-        const nextSession = await window.api.getAgentTraceSession(currentSelection);
-        if (mountedRef.current) {
-          setSession(nextSession);
-          setSessionError(null);
-        }
-      } catch (err) {
-        logError(
-          'useAgentTrace',
-          `getAgentTraceSession failed for ${currentSelection.source}:${currentSelection.sessionId}`,
-          err,
-        );
-        if (mountedRef.current) {
-          setSession(null);
-          setSessionError(asError(err));
-        }
-      } finally {
-        if (mountedRef.current) {
-          setSessionLoading(false);
-        }
-      }
+      await loadSession(currentSelection);
     } catch (err) {
       logError('useAgentTrace', 'clearAgentTraceData failed', err);
       if (mountedRef.current) {
@@ -180,6 +134,47 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
     setCollectionEnabled,
     clearTraceData,
   };
+
+  async function loadSession(currentSelection: AgentTraceSelection): Promise<void> {
+    const requestGeneration = startSessionRequest();
+
+    try {
+      const nextSession = await window.api.getAgentTraceSession(currentSelection);
+      if (isActiveSessionRequest(requestGeneration)) {
+        setSession(nextSession);
+        setSessionError(null);
+      }
+    } catch (err) {
+      logError(
+        'useAgentTrace',
+        `getAgentTraceSession failed for ${currentSelection.source}:${currentSelection.sessionId}`,
+        err,
+      );
+      if (isActiveSessionRequest(requestGeneration)) {
+        setSession(null);
+        setSessionError(asError(err));
+      }
+    } finally {
+      if (isActiveSessionRequest(requestGeneration)) {
+        setSessionLoading(false);
+      }
+    }
+  }
+
+  function startSessionRequest(): number {
+    const nextGeneration = sessionRequestGenerationRef.current + 1;
+    sessionRequestGenerationRef.current = nextGeneration;
+    setSessionLoading(true);
+    return nextGeneration;
+  }
+
+  function invalidateSessionRequest(): void {
+    sessionRequestGenerationRef.current += 1;
+  }
+
+  function isActiveSessionRequest(requestGeneration: number): boolean {
+    return mountedRef.current && sessionRequestGenerationRef.current === requestGeneration;
+  }
 }
 
 function asError(error: unknown): Error {
