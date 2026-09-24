@@ -293,6 +293,22 @@ describe('App', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps Traces agents reachable when usage or filter data is unavailable', async () => {
+    window.api.getFilterOptions = vi.fn().mockRejectedValue(new Error('db not found'));
+    window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Couldn't load Copilot CLI usage data.");
+
+    await user.click(screen.getByRole('button', { name: 'Traces agents' }));
+
+    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Activer la collecte locale des traces agent' })).toBeInTheDocument();
+    expect(screen.getByText('Collection is disabled until you opt in from this page.')).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't load Copilot CLI usage data.")).not.toBeInTheDocument();
+  });
+
   it('logs failures and tab navigation through the bridge', async () => {
     window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
 
@@ -517,6 +533,36 @@ describe('App', () => {
 
     expect(await screen.findByText('9.00')).toBeInTheDocument();
     expect(screen.queryByText('+6.00')).not.toBeInTheDocument();
+  });
+
+  it('navigates to Traces agents from a conversation action and preserves the selected trace across tab changes', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+
+    const projectChartCard = screen.getByText('Credits by project').closest('.chart-card') as HTMLElement;
+    const projectChart = within(projectChartCard).getByTestId('breakdown-chart');
+    const bar = projectChart.querySelector('.recharts-bar-rectangle');
+    await user.click(bar as Element);
+
+    expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Voir la trace' }));
+
+    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(screen.getAllByText('copilot-cli').length).toBeGreaterThan(0);
+    expect(screen.getByText('s1')).toBeInTheDocument();
+    expect(screen.getByText('No trace has been collected yet for this conversation.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Daily consumption' }));
+    expect(await screen.findByText('Credits over time')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Traces agents' }));
+    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(screen.getAllByText('copilot-cli').length).toBeGreaterThan(0);
+    expect(screen.getByText('s1')).toBeInTheDocument();
   });
 
   it('does not animate deltas when a tab is opened before a filtered refresh resolves', async () => {

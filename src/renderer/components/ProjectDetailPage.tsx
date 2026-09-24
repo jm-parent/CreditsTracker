@@ -4,7 +4,7 @@ import { SummaryCards } from './SummaryCards';
 import { TimeSeriesChart } from './TimeSeriesChart';
 import { ConversationsTable } from './ConversationsTable';
 import { Skeleton } from './ui/skeleton';
-import type { FilterOptions, UsageFilters } from '../../shared/types';
+import type { AgentTraceSelection, FilterOptions, UsageFilters } from '../../shared/types';
 
 interface ProjectDetailPageProps {
   project: string;
@@ -12,6 +12,7 @@ interface ProjectDetailPageProps {
   options: FilterOptions;
   onFiltersChange: (filters: UsageFilters) => void;
   onBack: () => void;
+  onViewTrace(selection: AgentTraceSelection): void;
 }
 
 export function ProjectDetailPage({
@@ -20,6 +21,7 @@ export function ProjectDetailPage({
   options,
   onFiltersChange,
   onBack,
+  onViewTrace,
 }: ProjectDetailPageProps) {
   const { data, loading, error } = useProjectDetail(project, filters);
   const updateContextKey = JSON.stringify({
@@ -66,7 +68,11 @@ export function ProjectDetailPage({
         <>
           <SummaryCards totals={data.totals} updateContextKey={updateContextKey} />
           <TimeSeriesChart data={data.timeSeries} updateContextKey={updateContextKey} />
-          <ConversationsTable conversations={data.conversations} updateContextKey={updateContextKey} />
+          <ConversationsTable
+            conversations={data.conversations}
+            updateContextKey={updateContextKey}
+            onViewTrace={onViewTrace}
+          />
         </>
       )}
     </div>

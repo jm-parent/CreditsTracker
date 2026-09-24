@@ -30,6 +30,7 @@ describe('Sidebar', () => {
     expect(buttonsInGroup('Data & tools')).toEqual([
       'Raw data',
       'HTML export',
+      'Traces agents',
       'Logs',
     ]);
     expect(buttonsInGroup('Discovery')).toEqual([
@@ -77,6 +78,20 @@ describe('Sidebar', () => {
     await user.click(screen.getByRole('button', { name: 'Featured projects' }));
 
     expect(onTabChange).toHaveBeenCalledWith('featured');
+  });
+
+  it('highlights and navigates to the Traces agents tab', async () => {
+    const user = userEvent.setup();
+    const onTabChange = vi.fn();
+    render(<Sidebar activeTab="agent-traces" onTabChange={onTabChange} />);
+
+    const tracesButton = screen.getByRole('button', { name: 'Traces agents' });
+    expect(tracesButton).toHaveAttribute('aria-current', 'page');
+    expect(tracesButton.className).toContain('bg-primary');
+
+    await user.click(tracesButton);
+
+    expect(onTabChange).toHaveBeenCalledWith('agent-traces');
   });
 
   it('renders the packaged version footer when provided', () => {

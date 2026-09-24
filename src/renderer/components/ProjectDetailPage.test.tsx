@@ -63,6 +63,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -79,6 +80,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -94,6 +96,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -116,6 +119,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={onFiltersChange}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
     await screen.findByText('3.50');
@@ -135,6 +139,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={onBack}
+        onViewTrace={vi.fn()}
       />,
     );
     await screen.findByText('3.50');
@@ -160,6 +165,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -179,6 +185,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -198,6 +205,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -212,6 +220,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -239,6 +248,7 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
@@ -251,10 +261,35 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
       />,
     );
 
     expect(await screen.findByText('9.00')).toBeInTheDocument();
     expect(screen.queryByText('+5.50')).not.toBeInTheDocument();
+  });
+
+  it('forwards the selected conversation trace action to the parent callback', async () => {
+    const onViewTrace = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+        onViewTrace={onViewTrace}
+      />,
+    );
+
+    await screen.findByText('Fixed the login bug');
+    await user.click(screen.getByRole('button', { name: 'Voir la trace' }));
+
+    expect(onViewTrace).toHaveBeenCalledWith({
+      source: 'copilot-cli',
+      sessionId: 's1',
+    });
   });
 });

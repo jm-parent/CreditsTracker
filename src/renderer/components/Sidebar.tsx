@@ -18,6 +18,7 @@ export type DashboardTab =
   | 'monthly'
   | 'projects'
   | 'models'
+  | 'agent-traces'
   | 'raw'
   | 'export'
   | 'logs'
@@ -63,6 +64,7 @@ const NAV_GROUPS: NavigationGroup[] = [
     entries: [
       { id: 'raw', label: 'Raw data', icon: Database },
       { id: 'export', label: 'HTML export', icon: Download },
+      { id: 'agent-traces', label: 'Traces agents', icon: ScrollText },
       { id: 'logs', label: 'Logs', icon: ScrollText },
     ],
   },
