@@ -296,13 +296,15 @@ function isStoredAgentTraceSpan(value: unknown): value is AgentTraceSpan {
   }
 
   return (
-    VALID_SOURCES.has(value.source)
+    typeof value.source === 'string'
+    && VALID_SOURCES.has(value.source as AgentTraceSpan['source'])
     && typeof value.sessionId === 'string'
     && typeof value.traceId === 'string'
     && typeof value.spanId === 'string'
     && (value.parentSpanId === null || typeof value.parentSpanId === 'string')
     && typeof value.name === 'string'
-    && VALID_CATEGORIES.has(value.category)
+    && typeof value.category === 'string'
+    && VALID_CATEGORIES.has(value.category as AgentTraceSpan['category'])
     && isNullableString(value.toolName)
     && isNullableString(value.skillName)
     && isNullableString(value.model)
@@ -310,12 +312,14 @@ function isStoredAgentTraceSpan(value: unknown): value is AgentTraceSpan {
     && isIsoDate(value.endedAt)
     && typeof value.durationMs === 'number'
     && Number.isFinite(value.durationMs)
-    && VALID_STATUSES.has(value.status)
+    && typeof value.status === 'string'
+    && VALID_STATUSES.has(value.status as AgentTraceSpan['status'])
     && isNullableString(value.errorType)
     && isNullableString(value.toolCallId)
     && isNullableString(value.argumentsJson)
     && isNullableString(value.resultText)
-    && VALID_CONTENT_STATES.has(value.contentState)
+    && typeof value.contentState === 'string'
+    && VALID_CONTENT_STATES.has(value.contentState as AgentTraceSpan['contentState'])
   );
 }
 

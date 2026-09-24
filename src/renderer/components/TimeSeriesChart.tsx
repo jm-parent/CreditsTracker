@@ -93,10 +93,6 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
     CREDIT_CHART_ANIMATION_DURATION_MS,
   );
 
-  const handleBarClick = onDayClick
-    ? (entry: TimeSeriesPoint) => onDayClick(entry.date)
-    : undefined;
-
   return (
     <Card className="chart-card">
       <CardHeader>
@@ -121,7 +117,15 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
                       stackId="credits"
                       fill={getColorForKey(key)}
                       cursor={onDayClick ? 'pointer' : undefined}
-                      onClick={handleBarClick}
+                      onClick={
+                        onDayClick
+                          ? (((entry: { date?: string }) => {
+                              if (typeof entry.date === 'string') {
+                                onDayClick(entry.date);
+                              }
+                            }) as React.ComponentProps<typeof Bar>['onClick'])
+                          : undefined
+                      }
                       // Recharts draws this as a transparent rect spanning the
                       // whole plot height for the bar's column (the same grey
                       // area the hover cursor highlights), reusing the same
@@ -144,7 +148,15 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
                     dataKey="aiuCredits"
                     fill="#22d3ee"
                     cursor={onDayClick ? 'pointer' : undefined}
-                    onClick={handleBarClick}
+                    onClick={
+                      onDayClick
+                        ? (((entry: { date?: string }) => {
+                            if (typeof entry.date === 'string') {
+                              onDayClick(entry.date);
+                            }
+                          }) as React.ComponentProps<typeof Bar>['onClick'])
+                        : undefined
+                    }
                     background={{ fill: 'transparent' }}
                   >
                     {data.map((point) => (

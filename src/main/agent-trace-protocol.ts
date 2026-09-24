@@ -1,10 +1,10 @@
 import { opentelemetry } from './agent-trace-proto.generated';
 import type { AgentTraceCategory, AgentTraceSource } from '../shared/types';
 
-type AnyValue = opentelemetry.proto.common.v1.AnyValue | null | undefined;
+type AnyValue = opentelemetry.proto.common.v1.AnyValue.$Properties | null | undefined;
 type KeyValue = opentelemetry.proto.common.v1.KeyValue.$Properties;
-type ResourceSpans = opentelemetry.proto.trace.v1.ResourceSpans & opentelemetry.proto.trace.v1.ResourceSpans.$Shape;
-type Span = opentelemetry.proto.trace.v1.Span & opentelemetry.proto.trace.v1.Span.$Shape;
+type ResourceSpans = opentelemetry.proto.trace.v1.ResourceSpans.$Properties;
+type Span = opentelemetry.proto.trace.v1.Span.$Properties;
 
 interface DecodedSpanEnvelope {
   resourceServiceName: string | null;
@@ -95,7 +95,7 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
   const parentSpanId = decodeOptionalId(span.parentSpanId, 8, 'parent span');
   const attributes = collectAttributes(span.attributes ?? [], SPAN_ATTRIBUTE_ALLOWLIST);
   const skillName = asString(attributes.get('github.copilot.tool.parameters.skill_name'));
-  const category = classifySpan(span.name, attributes, skillName);
+  const category = classifySpan(span.name ?? '', attributes, skillName);
   const startedAtNs = normalizeNanoseconds(span.startTimeUnixNano);
   const endedAtNs = normalizeNanoseconds(span.endTimeUnixNano);
 
@@ -112,7 +112,7 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
       traceId,
       spanId,
       parentSpanId,
-      name: span.name,
+      name: span.name ?? '',
       category,
       toolName: asString(attributes.get('gen_ai.tool.name')),
       skillName,

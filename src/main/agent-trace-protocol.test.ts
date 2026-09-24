@@ -11,7 +11,25 @@ const skillSpanId = Buffer.from('777788889999aaaa', 'hex');
 const start = '1780000000000000000';
 const end = '1780000000100000000';
 
-const OTLP_FIXTURE = {
+type OtlpKeyValueFixture = { key: string; value: Record<string, unknown> };
+type OtlpSpanFixture = {
+  traceId: Buffer;
+  spanId: Buffer;
+  parentSpanId?: Buffer;
+  name: string;
+  startTimeUnixNano: string;
+  endTimeUnixNano: string;
+  attributes?: OtlpKeyValueFixture[];
+  status?: { code: number };
+};
+type OtlpTraceFixture = {
+  resourceSpans: Array<{
+    resource: { attributes: OtlpKeyValueFixture[] };
+    scopeSpans: Array<{ spans: OtlpSpanFixture[] }>;
+  }>;
+};
+
+const OTLP_FIXTURE: OtlpTraceFixture = {
   resourceSpans: [{
     resource: {
       attributes: [{ key: 'service.name', value: { stringValue: 'copilot-chat' } }],
@@ -406,7 +424,7 @@ describe('decodeOtlpTraceRequest', () => {
       key: 'service.version',
       value: { stringValue: '1.2.3' },
     });
-    fixture.resourceSpans[0].scopeSpans[0].spans[2].attributes.push(
+    fixture.resourceSpans[0].scopeSpans[0].spans[2].attributes?.push(
       { key: 'gen_ai.error.type', value: { stringValue: 'tool_failure' } },
       { key: 'gen_ai.output.messages', value: { stringValue: 'synthetic response' } },
       {

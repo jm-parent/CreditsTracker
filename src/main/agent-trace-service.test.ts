@@ -434,7 +434,7 @@ function makeStoreDouble(overrides: Partial<AgentTraceStore> = {}): AgentTraceSt
     getSession: vi.fn((selection) => ({
       source: selection.source,
       sessionId: selection.sessionId,
-      availability: 'not-collected',
+      availability: 'not-collected' as const,
       spans: [],
     })),
     getCollectionEnabled: vi.fn(() => collectionEnabled),

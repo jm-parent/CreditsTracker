@@ -94,7 +94,7 @@ function sanitizeContent(input: unknown): SanitizedContent | null {
 
   if (typeof input === 'string') {
     const parsed = tryParseJson(input);
-    if (parsed !== undefined && (Array.isArray(parsed) || isPlainObject(parsed))) {
+    if (parsed !== undefined && parsed !== null && (Array.isArray(parsed) || isPlainObject(parsed))) {
       return serializeSanitizedJsonValue(parsed);
     }
 

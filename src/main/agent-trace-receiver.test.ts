@@ -1,4 +1,5 @@
 import http, { type IncomingMessage } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getLogEntries, resetLoggerForTests } from './logger';
 import { openAgentTraceStore, type AgentTraceStore } from './agent-trace-store';
@@ -631,7 +632,7 @@ describe('startAgentTraceReceiver', () => {
       server.once('error', reject);
       server.listen(0, '127.0.0.1', () => resolve());
     });
-    const port = (server.address() as http.AddressInfo).port;
+    const port = (server.address() as AddressInfo).port;
 
     await expect(startReceiver({ store: openMemoryStore(), port })).rejects.toThrow(/EADDRINUSE/i);
   });
@@ -691,7 +692,7 @@ function encodeTraceRequest(input: {
     resource: { attributes: ReturnType<typeof attribute>[] };
     scopeSpans: Array<{ spans: ReturnType<typeof makeSpan>[] }>;
   }>;
-}): Uint8Array {
+}): BodyInit {
   const resourceSpans = input.resourceSpans ?? [{
     resource: {
       attributes: [attribute('service.name', input.serviceName ?? 'copilot-chat')],
@@ -699,7 +700,10 @@ function encodeTraceRequest(input: {
     scopeSpans: [{ spans: input.spans ?? [] }],
   }];
 
-  return ExportTraceServiceRequest.encode(ExportTraceServiceRequest.create({ resourceSpans })).finish();
+  const payload = ExportTraceServiceRequest.encode(
+    ExportTraceServiceRequest.fromObject({ resourceSpans }),
+  ).finish();
+  return Buffer.from(payload) as unknown as BodyInit;
 }
 
 function makeSpan(input: {

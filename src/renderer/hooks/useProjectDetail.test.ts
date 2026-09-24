@@ -10,6 +10,7 @@ const detail: ProjectDetailResult = {
   timeSeries: [{ date: '2026-09-01', aiuCredits: 3 }],
   conversations: [
     {
+      source: 'vscode',
       sessionId: 's1',
       createdAt: '2026-09-01 10:00:00',
       summary: 'Fixed a bug',

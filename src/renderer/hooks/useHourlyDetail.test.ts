@@ -1,20 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useHourlyDetail } from './useHourlyDetail';
+import { createWindowApi } from '../test-utils/windowApi';
 import type { HourlyPoint } from '../../shared/types';
 
 const points: HourlyPoint[] = [];
 
 beforeEach(() => {
-  window.api = {
-    getFilterOptions: vi.fn(),
-    getUsage: vi.fn(),
-    getProjectDetail: vi.fn(),
-    getRawTablePage: vi.fn(),
+  window.api = createWindowApi({
     getHourlyDetail: vi.fn().mockResolvedValue(points),
-    getMonthlyActivity: vi.fn(),
-    openExternalUrl: vi.fn().mockResolvedValue(undefined),
-  };
+  });
 });
 
 describe('useHourlyDetail', () => {
