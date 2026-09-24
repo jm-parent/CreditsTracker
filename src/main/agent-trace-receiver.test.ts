@@ -553,6 +553,39 @@ describe('startAgentTraceReceiver', () => {
     });
   });
 
+  it('notifies the receiver callback with null after a fully accepted export', async () => {
+    const store = openMemoryStore();
+    const onPartialSuccess = vi.fn<(partialSuccess: import('./agent-trace-receiver').AgentTracePartialSuccess | null) => void>();
+    const receiver = await startReceiver({ store, port: 0, onPartialSuccess });
+
+    const response = await fetch(`${receiver.endpoint}/v1/traces`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-protobuf' },
+      body: encodeTraceRequest({
+        serviceName: 'copilot-chat',
+        spans: [
+          makeSpan({
+            traceId: 'c0112233445566778899aabbccddeeff',
+            spanId: '1111222233334444',
+            name: 'invoke_agent copilot',
+            attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+          }),
+          makeSpan({
+            traceId: 'c0112233445566778899aabbccddeeff',
+            spanId: '5555666677778888',
+            parentSpanId: '1111222233334444',
+            name: 'execute_tool runCommand',
+            attributes: [attribute('gen_ai.tool.name', 'runCommand')],
+          }),
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(onPartialSuccess).toHaveBeenCalledTimes(1);
+    expect(onPartialSuccess).toHaveBeenCalledWith(null);
+  });
+
   it('returns 413 when a chunked request body exceeds the 8 MiB limit', async () => {
     const receiver = await startReceiver({ store: openMemoryStore(), port: 0 });
 

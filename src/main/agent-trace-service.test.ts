@@ -120,12 +120,12 @@ describe('createAgentTraceService', () => {
 
   it('surfaces receiver partial-coverage updates in status and preserves them across disable and re-enable', async () => {
     let reportPartialSuccess:
-      | ((partialSuccess: AgentTracePartialSuccess) => void)
+      | ((partialSuccess: AgentTracePartialSuccess | null) => void)
       | undefined;
     const store = makeStoreDouble();
     const receiver = makeReceiverDouble();
     const receiverFactory = vi.fn(async (options: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0]) => {
-      reportPartialSuccess = options.onPartialSuccess;
+      reportPartialSuccess = options.onPartialSuccess as typeof reportPartialSuccess;
       return receiver;
     });
     const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
@@ -168,6 +168,63 @@ describe('createAgentTraceService', () => {
         'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
     } satisfies AgentTraceCollectionStatus);
     expect(receiverFactory).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears partial coverage after a clean export without hiding an independent lifecycle error', async () => {
+    let reportPartialSuccess:
+      | ((partialSuccess: AgentTracePartialSuccess | null) => void)
+      | undefined;
+    let persistShouldFail = false;
+    const store = makeStoreDouble({
+      setCollectionEnabled: vi.fn((enabled: boolean) => {
+        if (persistShouldFail) {
+          throw new Error('persist failed');
+        }
+      }),
+    });
+    const receiver = makeReceiverDouble();
+    const receiverFactory = vi.fn(async (options: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0]) => {
+      reportPartialSuccess = options.onPartialSuccess as typeof reportPartialSuccess;
+      return receiver;
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory,
+    });
+
+    await service.initialize();
+    await service.setEnabled(true);
+
+    reportPartialSuccess?.({
+      totalRejectedSpans: 2,
+      unsupportedSourceSpans: 1,
+      missingSourceSessionSpans: 1,
+      errorMessage:
+        'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
+    });
+    expect(service.getStatus().errorMessage).toBe(
+      'partial trace coverage: rejected 2 span(s): 1 from unsupported source, 1 without source/session context',
+    );
+
+    reportPartialSuccess?.(null);
+    expect(service.getStatus().errorMessage).toBeNull();
+
+    reportPartialSuccess?.({
+      totalRejectedSpans: 1,
+      unsupportedSourceSpans: 1,
+      missingSourceSessionSpans: 0,
+      errorMessage: 'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
+    });
+    expect(service.getStatus().errorMessage).toBe(
+      'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
+    );
+
+    persistShouldFail = true;
+    await service.setEnabled(true);
+    expect(service.getStatus().errorMessage).toContain('persist failed');
+
+    reportPartialSuccess?.(null);
+    expect(service.getStatus().errorMessage).toContain('persist failed');
   });
 
   it('auto-starts persisted opt-in, purges every 24 hours, and stops the timer during shutdown', async () => {

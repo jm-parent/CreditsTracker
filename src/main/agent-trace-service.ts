@@ -217,7 +217,7 @@ export class AgentTraceService {
       receiver = await this.dependencies.receiverFactory({
         store,
         onPartialSuccess: (partialSuccess) => {
-          this.recordPartialCoverage(partialSuccess);
+          this.recordExportOutcome(partialSuccess);
         },
       });
       if (options.persistEnabled) {
@@ -331,8 +331,8 @@ export class AgentTraceService {
     };
   }
 
-  private recordPartialCoverage(partialSuccess: AgentTracePartialSuccess): void {
-    this.partialCoverageMessage = partialSuccess.errorMessage;
+  private recordExportOutcome(partialSuccess: AgentTracePartialSuccess | null): void {
+    this.partialCoverageMessage = partialSuccess?.errorMessage ?? null;
     this.status = {
       ...this.status,
       errorMessage: this.currentErrorMessage(),

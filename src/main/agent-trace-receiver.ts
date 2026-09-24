@@ -34,7 +34,7 @@ export interface AgentTraceReceiver {
 export async function startAgentTraceReceiver(options: {
   store: AgentTraceStore;
   port?: number;
-  onPartialSuccess?(partialSuccess: AgentTracePartialSuccess): void;
+  onPartialSuccess?(partialSuccess: AgentTracePartialSuccess | null): void;
 }): Promise<AgentTraceReceiver> {
   const { store, port = DEFAULT_PORT, onPartialSuccess } = options;
   const server = http.createServer((request, response) => {
@@ -66,7 +66,7 @@ async function handleRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   store: AgentTraceStore,
-  onPartialSuccess: ((partialSuccess: AgentTracePartialSuccess) => void) | undefined,
+  onPartialSuccess: ((partialSuccess: AgentTracePartialSuccess | null) => void) | undefined,
 ): Promise<void> {
   const route = getRoute(request);
 
@@ -119,9 +119,7 @@ async function handleRequest(
     store.insertSpans(acceptedSpans);
 
     const partialSuccess = buildPartialSuccess(rejectedSpans);
-    if (partialSuccess) {
-      onPartialSuccess?.(partialSuccess);
-    }
+    onPartialSuccess?.(partialSuccess);
 
     writeOtlpResponse(response, partialSuccess);
   } catch (error) {
