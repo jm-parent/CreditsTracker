@@ -260,6 +260,61 @@ describe('useAgentTrace', () => {
     expect(window.api.getAgentTraceCollectionStatus).toHaveBeenCalledTimes(2);
   });
 
+  it('ignores an initial status response that resolves after a newer clear-triggered refresh', async () => {
+    const initialStatus = createDeferred<AgentTraceCollectionStatus>();
+    const refreshedStatus = createDeferred<AgentTraceCollectionStatus>();
+    const partialCoverageStatus: AgentTraceCollectionStatus = {
+      enabled: true,
+      listening: true,
+      endpoint: 'http://127.0.0.1:4318',
+      errorMessage: 'Only some spans were stored.',
+    };
+    const clearedStatus: AgentTraceCollectionStatus = {
+      ...partialCoverageStatus,
+      errorMessage: null,
+    };
+
+    window.api.getAgentTraceCollectionStatus = vi
+      .fn()
+      .mockImplementationOnce(() => initialStatus.promise)
+      .mockImplementationOnce(() => refreshedStatus.promise);
+    window.api.getAgentTraceSession = vi
+      .fn()
+      .mockResolvedValueOnce(partialSession)
+      .mockResolvedValueOnce(notCollectedSessionA);
+    window.api.clearAgentTraceData = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useAgentTrace(selectionA));
+
+    await waitFor(() => expect(result.current.session).toEqual(partialSession));
+
+    let clearPromise!: Promise<void>;
+    await act(async () => {
+      clearPromise = result.current.clearTraceData();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      refreshedStatus.resolve(clearedStatus);
+      await refreshedStatus.promise;
+      await clearPromise;
+    });
+
+    await waitFor(() => expect(result.current.collectionStatus).toEqual(clearedStatus));
+    expect(result.current.error).toBeNull();
+    expect(result.current.statusLoading).toBe(false);
+
+    await act(async () => {
+      initialStatus.resolve(partialCoverageStatus);
+      await initialStatus.promise;
+    });
+
+    expect(result.current.collectionStatus).toEqual(clearedStatus);
+    expect(result.current.error).toBeNull();
+    expect(result.current.statusLoading).toBe(false);
+    expect(window.api.getAgentTraceCollectionStatus).toHaveBeenCalledTimes(2);
+  });
+
   it('ignores stale clear-triggered reloads after the selection changes', async () => {
     const staleReload = createDeferred<AgentTraceSession>();
     const freshSession = createDeferred<AgentTraceSession>();

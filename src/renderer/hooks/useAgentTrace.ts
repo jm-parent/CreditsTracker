@@ -25,6 +25,7 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
   const [sessionError, setSessionError] = useState<Error | null>(null);
   const selectionRef = useRef(selection);
   const mountedRef = useRef(true);
+  const statusRequestGenerationRef = useRef(0);
   const sessionRequestGenerationRef = useRef(0);
 
   selectionRef.current = selection;
@@ -37,12 +38,7 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
   }, []);
 
   useEffect(() => {
-    setStatusLoading(true);
-    void refreshCollectionStatus().finally(() => {
-      if (mountedRef.current) {
-        setStatusLoading(false);
-      }
-    });
+    void refreshCollectionStatus();
   }, []);
 
   useEffect(() => {
@@ -157,18 +153,35 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
   }
 
   async function refreshCollectionStatus(): Promise<void> {
+    const requestGeneration = startStatusRequest();
+
     try {
       const nextStatus = await window.api.getAgentTraceCollectionStatus();
-      if (mountedRef.current) {
+      if (isActiveStatusRequest(requestGeneration)) {
         setCollectionStatus(nextStatus);
         setStatusError(null);
       }
     } catch (err) {
       logError('useAgentTrace', 'getAgentTraceCollectionStatus failed', err);
-      if (mountedRef.current) {
+      if (isActiveStatusRequest(requestGeneration)) {
         setStatusError(asError(err));
       }
+    } finally {
+      if (isActiveStatusRequest(requestGeneration)) {
+        setStatusLoading(false);
+      }
     }
+  }
+
+  function startStatusRequest(): number {
+    const nextGeneration = statusRequestGenerationRef.current + 1;
+    statusRequestGenerationRef.current = nextGeneration;
+    setStatusLoading(true);
+    return nextGeneration;
+  }
+
+  function isActiveStatusRequest(requestGeneration: number): boolean {
+    return mountedRef.current && statusRequestGenerationRef.current === requestGeneration;
   }
 }
 
