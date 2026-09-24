@@ -12,6 +12,8 @@ interface DecodedSpanEnvelope {
   decoded: DecodedAgentTraceSpan;
 }
 
+export type DecodedAgentTraceSourceResolution = 'supported' | 'unsupported' | 'missing';
+
 const RESOURCE_ATTRIBUTE_ALLOWLIST = new Set([
   'service.name',
 ]);
@@ -35,6 +37,7 @@ const SPAN_ATTRIBUTE_ALLOWLIST = new Set([
 
 export interface DecodedAgentTraceSpan {
   source: AgentTraceSource | null;
+  sourceResolution: DecodedAgentTraceSourceResolution;
   conversationId: string | null;
   sessionId: string | null;
   traceId: string;
@@ -103,6 +106,7 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
     attributes,
     decoded: {
       source: null,
+      sourceResolution: 'missing',
       conversationId: null,
       sessionId: null,
       traceId,
@@ -131,12 +135,13 @@ function decodeSpan(span: Span, resourceServiceName: string | null): DecodedSpan
 
 function applyTraceMetadata(group: DecodedSpanEnvelope[]): void {
   const rootSpan = findRootSpan(group);
-  const source = classifySource(rootSpan?.resourceServiceName ?? null);
+  const { source, resolution } = resolveSource(rootSpan?.resourceServiceName ?? null);
   const conversationId = asString(rootSpan?.attributes.get('gen_ai.conversation.id'));
   const sessionId = buildSessionId(source, conversationId);
 
   for (const envelope of group) {
     envelope.decoded.source = source;
+    envelope.decoded.sourceResolution = resolution;
     envelope.decoded.conversationId = conversationId;
     envelope.decoded.sessionId = sessionId;
   }
@@ -152,18 +157,18 @@ function findRootSpan(group: DecodedSpanEnvelope[]): DecodedSpanEnvelope | undef
   return rootCandidates.find((entry) => isRecognizedConversationRoot(entry))
     ?? rootCandidates.find((entry) => isConversationRoot(entry))
     ?? rootCandidates.find((entry) => (
-      classifySource(entry.resourceServiceName) !== null
+      hasSupportedSource(entry.resourceServiceName)
       && entry.attributes.has('gen_ai.conversation.id')
     ))
     ?? rootCandidates.find((entry) => entry.attributes.has('gen_ai.conversation.id'))
     ?? rootCandidates.find((entry) => entry.decoded.category === 'agent')
-    ?? rootCandidates.find((entry) => classifySource(entry.resourceServiceName) !== null)
+    ?? rootCandidates.find((entry) => hasSupportedSource(entry.resourceServiceName))
     ?? rootCandidates[0]
     ?? group[0];
 }
 
 function isRecognizedConversationRoot(entry: DecodedSpanEnvelope): boolean {
-  return classifySource(entry.resourceServiceName) !== null
+  return hasSupportedSource(entry.resourceServiceName)
     && isConversationRoot(entry);
 }
 
@@ -172,14 +177,23 @@ function isConversationRoot(entry: DecodedSpanEnvelope): boolean {
     && asString(entry.attributes.get('gen_ai.conversation.id')) !== null;
 }
 
-function classifySource(serviceName: string | null): AgentTraceSource | null {
+function hasSupportedSource(serviceName: string | null): boolean {
+  return resolveSource(serviceName).resolution === 'supported';
+}
+
+function resolveSource(serviceName: string | null): {
+  source: AgentTraceSource | null;
+  resolution: DecodedAgentTraceSourceResolution;
+} {
   if (serviceName === 'copilot-chat') {
-    return 'vscode';
+    return { source: 'vscode', resolution: 'supported' };
   }
   if (serviceName === 'github-copilot') {
-    return 'copilot-cli';
+    return { source: 'copilot-cli', resolution: 'supported' };
   }
-  return null;
+  return serviceName === null
+    ? { source: null, resolution: 'missing' }
+    : { source: null, resolution: 'unsupported' };
 }
 
 function buildSessionId(

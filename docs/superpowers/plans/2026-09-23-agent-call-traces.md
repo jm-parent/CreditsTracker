@@ -626,7 +626,7 @@ rtk git commit -m "feat: persist sanitized agent traces locally" -m "Co-authored
 
 - [ ] **Step 1: Écrire les tests HTTP sur un port de test**
 
-Démarrer le store de test avec `openAgentTraceStore(':memory:')`, encoder un `payload` à partir de la fixture `OTLP_FIXTURE` de Task 2, puis démarrer le serveur sur un port éphémère et envoyer un `POST /v1/traces` :
+Démarrer le store de test avec `openAgentTraceStore(':memory:')`, activer explicitement `store.setCollectionEnabled(true)` pour refléter le fait que le service de Task 6 est l’unique porte opt-in qui démarre/arrête le receiver, encoder un `payload` à partir de la fixture `OTLP_FIXTURE` de Task 2, puis démarrer le serveur sur un port éphémère et envoyer un `POST /v1/traces` :
 
 ```ts
 const receiver = await startAgentTraceReceiver({ store, port: 0 });
@@ -651,7 +651,7 @@ Expected: FAIL parce que le récepteur n'existe pas.
 
 - [ ] **Step 3: Implémenter le serveur OTLP/HTTP**
 
-Utiliser `node:http`. N'écouter que sur `127.0.0.1`; l'adresse et le port ne viennent jamais d'une URL renderer. N'accepter que `POST /v1/traces` en `application/x-protobuf`, avec un corps borné à 8 MiB. Décoder le batch, sanitizer chaque span et écrire le lot expurgé dans une transaction. Les spans sans source/session déterminée ne sont pas stockés ; les compter dans `ExportTraceServiceResponse.partial_success.rejected_spans` avec un message de couverture partielle. Répondre `200` avec un `ExportTraceServiceResponse` vide lorsque tous les spans sont acceptés.
+Utiliser `node:http`. N'écouter que sur `127.0.0.1`; l'adresse et le port ne viennent jamais d'une URL renderer. N'accepter que `POST /v1/traces` en `application/x-protobuf`, avec un corps borné à 8 MiB. Le receiver ne relit jamais la préférence opt-in persistée : il suppose que Task 6 l’a démarré uniquement pendant l’opt-in explicite. Décoder le batch, propager un état typé de résolution de source (`supported` / `unsupported` / `missing`) depuis la racine de trace sélectionnée, sanitizer chaque span accepté et écrire le lot expurgé dans une transaction. Les spans d’une source non supportée et les spans sans source/session déterminée ne sont pas stockés ; les compter dans `ExportTraceServiceResponse.partial_success.rejected_spans` avec des raisons génériques distinctes, sans jamais conserver ou journaliser le nom brut d’un service inconnu. Répondre `200` avec un `ExportTraceServiceResponse` vide lorsque tous les spans sont acceptés.
 
 Refuser les requêtes non prises en charge avec un statut HTTP explicite. Les erreurs de décodage/stockage sont journalisées avec route, statut et contexte seulement ; aucune valeur de payload n'est enregistrée. `close()` doit être idempotent et attendre la fermeture de la socket.
 
@@ -719,7 +719,7 @@ Expected: FAIL parce que `AgentTraceService` n'existe pas.
 
 - [ ] **Step 3: Implémenter le service**
 
-Initialiser le store avec `app.getPath('userData')` fourni par `main.ts`; purger les entrées expirées au démarrage et toutes les 24 heures pendant l'exécution via un timer possédé par `AgentTraceService` et arrêté dans `shutdown()`. Si le réglage opt-in persistant est activé, démarrer le récepteur. Si son bind échoue, conserver la collecte désactivée, exposer `errorMessage` sans données brutes et journaliser l'erreur. Si des spans sont rejetés faute de source/session, conserver un état de couverture partielle visible dans `errorMessage`, sans convertir les spans rejetés en session.
+Initialiser le store avec `app.getPath('userData')` fourni par `main.ts`; purger les entrées expirées au démarrage et toutes les 24 heures pendant l'exécution via un timer possédé par `AgentTraceService` et arrêté dans `shutdown()`. `AgentTraceService` est l’unique porte opt-in : si le réglage opt-in persistant est activé, il démarre le récepteur de Task 5, et `setEnabled(false)`/`shutdown()` l’arrêtent. Le receiver de Task 5 ne revérifie pas cette préférence. Si son bind échoue, conserver la collecte désactivée, exposer `errorMessage` sans données brutes et journaliser l'erreur. Si des spans sont rejetés pour source non supportée ou faute de source/session, conserver un état de couverture partielle visible dans `errorMessage`, sans convertir les spans rejetés en session.
 
 `setEnabled(true)` doit démarrer le récepteur avant d'écrire la préférence ; en cas d'échec, la préférence reste `false`. `setEnabled(false)` ferme le serveur puis enregistre `false`. `getSession` retourne explicitement `not-collected` plutôt qu'une session complète vide. `clear()` retire uniquement les spans.
 

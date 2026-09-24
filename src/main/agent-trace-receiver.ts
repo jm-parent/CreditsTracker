@@ -4,6 +4,7 @@ import { decodeOtlpTraceRequest } from './agent-trace-protocol';
 import { opentelemetry } from './agent-trace-proto.generated';
 import { sanitizeAgentTraceSpan } from './agent-trace-sanitizer';
 import { logError } from './logger';
+import type { AgentTraceSpan } from '../shared/types';
 
 const LOOPBACK_HOST = '127.0.0.1';
 const DEFAULT_PORT = 4318;
@@ -12,6 +13,11 @@ const OTLP_PATH = '/v1/traces';
 const OTLP_CONTENT_TYPE = 'application/x-protobuf';
 
 const ExportTraceServiceResponse = opentelemetry.proto.collector.trace.v1.ExportTraceServiceResponse;
+
+interface SpanRejectionCounts {
+  unsupportedSource: number;
+  missingSourceSession: number;
+}
 
 export interface AgentTraceReceiver {
   endpoint: string;
@@ -80,10 +86,26 @@ async function handleRequest(
     }
 
     const decodedSpans = decodeRequestBody(body);
-    const acceptedSpans = decodedSpans
-      .map((span) => sanitizeAgentTraceSpan(span))
-      .filter((span) => span !== null);
-    const rejectedSpans = decodedSpans.length - acceptedSpans.length;
+    const acceptedSpans: AgentTraceSpan[] = [];
+    const rejectedSpans: SpanRejectionCounts = {
+      unsupportedSource: 0,
+      missingSourceSession: 0,
+    };
+
+    for (const decodedSpan of decodedSpans) {
+      const sanitizedSpan = sanitizeAgentTraceSpan(decodedSpan);
+      if (sanitizedSpan !== null) {
+        acceptedSpans.push(sanitizedSpan);
+        continue;
+      }
+
+      if (decodedSpan.sourceResolution === 'unsupported') {
+        rejectedSpans.unsupportedSource += 1;
+        continue;
+      }
+
+      rejectedSpans.missingSourceSession += 1;
+    }
 
     store.insertSpans(acceptedSpans);
 
@@ -147,13 +169,14 @@ function readRequestBody(
   });
 }
 
-function writeOtlpResponse(response: http.ServerResponse, rejectedSpans: number): void {
+function writeOtlpResponse(response: http.ServerResponse, rejectedSpans: SpanRejectionCounts): void {
+  const totalRejectedSpans = rejectedSpans.unsupportedSource + rejectedSpans.missingSourceSession;
   const payload = ExportTraceServiceResponse.encode(ExportTraceServiceResponse.create(
-    rejectedSpans > 0
+    totalRejectedSpans > 0
       ? {
         partialSuccess: {
-          rejectedSpans,
-          errorMessage: `partial trace coverage: rejected ${rejectedSpans} span(s) without source/session`,
+          rejectedSpans: totalRejectedSpans,
+          errorMessage: buildPartialSuccessErrorMessage(rejectedSpans, totalRejectedSpans),
         },
       }
       : {},
@@ -163,6 +186,22 @@ function writeOtlpResponse(response: http.ServerResponse, rejectedSpans: number)
   response.setHeader('content-type', OTLP_CONTENT_TYPE);
   response.setHeader('content-length', String(payload.length));
   response.end(payload);
+}
+
+function buildPartialSuccessErrorMessage(
+  rejectedSpans: SpanRejectionCounts,
+  totalRejectedSpans: number,
+): string {
+  const reasons: string[] = [];
+
+  if (rejectedSpans.unsupportedSource > 0) {
+    reasons.push(`${rejectedSpans.unsupportedSource} from unsupported source`);
+  }
+  if (rejectedSpans.missingSourceSession > 0) {
+    reasons.push(`${rejectedSpans.missingSourceSession} without source/session context`);
+  }
+
+  return `partial trace coverage: rejected ${totalRejectedSpans} span(s): ${reasons.join(', ')}`;
 }
 
 function getRoute(request: http.IncomingMessage): string {

@@ -161,6 +161,42 @@ describe('startAgentTraceReceiver', () => {
     });
   });
 
+  it('continues storing spans even when the persisted collection flag is false because Task 6 owns opt-in gating', async () => {
+    const insertedBatches: AgentTraceSpan[][] = [];
+    const store = makeStoreDouble({
+      insertSpans: (spans) => {
+        insertedBatches.push(spans.map((span) => ({ ...span })));
+      },
+      getCollectionEnabled: () => false,
+    });
+    const receiver = await startReceiver({ store, port: 0 });
+
+    const response = await fetch(`${receiver.endpoint}/v1/traces`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-protobuf' },
+      body: encodeTraceRequest({
+        serviceName: 'copilot-chat',
+        spans: [
+          makeSpan({
+            traceId: '15112233445566778899aabbccddeeff',
+            spanId: '1111222233334444',
+            name: 'invoke_agent copilot',
+            attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+          }),
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(insertedBatches).toHaveLength(1);
+    expect(insertedBatches[0]).toHaveLength(1);
+    expect(insertedBatches[0][0]).toMatchObject({
+      source: 'vscode',
+      sessionId: 'vscode:conversation-1',
+      spanId: '1111222233334444',
+    });
+  });
+
   it('rejects unsupported methods for the OTLP route', async () => {
     const receiver = await startReceiver({ store: openMemoryStore(), port: 0 });
 
@@ -324,10 +360,116 @@ describe('startAgentTraceReceiver', () => {
 
     const responseMessage = decodeTraceResponse(new Uint8Array(await response.arrayBuffer()));
     expect(Number(responseMessage.partialSuccess?.rejectedSpans ?? 0)).toBe(1);
-    expect(responseMessage.partialSuccess?.errorMessage).toContain('partial');
+    expect(responseMessage.partialSuccess?.errorMessage).toContain('unsupported source');
+    expect(responseMessage.partialSuccess?.errorMessage).not.toContain('without source/session');
 
     const session = store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' });
     expect(session.spans).toHaveLength(2);
+    expect(session.spans.map((span) => span.spanId)).toEqual(['1111222233334444', '5555666677778888']);
+  });
+
+  it('reports missing source/session context separately from unsupported sources', async () => {
+    const store = openMemoryStore();
+    const receiver = await startReceiver({ store, port: 0 });
+
+    const response = await fetch(`${receiver.endpoint}/v1/traces`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-protobuf' },
+      body: encodeTraceRequest({
+        serviceName: 'copilot-chat',
+        spans: [
+          makeSpan({
+            traceId: '50112233445566778899aabbccddeeff',
+            spanId: '1111222233334444',
+            name: 'invoke_agent copilot',
+            attributes: [attribute('gen_ai.agent.name', 'copilot')],
+          }),
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+
+    const responseMessage = decodeTraceResponse(new Uint8Array(await response.arrayBuffer()));
+    expect(Number(responseMessage.partialSuccess?.rejectedSpans ?? 0)).toBe(1);
+    expect(responseMessage.partialSuccess?.errorMessage).toContain('without source/session');
+    expect(responseMessage.partialSuccess?.errorMessage).not.toContain('unsupported source');
+    expect(store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' }).spans).toHaveLength(0);
+  });
+
+  it('combines unsupported-source and missing-source/session rejection reasons in one partial success response', async () => {
+    const store = openMemoryStore();
+    const receiver = await startReceiver({ store, port: 0 });
+
+    const response = await fetch(`${receiver.endpoint}/v1/traces`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-protobuf' },
+      body: encodeTraceRequest({
+        resourceSpans: [
+          {
+            resource: {
+              attributes: [attribute('service.name', 'copilot-chat')],
+            },
+            scopeSpans: [{
+              spans: [
+                makeSpan({
+                  traceId: '60112233445566778899aabbccddeeff',
+                  spanId: '1111222233334444',
+                  name: 'invoke_agent copilot',
+                  attributes: [attribute('gen_ai.conversation.id', 'conversation-1')],
+                }),
+                makeSpan({
+                  traceId: '60112233445566778899aabbccddeeff',
+                  spanId: '5555666677778888',
+                  parentSpanId: '1111222233334444',
+                  name: 'execute_tool runCommand',
+                  attributes: [attribute('gen_ai.tool.name', 'runCommand')],
+                }),
+              ],
+            }],
+          },
+          {
+            resource: {
+              attributes: [attribute('service.name', 'unknown-client')],
+            },
+            scopeSpans: [{
+              spans: [
+                makeSpan({
+                  traceId: '70112233445566778899aabbccddeeff',
+                  spanId: 'aaaaaaaaaaaaaaaa',
+                  name: 'invoke_agent unsupported',
+                  attributes: [attribute('gen_ai.conversation.id', 'conversation-2')],
+                }),
+              ],
+            }],
+          },
+          {
+            resource: {
+              attributes: [attribute('service.name', 'copilot-chat')],
+            },
+            scopeSpans: [{
+              spans: [
+                makeSpan({
+                  traceId: '80112233445566778899aabbccddeeff',
+                  spanId: 'bbbbbbbbbbbbbbbb',
+                  name: 'invoke_agent missingContext',
+                  attributes: [attribute('gen_ai.agent.name', 'copilot')],
+                }),
+              ],
+            }],
+          },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+
+    const responseMessage = decodeTraceResponse(new Uint8Array(await response.arrayBuffer()));
+    expect(Number(responseMessage.partialSuccess?.rejectedSpans ?? 0)).toBe(2);
+    expect(responseMessage.partialSuccess?.errorMessage).toContain('1 from unsupported source');
+    expect(responseMessage.partialSuccess?.errorMessage).toContain('1 without source/session context');
+
+    const session = store.getSession({ source: 'vscode', sessionId: 'vscode:conversation-1' });
     expect(session.spans.map((span) => span.spanId)).toEqual(['1111222233334444', '5555666677778888']);
   });
 
@@ -393,11 +535,15 @@ describe('startAgentTraceReceiver', () => {
 
 function openMemoryStore(): AgentTraceStore {
   const store = openAgentTraceStore(':memory:');
+  store.setCollectionEnabled(true);
   openStores.add(store);
   return store;
 }
 
-function makeStoreDouble(overrides: Pick<AgentTraceStore, 'insertSpans'>): AgentTraceStore {
+function makeStoreDouble(overrides: {
+  insertSpans: AgentTraceStore['insertSpans'];
+  getCollectionEnabled?: AgentTraceStore['getCollectionEnabled'];
+}): AgentTraceStore {
   return {
     insertSpans: overrides.insertSpans,
     getSession: () => ({
@@ -406,7 +552,7 @@ function makeStoreDouble(overrides: Pick<AgentTraceStore, 'insertSpans'>): Agent
       availability: 'not-collected',
       spans: [],
     }),
-    getCollectionEnabled: () => false,
+    getCollectionEnabled: overrides.getCollectionEnabled ?? (() => true),
     setCollectionEnabled: () => undefined,
     pruneExpired: () => undefined,
     clear: () => undefined,

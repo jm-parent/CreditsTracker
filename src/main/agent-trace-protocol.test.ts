@@ -122,6 +122,7 @@ describe('decodeOtlpTraceRequest', () => {
           parentSpanId: null,
           name: 'invoke_agent copilot',
           source: 'vscode',
+          sourceResolution: 'supported',
           conversationId: 'conversation-1',
           sessionId: 'vscode:conversation-1',
           category: 'agent',
@@ -141,6 +142,7 @@ describe('decodeOtlpTraceRequest', () => {
           parentSpanId: '2222333344445555',
           name: 'execute_tool runCommand',
           source: 'vscode',
+          sourceResolution: 'supported',
           conversationId: 'conversation-1',
           sessionId: 'vscode:conversation-1',
           category: 'tool',
@@ -178,6 +180,7 @@ describe('decodeOtlpTraceRequest', () => {
         expect.objectContaining({
           spanId: '6666777788889999',
           source: 'vscode',
+          sourceResolution: 'supported',
           conversationId: 'conversation-1',
           sessionId: 'vscode:conversation-1',
           parentSpanId: null,
@@ -248,12 +251,14 @@ describe('decodeOtlpTraceRequest', () => {
         expect.objectContaining({
           spanId: '1111222233334444',
           source: 'copilot-cli',
+          sourceResolution: 'supported',
           conversationId: 'cli-session-7',
           sessionId: 'cli-session-7',
         }),
         expect.objectContaining({
           spanId: '5555666677778888',
           source: 'copilot-cli',
+          sourceResolution: 'supported',
           conversationId: 'cli-session-7',
           sessionId: 'cli-session-7',
         }),
@@ -261,15 +266,77 @@ describe('decodeOtlpTraceRequest', () => {
     );
   });
 
-  it('returns null source and session when the service name is unsupported', async () => {
+  it('marks traces from unsupported service names without preserving the raw service name', async () => {
     const fixture = structuredClone(OTLP_FIXTURE);
-    fixture.resourceSpans[0].resource.attributes[0].value.stringValue = 'unsupported-client';
+    fixture.resourceSpans = [
+      {
+        resource: {
+          attributes: [{ key: 'service.name', value: { stringValue: 'unsupported-client' } }],
+        },
+        scopeSpans: [{
+          spans: [{
+            traceId,
+            spanId: rootSpanId,
+            name: 'invoke_agent copilot',
+            startTimeUnixNano: start,
+            endTimeUnixNano: end,
+            attributes: [
+              { key: 'gen_ai.conversation.id', value: { stringValue: 'conversation-1' } },
+            ],
+          }],
+        }],
+      },
+      {
+        resource: {
+          attributes: [{ key: 'service.name', value: { stringValue: 'copilot-chat' } }],
+        },
+        scopeSpans: [{
+          spans: [{
+            traceId,
+            spanId: toolSpanId,
+            parentSpanId: rootSpanId,
+            name: 'execute_tool runCommand',
+            startTimeUnixNano: start,
+            endTimeUnixNano: end,
+            attributes: [
+              { key: 'gen_ai.tool.name', value: { stringValue: 'runCommand' } },
+            ],
+          }],
+        }],
+      },
+    ];
+
+    const decoded = await decodePayload(encodeFixture(fixture));
+    const decodedRoot = decoded.find((span) => span.spanId === '1111222233334444');
+    const decodedChild = decoded.find((span) => span.spanId === '5555666677778888');
+
+    expect(decodedRoot).toMatchObject({
+      spanId: '1111222233334444',
+      source: null,
+      sourceResolution: 'unsupported',
+      conversationId: 'conversation-1',
+      sessionId: null,
+    });
+    expect(decodedChild).toMatchObject({
+      spanId: '5555666677778888',
+      source: null,
+      sourceResolution: 'unsupported',
+      conversationId: 'conversation-1',
+      sessionId: null,
+    });
+    expect(JSON.stringify(decoded)).not.toContain('unsupported-client');
+  });
+
+  it('marks traces with no root service name as missing source metadata', async () => {
+    const fixture = structuredClone(OTLP_FIXTURE);
+    fixture.resourceSpans[0].resource.attributes = [];
 
     const [decodedRoot] = await decodePayload(encodeFixture(fixture));
 
     expect(decodedRoot).toMatchObject({
       spanId: '1111222233334444',
       source: null,
+      sourceResolution: 'missing',
       conversationId: 'conversation-1',
       sessionId: null,
     });

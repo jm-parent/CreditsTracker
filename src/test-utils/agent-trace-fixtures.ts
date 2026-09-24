@@ -39,6 +39,7 @@ export function makeDecodedAgentTraceSpan(
 ): DecodedAgentTraceSpan {
   return {
     source: 'vscode',
+    sourceResolution: 'supported',
     conversationId: 'conversation-1',
     sessionId: DEFAULT_SESSION_ID,
     traceId: DEFAULT_TRACE_ID,
