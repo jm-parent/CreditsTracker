@@ -37,34 +37,12 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function fetchStatus(): Promise<void> {
-      setStatusLoading(true);
-
-      try {
-        const nextStatus = await window.api.getAgentTraceCollectionStatus();
-        if (!cancelled) {
-          setCollectionStatus(nextStatus);
-          setStatusError(null);
-        }
-      } catch (err) {
-        logError('useAgentTrace', 'getAgentTraceCollectionStatus failed', err);
-        if (!cancelled) {
-          setStatusError(asError(err));
-        }
-      } finally {
-        if (!cancelled) {
-          setStatusLoading(false);
-        }
+    setStatusLoading(true);
+    void refreshCollectionStatus().finally(() => {
+      if (mountedRef.current) {
+        setStatusLoading(false);
       }
-    }
-
-    void fetchStatus();
-
-    return () => {
-      cancelled = true;
-    };
+    });
   }, []);
 
   useEffect(() => {
@@ -102,11 +80,13 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
   async function clearTraceData(): Promise<void> {
     try {
       await window.api.clearAgentTraceData();
-      const currentSelection = selectionRef.current;
       if (!mountedRef.current) {
         return;
       }
 
+      await refreshCollectionStatus();
+
+      const currentSelection = selectionRef.current;
       if (!currentSelection) {
         invalidateSessionRequest();
         setSession(null);
@@ -174,6 +154,21 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
 
   function isActiveSessionRequest(requestGeneration: number): boolean {
     return mountedRef.current && sessionRequestGenerationRef.current === requestGeneration;
+  }
+
+  async function refreshCollectionStatus(): Promise<void> {
+    try {
+      const nextStatus = await window.api.getAgentTraceCollectionStatus();
+      if (mountedRef.current) {
+        setCollectionStatus(nextStatus);
+        setStatusError(null);
+      }
+    } catch (err) {
+      logError('useAgentTrace', 'getAgentTraceCollectionStatus failed', err);
+      if (mountedRef.current) {
+        setStatusError(asError(err));
+      }
+    }
   }
 }
 

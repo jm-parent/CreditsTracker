@@ -36,7 +36,7 @@ export function AgentTracesPage({ selection }: AgentTracesPageProps) {
   const [clearing, setClearing] = useState(false);
   const enabled = collectionStatus?.enabled ?? false;
   const endpoint = collectionStatus?.endpoint ?? DEFAULT_OTLP_ENDPOINT;
-  const activeError = collectionStatus?.errorMessage ?? error?.message ?? null;
+  const activeError = error?.message ?? collectionStatus?.errorMessage ?? null;
 
   async function handleCollectionToggle(nextEnabled: boolean): Promise<void> {
     setUpdatingEnabled(true);

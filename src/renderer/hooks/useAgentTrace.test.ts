@@ -225,6 +225,41 @@ describe('useAgentTrace', () => {
     expect(window.api.clearAgentTraceData).toHaveBeenCalledTimes(1);
   });
 
+  it('refreshes collection status after clearing stored traces so stale partial coverage warnings disappear', async () => {
+    const partialCoverageStatus: AgentTraceCollectionStatus = {
+      enabled: true,
+      listening: true,
+      endpoint: 'http://127.0.0.1:4318',
+      errorMessage: 'Only some spans were stored.',
+    };
+    const clearedStatus: AgentTraceCollectionStatus = {
+      ...partialCoverageStatus,
+      errorMessage: null,
+    };
+
+    window.api.getAgentTraceCollectionStatus = vi
+      .fn()
+      .mockResolvedValueOnce(partialCoverageStatus)
+      .mockResolvedValueOnce(clearedStatus);
+    window.api.getAgentTraceSession = vi
+      .fn()
+      .mockResolvedValueOnce(partialSession)
+      .mockResolvedValueOnce(notCollectedSessionA);
+    window.api.clearAgentTraceData = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useAgentTrace(selectionA));
+
+    await waitFor(() => expect(result.current.collectionStatus).toEqual(partialCoverageStatus));
+
+    await act(async () => {
+      await result.current.clearTraceData();
+    });
+
+    await waitFor(() => expect(result.current.collectionStatus).toEqual(clearedStatus));
+    expect(result.current.error).toBeNull();
+    expect(window.api.getAgentTraceCollectionStatus).toHaveBeenCalledTimes(2);
+  });
+
   it('ignores stale clear-triggered reloads after the selection changes', async () => {
     const staleReload = createDeferred<AgentTraceSession>();
     const freshSession = createDeferred<AgentTraceSession>();

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AgentTraceCollectionStatus, AgentTraceSession } from '../../shared/types';
 import { makeAgentTraceSpan } from '../../test-utils/agent-trace-fixtures';
+import * as useAgentTraceModule from '../hooks/useAgentTrace';
 import { createWindowApi } from '../test-utils/windowApi';
 import { AgentTracesPage } from './AgentTracesPage';
 
@@ -60,6 +61,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('AgentTracesPage', () => {
   it('shows the opt-in state, loopback-only instructions, capture warning, and 30-day retention notice', async () => {
     render(<AgentTracesPage selection={null} />);
@@ -97,6 +102,28 @@ describe('AgentTracesPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Port 4318 is already in use.');
     expect(screen.getByText('http://127.0.0.1:4318')).toBeInTheDocument();
+  });
+
+  it('prefers a fresh hook error over an older collection status warning', async () => {
+    vi.spyOn(useAgentTraceModule, 'useAgentTrace').mockReturnValue({
+      collectionStatus: {
+        enabled: true,
+        listening: true,
+        endpoint: 'http://127.0.0.1:4318',
+        errorMessage: 'Old partial coverage warning.',
+      },
+      session: null,
+      statusLoading: false,
+      sessionLoading: false,
+      error: new Error('Newer clear or session failure.'),
+      setCollectionEnabled: vi.fn().mockResolvedValue(undefined),
+      clearTraceData: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(<AgentTracesPage selection={{ source: 'vscode', sessionId: 'vscode:conversation-1' }} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Newer clear or session failure.');
+    expect(screen.queryByText('Old partial coverage warning.')).not.toBeInTheDocument();
   });
 
   it('renders the selected trace tree, explains partial traces, and confirms manual deletion before clearing', async () => {
