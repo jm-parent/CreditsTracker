@@ -49,6 +49,10 @@ const STATUS_OPTIONS: Array<{ value: AgentTraceSpan['status']; label: string }> 
   { value: 'unset', label: 'Non défini' },
 ];
 
+function getSourceLabel(source: AgentTraceSource): string {
+  return SOURCE_OPTIONS.find((option) => option.value === source)?.label ?? source;
+}
+
 export interface AgentTraceSessionsViewProps {
   onBack(): void;
 }
@@ -295,7 +299,7 @@ export function AgentTraceSessionsView({ onBack }: AgentTraceSessionsViewProps) 
                           type="button"
                           onClick={() => setSelectedSummary(item)}
                           className="rounded-sm text-left text-sm text-cyan-300 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
-                          aria-label={`Ouvrir la session ${item.sessionId}`}
+                          aria-label={`Ouvrir la session ${getSourceLabel(item.source)} : ${item.sessionId}`}
                         >
                           {item.sessionId}
                         </button>

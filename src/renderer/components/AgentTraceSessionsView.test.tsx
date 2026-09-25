@@ -97,12 +97,34 @@ describe('AgentTraceSessionsView', () => {
 
     const rows = screen.getAllByRole('row').slice(1);
     expect(within(rows[0]).getByText('copilot-cli')).toBeInTheDocument();
-    expect(within(rows[0]).getByRole('button', { name: 'Ouvrir la session cli-session-9' })).toBeInTheDocument();
+    expect(
+      within(rows[0]).getByRole('button', { name: 'Ouvrir la session Copilot CLI : cli-session-9' }),
+    ).toBeInTheDocument();
     expect(within(rows[0]).getByText('12 spans')).toBeInTheDocument();
 
     expect(within(rows[1]).getByText('vscode')).toBeInTheDocument();
-    expect(within(rows[1]).getByRole('button', { name: 'Ouvrir la session vscode:conversation-4' })).toBeInTheDocument();
+    expect(
+      within(rows[1]).getByRole('button', { name: 'Ouvrir la session VS Code : vscode:conversation-4' }),
+    ).toBeInTheDocument();
     expect(within(rows[1]).getByText('4 spans')).toBeInTheDocument();
+  });
+
+  it('gives duplicate session ids distinct accessible names by including the localized source label', async () => {
+    window.api.listAgentTraceSessions = vi.fn().mockResolvedValue(
+      makePage([
+        makeSummary({ source: 'vscode', sessionId: 'shared-session' }),
+        makeSummary({ source: 'copilot-cli', sessionId: 'shared-session' }),
+      ]),
+    );
+
+    render(<AgentTraceSessionsView onBack={vi.fn()} />);
+
+    expect(
+      await screen.findByRole('button', { name: 'Ouvrir la session VS Code : shared-session' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Ouvrir la session Copilot CLI : shared-session' }),
+    ).toBeInTheDocument();
   });
 
   it('updates the list filters for search, source, dates, category, and status and resets pagination to page zero', async () => {
@@ -239,7 +261,7 @@ describe('AgentTraceSessionsView', () => {
 
     render(<AgentTraceSessionsView onBack={vi.fn()} />);
 
-    await screen.findByRole('button', { name: 'Ouvrir la session vscode:session-1' });
+    await screen.findByRole('button', { name: 'Ouvrir la session VS Code : vscode:session-1' });
     fireEvent.change(screen.getByLabelText('Recherche'), { target: { value: 'missing-session' } });
 
     expect(await screen.findByText('Aucune session ne correspond aux filtres actuels.')).toBeInTheDocument();
@@ -255,7 +277,7 @@ describe('AgentTraceSessionsView', () => {
     expect(await screen.findByText('Chargement des sessions…')).toBeInTheDocument();
 
     request.resolve(makePage([makeSummary()]));
-    expect(await screen.findByRole('button', { name: 'Ouvrir la session vscode:session-1' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Ouvrir la session VS Code : vscode:session-1' })).toBeInTheDocument();
   });
 
   it('shows a list error and retries the current request', async () => {
@@ -271,7 +293,7 @@ describe('AgentTraceSessionsView', () => {
 
     await user.click(screen.getByRole('button', { name: 'Réessayer' }));
 
-    expect(await screen.findByRole('button', { name: 'Ouvrir la session vscode:session-2' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Ouvrir la session VS Code : vscode:session-2' })).toBeInTheDocument();
     expect(window.api.listAgentTraceSessions).toHaveBeenCalledTimes(2);
   });
 
@@ -292,14 +314,14 @@ describe('AgentTraceSessionsView', () => {
     fireEvent.change(screen.getByLabelText('Recherche'), { target: { value: 'gpt-6' } });
 
     secondRequest.resolve(makePage([makeSummary({ sessionId: 'vscode:newest' })]));
-    expect(await screen.findByRole('button', { name: 'Ouvrir la session vscode:newest' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Ouvrir la session VS Code : vscode:newest' })).toBeInTheDocument();
 
     firstRequest.resolve(makePage([makeSummary({ sessionId: 'vscode:stale' })]));
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Ouvrir la session vscode:stale' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Ouvrir la session VS Code : vscode:stale' })).not.toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: 'Ouvrir la session vscode:newest' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ouvrir la session VS Code : vscode:newest' })).toBeInTheDocument();
   });
 
   it('loads session details, returns to the session list with filters and page preserved, and lets the top-level back action fire', async () => {
@@ -336,7 +358,7 @@ describe('AgentTraceSessionsView', () => {
     await user.click(screen.getByRole('button', { name: 'Page suivante' }));
     expect(await screen.findByText('Page 2 sur 2')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Ouvrir la session cli-session-50' }));
+    await user.click(screen.getByRole('button', { name: 'Ouvrir la session Copilot CLI : cli-session-50' }));
 
     await waitFor(() => {
       expect(window.api.getAgentTraceSession).toHaveBeenCalledWith({
@@ -344,7 +366,7 @@ describe('AgentTraceSessionsView', () => {
         sessionId: 'cli-session-50',
       } satisfies AgentTraceSelection);
     });
-    expect(await screen.findByText('Agent trace spans')).toBeInTheDocument();
+    expect(await screen.findByText('Spans de trace agent')).toBeInTheDocument();
 
     const backToSessions = screen.getByRole('button', { name: 'Retour aux sessions' });
     backToSessions.focus();
@@ -352,7 +374,7 @@ describe('AgentTraceSessionsView', () => {
 
     expect(await screen.findByLabelText('Source')).toHaveValue('copilot-cli');
     expect(screen.getByText('Page 2 sur 2')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ouvrir la session cli-session-50' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ouvrir la session Copilot CLI : cli-session-50' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Retour aux traces' }));
     expect(onBack).toHaveBeenCalledTimes(1);
@@ -365,7 +387,7 @@ describe('AgentTraceSessionsView', () => {
 
     render(<AgentTraceSessionsView onBack={vi.fn()} />);
 
-    await user.click(await screen.findByRole('button', { name: 'Ouvrir la session cli-session-4' }));
+    await user.click(await screen.findByRole('button', { name: 'Ouvrir la session VS Code : cli-session-4' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('session lookup failed');
     expect(screen.queryByText("Aucune trace stockée n'est disponible pour cette session.")).not.toBeInTheDocument();
@@ -385,9 +407,9 @@ describe('AgentTraceSessionsView', () => {
 
     render(<AgentTraceSessionsView onBack={vi.fn()} />);
 
-    await user.click(await screen.findByRole('button', { name: 'Ouvrir la session cli-session-8' }));
+    await user.click(await screen.findByRole('button', { name: 'Ouvrir la session Copilot CLI : cli-session-8' }));
 
     expect(await screen.findByText("Aucune trace n'a encore été collectée pour cette session.")).toBeInTheDocument();
-    expect(screen.queryByText('Agent trace spans')).not.toBeInTheDocument();
+    expect(screen.queryByText('Spans de trace agent')).not.toBeInTheDocument();
   });
 });
