@@ -35,6 +35,22 @@ export function AgentTracesPage() {
   const endpoint = collectionStatus?.endpoint ?? DEFAULT_OTLP_ENDPOINT;
   const endpointPort = new URL(endpoint).port || '4318';
   const activeError = error?.message ?? collectionStatus?.errorMessage ?? null;
+  const summaryBadgeLabel = statusLoading
+    ? 'Chargement'
+    : !collectionStatus
+      ? 'Indisponible'
+      : enabled
+        ? 'Collecte active'
+        : 'Collecte inactive';
+  const summaryBadgeClassName = statusLoading
+    ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-100'
+    : !collectionStatus
+      ? 'border-slate-700 bg-slate-900 text-slate-200'
+      : collectionStatus.listening
+        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100'
+        : enabled
+          ? 'border-amber-500/40 bg-amber-500/15 text-amber-100'
+          : 'border-slate-700 bg-slate-900 text-slate-200';
   const collectionMessage = statusLoading
     ? 'Chargement de l’état de collecte…'
     : !collectionStatus
@@ -91,15 +107,9 @@ export function AgentTracesPage() {
                   Télémétrie locale
                 </Badge>
                 <Badge
-                  className={
-                    collectionStatus?.listening
-                      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100'
-                      : enabled
-                        ? 'border-amber-500/40 bg-amber-500/15 text-amber-100'
-                        : 'border-slate-700 bg-slate-900 text-slate-200'
-                  }
+                  className={summaryBadgeClassName}
                 >
-                  {enabled ? 'Collecte active' : 'Collecte inactive'}
+                  {summaryBadgeLabel}
                 </Badge>
               </div>
               <div className="space-y-2">

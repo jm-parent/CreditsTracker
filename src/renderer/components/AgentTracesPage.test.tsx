@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AgentTraceCollectionStatus } from '../../shared/types';
 import { createWindowApi } from '../test-utils/windowApi';
@@ -34,6 +34,15 @@ describe('AgentTracesPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.textContent?.includes(
+            'L’activation de captureContent peut faire transiter les prompts et réponses localement avant filtrage',
+          ) ?? false,
+        { selector: 'p' },
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText('Volume actuel')).toBeInTheDocument();
     expect(screen.getByText('Politique de rétention')).toBeInTheDocument();
     expect(screen.getByText('Dernière capture')).toBeInTheDocument();
@@ -64,8 +73,9 @@ describe('AgentTracesPage', () => {
 
     render(<AgentTracesPage />);
 
+    expect(screen.getByRole('heading', { name: 'Traces agents & Télémétrie locale' })).toBeInTheDocument();
     expect(screen.getByText(/Chargement de l’état de collecte/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Collecte désactivée/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Collecte inactive/i)).not.toBeInTheDocument();
   });
 
   it('shows the collection status unavailable after an error without claiming disabled collection', () => {
@@ -82,7 +92,7 @@ describe('AgentTracesPage', () => {
     render(<AgentTracesPage />);
 
     expect(screen.getByText('État de collecte indisponible')).toBeInTheDocument();
-    expect(screen.queryByText(/Collecte désactivée/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Collecte inactive/i)).not.toBeInTheDocument();
   });
 
   it('shows an exporter wire-format rejection reported by the receiver', async () => {
