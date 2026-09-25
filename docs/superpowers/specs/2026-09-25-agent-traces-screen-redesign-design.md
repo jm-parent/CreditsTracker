@@ -118,16 +118,17 @@ Décisions confirmées :
 - Le clic sur **Sessions avec traces** remplace l’aperçu par une vue de liste
   intégrée à l’écran Traces agents; **Retour aux traces** ramène à l’aperçu.
 - Regrouper les spans par `(source, session_id)`. Chaque ligne expose seulement
-  des métadonnées de synthèse : source, ID de session et nombre de spans.
+  des métadonnées de synthèse : source, ID de session et nombre total de spans
+  stockés pour cette session, indépendamment des filtres.
 - Fournir :
   - une recherche texte sur l’ID de session, l’outil, le skill ou le modèle;
   - un filtre source (VS Code / Copilot CLI);
   - une période basée sur `started_at`;
   - des filtres catégorie et statut.
-- Une session apparaît si elle possède des spans répondant aux filtres actifs;
-  la recherche texte correspond à l’ID de session ou à au moins un champ
-  recherché dans un span. La source filtre le couple; les filtres
-  catégorie/statut/période sont combinés sur un même span.
+- La recherche texte correspond à l’ID de session ou à un champ recherché dans
+  un span. La source filtre le couple; la catégorie, le statut, la période et
+  les champs de recherche issus des spans doivent correspondre simultanément à
+  au moins un même span de la session.
 - Trier par activité de span la plus récente et paginer les résultats par
   50 sessions. Un changement de filtre réinitialise la page; un retour du détail
   conserve les filtres et la page courants.
