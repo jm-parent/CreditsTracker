@@ -222,6 +222,7 @@ describe('useAgentTrace', () => {
 
     expect(result.current.session).toBeNull();
     expect(result.current.error).toEqual(boom);
+    expect(result.current.sessionError).toEqual(boom);
     expect(logError).toHaveBeenCalledWith(
       'useAgentTrace',
       `getAgentTraceSession failed for ${selectionA.source}:${selectionA.sessionId}`,

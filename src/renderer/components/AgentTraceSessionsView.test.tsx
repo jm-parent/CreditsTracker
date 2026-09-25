@@ -297,6 +297,38 @@ describe('AgentTraceSessionsView', () => {
     expect(window.api.listAgentTraceSessions).toHaveBeenCalledTimes(2);
   });
 
+  it('shows an inline French validation error for a reversed date range and skips the invalid list request', async () => {
+    const user = userEvent.setup();
+    window.api.listAgentTraceSessions = vi
+      .fn()
+      .mockResolvedValue(makePage([makeSummary({ sessionId: 'vscode:session-2' })]));
+
+    render(<AgentTraceSessionsView onBack={vi.fn()} />);
+
+    await screen.findByRole('button', { name: 'Ouvrir la session VS Code : vscode:session-2' });
+    expect(window.api.listAgentTraceSessions).toHaveBeenCalledTimes(1);
+
+    await user.type(screen.getByLabelText('Au'), '2026-09-25');
+    await waitFor(() => expect(window.api.listAgentTraceSessions).toHaveBeenCalledTimes(2));
+
+    await user.type(screen.getByLabelText('Du'), '2026-09-30');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La date de début doit être antérieure ou égale à la date de fin.',
+    );
+    expect(window.api.listAgentTraceSessions).toHaveBeenCalledTimes(2);
+    expect(window.api.listAgentTraceSessions).not.toHaveBeenLastCalledWith({
+      query: '',
+      source: null,
+      from: '2026-09-30',
+      to: '2026-09-25',
+      category: null,
+      status: null,
+      page: 0,
+    } satisfies AgentTraceSessionListFilters);
+    expect(screen.queryByRole('button', { name: 'Réessayer' })).not.toBeInTheDocument();
+  });
+
   it('keeps the newest list response when older requests resolve later', async () => {
     const user = userEvent.setup();
     const firstRequest = deferred<AgentTraceSessionListPage>();
@@ -391,6 +423,30 @@ describe('AgentTraceSessionsView', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('session lookup failed');
     expect(screen.queryByText("Aucune trace stockée n'est disponible pour cette session.")).not.toBeInTheDocument();
+  });
+
+  it('keeps the loaded trace tree visible when a collection warning is present for the selected session', async () => {
+    const user = userEvent.setup();
+    window.api.getAgentTraceCollectionStatus = vi.fn().mockResolvedValue({
+      enabled: true,
+      listening: false,
+      endpoint: 'http://127.0.0.1:4318',
+      errorMessage: 'Receiver unavailable',
+    });
+    window.api.listAgentTraceSessions = vi.fn().mockResolvedValue(
+      makePage([makeSummary({ source: 'copilot-cli', sessionId: 'cli-session-8' })]),
+    );
+    window.api.getAgentTraceSession = vi.fn().mockResolvedValue(
+      makeSession({ source: 'copilot-cli', sessionId: 'cli-session-8' }),
+    );
+
+    render(<AgentTraceSessionsView onBack={vi.fn()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Ouvrir la session Copilot CLI : cli-session-8' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Receiver unavailable');
+    expect(screen.getByText('Spans de trace agent')).toBeInTheDocument();
+    expect(screen.getAllByText('execute_tool readFile').length).toBeGreaterThan(0);
   });
 
   it('shows when no trace has been collected for the selected stored session', async () => {

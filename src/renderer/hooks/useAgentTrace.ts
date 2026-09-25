@@ -12,6 +12,7 @@ export interface UseAgentTraceResult {
   statusLoading: boolean;
   sessionLoading: boolean;
   error: Error | null;
+  sessionError: Error | null;
   setCollectionEnabled(enabled: boolean): Promise<void>;
   clearTraceData(): Promise<void>;
 }
@@ -119,6 +120,7 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
     statusLoading,
     sessionLoading,
     error: sessionError ?? statusError,
+    sessionError,
     setCollectionEnabled,
     clearTraceData,
   };

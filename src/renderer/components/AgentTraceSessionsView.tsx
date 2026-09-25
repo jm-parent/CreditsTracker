@@ -65,10 +65,18 @@ export function AgentTraceSessionsView({ onBack }: AgentTraceSessionsViewProps) 
   const [retryGeneration, setRetryGeneration] = useState(0);
   const [selectedSummary, setSelectedSummary] = useState<AgentTraceSessionSummary | null>(null);
   const requestGenerationRef = useRef(0);
+  const dateRangeErrorMessage = getDateRangeErrorMessage(filters.from, filters.to);
 
   useEffect(() => {
     const requestGeneration = requestGenerationRef.current + 1;
     requestGenerationRef.current = requestGeneration;
+
+    if (dateRangeErrorMessage) {
+      setListLoading(false);
+      setListError(null);
+      return;
+    }
+
     setListLoading(true);
     setListError(null);
 
@@ -92,7 +100,7 @@ export function AgentTraceSessionsView({ onBack }: AgentTraceSessionsViewProps) 
           setListLoading(false);
         }
       });
-  }, [filters, retryGeneration]);
+  }, [dateRangeErrorMessage, filters, retryGeneration]);
 
   const totalPages = useMemo(() => {
     const total = listPage?.total ?? 0;
@@ -182,6 +190,8 @@ export function AgentTraceSessionsView({ onBack }: AgentTraceSessionsViewProps) 
               type="date"
               aria-label="Du"
               value={filters.from ?? ''}
+              aria-invalid={dateRangeErrorMessage ? 'true' : 'false'}
+              max={filters.to ?? undefined}
               onChange={(event) => {
                 updateFilters(setFilters, { from: normalizeDateFilter(event.target.value) });
               }}
@@ -195,6 +205,8 @@ export function AgentTraceSessionsView({ onBack }: AgentTraceSessionsViewProps) 
               type="date"
               aria-label="Au"
               value={filters.to ?? ''}
+              aria-invalid={dateRangeErrorMessage ? 'true' : 'false'}
+              min={filters.from ?? undefined}
               onChange={(event) => {
                 updateFilters(setFilters, { to: normalizeDateFilter(event.target.value) });
               }}
@@ -258,7 +270,11 @@ export function AgentTraceSessionsView({ onBack }: AgentTraceSessionsViewProps) 
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {listError ? (
+          {dateRangeErrorMessage ? (
+            <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-300">
+              {dateRangeErrorMessage}
+            </p>
+          ) : listError ? (
             <div className="space-y-3">
               <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-300">
                 {listError.message}
@@ -355,8 +371,11 @@ function AgentTraceSessionDetail({ summary, onBack, onBackToSessions }: AgentTra
     }),
     [summary.sessionId, summary.source],
   );
-  const { collectionStatus, session, sessionLoading, error } = useAgentTrace(selection);
-  const activeError = error?.message ?? collectionStatus?.errorMessage ?? null;
+  const { collectionStatus, session, sessionLoading, error, sessionError } = useAgentTrace(selection);
+  const nonBlockingAlerts = [...new Set([
+    collectionStatus?.errorMessage ?? null,
+    sessionError ? null : error?.message ?? null,
+  ].filter((message): message is string => message !== null))];
 
   return (
     <div className="flex flex-col gap-6">
@@ -388,12 +407,21 @@ function AgentTraceSessionDetail({ summary, onBack, onBackToSessions }: AgentTra
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {activeError ? (
-            <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-300">
-              {activeError}
+          {nonBlockingAlerts.map((message) => (
+            <p
+              key={message}
+              role="alert"
+              className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-300"
+            >
+              {message}
             </p>
-          ) : sessionLoading ? (
+          ))}
+          {sessionLoading ? (
             <p className="text-sm text-muted-foreground">Chargement de la session…</p>
+          ) : sessionError ? (
+            <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-300">
+              {sessionError.message}
+            </p>
           ) : session?.availability === 'not-collected' ? (
             <p className="text-sm text-muted-foreground">
               Aucune trace n&apos;a encore été collectée pour cette session.
@@ -435,6 +463,14 @@ function LabeledField({
 
 function normalizeDateFilter(value: string): string | null {
   return value === '' ? null : value;
+}
+
+function getDateRangeErrorMessage(from: string | null, to: string | null): string | null {
+  if (from && to && from > to) {
+    return 'La date de début doit être antérieure ou égale à la date de fin.';
+  }
+
+  return null;
 }
 
 function updateFilters(

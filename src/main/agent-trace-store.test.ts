@@ -646,4 +646,64 @@ describe('openAgentTraceStore', () => {
       store.close();
     }
   });
+
+  it('orders filtered sessions by their latest stored span, even when that newest span does not match the active filter', () => {
+    const store = openMemoryStore();
+    try {
+      const fillerSpans = Array.from({ length: 50 }, (_, index) => makeSpan({
+        sessionId: `filler-${index.toString().padStart(2, '0')}`,
+        traceId: `filler-${index.toString().padStart(2, '0')}`,
+        spanId: `filler-${index.toString().padStart(2, '0')}`,
+        category: 'tool',
+        startedAt: new Date(Date.UTC(2026, 11, 29 - index, 12, 0, 0, 0)).toISOString(),
+      }));
+
+      store.insertSpans([
+        makeSpan({
+          sessionId: 'latest-overall',
+          traceId: 'latest-overall',
+          spanId: 'latest-overall-tool',
+          category: 'tool',
+          startedAt: '2026-09-01T12:00:00.000Z',
+        }),
+        makeSpan({
+          sessionId: 'latest-overall',
+          traceId: 'latest-overall',
+          spanId: 'latest-overall-llm',
+          category: 'llm',
+          startedAt: '2026-12-31T12:00:00.000Z',
+        }),
+        makeSpan({
+          sessionId: 'latest-matching',
+          traceId: 'latest-matching',
+          spanId: 'latest-matching-tool',
+          category: 'tool',
+          startedAt: '2026-12-30T12:00:00.000Z',
+        }),
+        ...fillerSpans,
+      ]);
+
+      const firstPage = store.listSessions(makeSessionFilters({ category: 'tool', page: 0 }));
+      const secondPage = store.listSessions(makeSessionFilters({ category: 'tool', page: 1 }));
+
+      expect(firstPage.total).toBe(52);
+      expect(firstPage.items).toHaveLength(50);
+      expect(firstPage.items.slice(0, 3)).toEqual([
+        { source: 'vscode', sessionId: 'latest-overall', spanCount: 2 },
+        { source: 'vscode', sessionId: 'latest-matching', spanCount: 1 },
+        { source: 'vscode', sessionId: 'filler-00', spanCount: 1 },
+      ]);
+      expect(secondPage).toEqual({
+        items: [
+          { source: 'vscode', sessionId: 'filler-48', spanCount: 1 },
+          { source: 'vscode', sessionId: 'filler-49', spanCount: 1 },
+        ],
+        total: 52,
+        page: 1,
+        pageSize: 50,
+      });
+    } finally {
+      store.close();
+    }
+  });
 });

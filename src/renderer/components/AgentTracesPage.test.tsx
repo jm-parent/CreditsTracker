@@ -53,6 +53,7 @@ function mockUseAgentTrace(
     statusLoading: false,
     sessionLoading: false,
     error: null,
+    sessionError: null,
     setCollectionEnabled: vi.fn().mockResolvedValue(undefined),
     clearTraceData: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -318,7 +319,7 @@ describe('AgentTracesPage', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('enables collection on demand, shows the listening endpoint, and never changes settings automatically', async () => {
+  it('disables collection on demand from an active state, shows the listening endpoint, and never changes settings automatically', async () => {
     const setCollectionEnabled = vi.fn().mockResolvedValue(undefined);
     mockUseAgentTrace({
       collectionStatus: listeningStatus,
@@ -336,6 +337,23 @@ describe('AgentTracesPage', () => {
     expect(setCollectionEnabled).toHaveBeenCalledWith(false);
     expect(screen.getAllByText('Écoute active')).toHaveLength(2);
     expect(screen.getAllByText('http://127.0.0.1:4318').length).toBeGreaterThan(0);
+  });
+
+  it('enables collection on demand from a disabled state', async () => {
+    const setCollectionEnabled = vi.fn().mockResolvedValue(undefined);
+    mockUseAgentTrace({
+      collectionStatus: disabledStatus,
+      setCollectionEnabled,
+    });
+    const user = userEvent.setup();
+
+    render(<AgentTracesPage />);
+
+    await user.click(await screen.findByRole('checkbox', {
+      name: 'Activer la collecte locale des traces agent',
+    }));
+
+    expect(setCollectionEnabled).toHaveBeenCalledWith(true);
   });
 
   it('shows the receiver error when the endpoint cannot listen', async () => {
