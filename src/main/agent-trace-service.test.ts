@@ -1,13 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AgentTraceCollectionStatus, AgentTraceSession } from '../shared/types';
+import type {
+  AgentTraceCollectionStatus,
+  AgentTraceSession,
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
+} from '../shared/types';
 import type { AgentTracePartialSuccess, AgentTraceReceiver } from './agent-trace-receiver';
 import type { AgentTraceStore } from './agent-trace-store';
+import { logError } from './logger';
 import { createAgentTraceService, type AgentTraceServiceDependencies } from './agent-trace-service';
 
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+vi.mock('./logger', () => ({
+  logError: vi.fn(),
+}));
+
 describe('createAgentTraceService', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.useFakeTimers();
   });
 
@@ -494,6 +505,224 @@ describe('createAgentTraceService', () => {
       spans: [],
     } satisfies AgentTraceSession);
   });
+
+  it('returns the exact stored trace session count', async () => {
+    const store = makeStoreDouble({
+      countSessions: vi.fn(() => 42),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(service.getSessionCount()).toBe(42);
+    expect(store.countSessions).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs and propagates count failures when storage is unavailable', async () => {
+    const storeError = new Error('disk unavailable');
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => {
+        throw storeError;
+      }),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.getSessionCount()).toThrow('Local agent trace store is unavailable');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to count stored trace sessions',
+      expect.objectContaining({ message: 'Local agent trace store is unavailable' }),
+    );
+  });
+
+  it('logs and propagates store count failures without returning zero', async () => {
+    const failure = new Error('count failed');
+    const store = makeStoreDouble({
+      countSessions: vi.fn(() => {
+        throw failure;
+      }),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.getSessionCount()).toThrow('count failed');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to count stored trace sessions',
+      failure,
+    );
+  });
+
+  it('forwards exact filters and returns the exact stored session list page', async () => {
+    const filters = makeSessionFilters({
+      query: 'model-a',
+      source: 'copilot-cli',
+      from: '2026-09-24',
+      to: '2026-09-25',
+      category: 'tool',
+      status: 'error',
+      page: 2,
+    });
+    const page: AgentTraceSessionListPage = {
+      items: [{ source: 'copilot-cli', sessionId: 'cli-session', spanCount: 7 }],
+      total: 23,
+      page: 2,
+      pageSize: 50,
+    };
+    const store = makeStoreDouble({
+      listSessions: vi.fn(() => page),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(service.listSessions(filters)).toBe(page);
+    expect(store.listSessions).toHaveBeenCalledWith(filters);
+  });
+
+  it('logs and propagates list failures when storage is unavailable', async () => {
+    const storeError = new Error('disk unavailable');
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => {
+        throw storeError;
+      }),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.listSessions(makeSessionFilters())).toThrow('Local agent trace store is unavailable');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to list stored trace sessions',
+      expect.objectContaining({ message: 'Local agent trace store is unavailable' }),
+    );
+  });
+
+  it('logs and propagates store list failures without returning an empty page', async () => {
+    const failure = new Error('list failed');
+    const store = makeStoreDouble({
+      listSessions: vi.fn(() => {
+        throw failure;
+      }),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.listSessions(makeSessionFilters())).toThrow('list failed');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to list stored trace sessions',
+      failure,
+    );
+  });
+
+  it('publishes copied status changes once per distinct transition', async () => {
+    const publishedStatuses: AgentTraceCollectionStatus[] = [];
+    const store = makeStoreDouble();
+    const receiver = makeReceiverDouble();
+    const dependencies: Partial<AgentTraceServiceDependencies> & {
+      onStatusChange: (status: AgentTraceCollectionStatus) => void;
+    } = {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(async () => receiver),
+      onStatusChange: (status) => {
+        publishedStatuses.push(status);
+      },
+    };
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', dependencies);
+
+    await service.initialize();
+    await service.setEnabled(true);
+    await service.setEnabled(true);
+
+    expect(publishedStatuses).toEqual([
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: null,
+      } satisfies AgentTraceCollectionStatus,
+    ]);
+    expect(publishedStatuses[0]).not.toBe(service.getStatus());
+
+    publishedStatuses[0].errorMessage = 'mutated outside the service';
+    expect(service.getStatus()).toEqual({
+      enabled: true,
+      listening: true,
+      endpoint: receiver.endpoint,
+      errorMessage: null,
+    } satisfies AgentTraceCollectionStatus);
+  });
+
+  it('publishes error and clear transitions from receiver-driven status changes', async () => {
+    const publishedStatuses: AgentTraceCollectionStatus[] = [];
+    let options: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0] | undefined;
+    const store = makeStoreDouble();
+    const receiver = makeReceiverDouble();
+    const dependencies: Partial<AgentTraceServiceDependencies> & {
+      onStatusChange: (status: AgentTraceCollectionStatus) => void;
+    } = {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(async (receiverOptions: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0]) => {
+        options = receiverOptions;
+        return receiver;
+      }),
+      onStatusChange: (status) => {
+        publishedStatuses.push(status);
+      },
+    };
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', dependencies);
+
+    await service.initialize();
+    await service.setEnabled(true);
+
+    options?.onPartialSuccess?.({
+      totalRejectedSpans: 1,
+      unsupportedSourceSpans: 1,
+      missingSourceSessionSpans: 0,
+      unresolvedTraceRootSpans: 0,
+      errorMessage: 'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
+    });
+    service.clear();
+
+    expect(publishedStatuses).toEqual([
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: null,
+      } satisfies AgentTraceCollectionStatus,
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: 'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
+      } satisfies AgentTraceCollectionStatus,
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: null,
+      } satisfies AgentTraceCollectionStatus,
+    ]);
+  });
 });
 
 function makeStoreDouble(overrides: Partial<AgentTraceStore> = {}): AgentTraceStore {
@@ -501,6 +730,13 @@ function makeStoreDouble(overrides: Partial<AgentTraceStore> = {}): AgentTraceSt
 
   return {
     insertSpans: vi.fn(),
+    countSessions: vi.fn(() => 0),
+    listSessions: vi.fn((filters) => ({
+      items: [],
+      total: 0,
+      page: filters.page,
+      pageSize: 50,
+    })),
     getSession: vi.fn((selection) => ({
       source: selection.source,
       sessionId: selection.sessionId,
@@ -533,6 +769,19 @@ function disabledStatus(): AgentTraceCollectionStatus {
     listening: false,
     endpoint: null,
     errorMessage: null,
+  };
+}
+
+function makeSessionFilters(overrides: Partial<AgentTraceSessionListFilters> = {}): AgentTraceSessionListFilters {
+  return {
+    query: '',
+    source: null,
+    from: null,
+    to: null,
+    category: null,
+    status: null,
+    page: 0,
+    ...overrides,
   };
 }
 

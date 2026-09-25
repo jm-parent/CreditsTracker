@@ -93,16 +93,17 @@ describe('AgentTraceTree', () => {
   it('renders nested lists with collapsed content by default and toggles details on demand', () => {
     render(<AgentTraceTree session={makeSession()} />);
 
-    expect(screen.getByRole('region', { name: 'Agent trace spans' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Spans de trace agent' })).toBeInTheDocument();
     expect(screen.queryByRole('tree')).not.toBeInTheDocument();
     expect(screen.queryAllByRole('treeitem')).toHaveLength(0);
     expect(screen.getByRole('list', { name: 'trace-1' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Calls under invoke_agent copilot' })).toBeInTheDocument();
-    expect(screen.getByText('Partial trace')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Appels sous invoke_agent copilot' })).toBeInTheDocument();
+    expect(screen.getByText('Trace partielle')).toBeInTheDocument();
+    expect(screen.queryByText('Agent trace spans')).not.toBeInTheDocument();
     expect(screen.getByText('trace-1')).toBeInTheDocument();
     expect(screen.getByText('trace-2')).toBeInTheDocument();
 
-    const shellButton = screen.getByRole('button', { name: 'execute_tool runCommand details at +80 ms' });
+    const shellButton = screen.getByRole('button', { name: 'execute_tool runCommand : détails à +80 ms' });
     expect(shellButton).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('{"command":"echo <script>alert(1)</script>"}')).not.toBeInTheDocument();
 
@@ -128,11 +129,11 @@ describe('AgentTraceTree', () => {
     render(<AgentTraceTree session={session} />);
 
     const labels = screen
-      .getAllByRole('button', { name: /^execute_tool runCommand details/ })
+      .getAllByRole('button', { name: /^execute_tool runCommand : détails/ })
       .map((button) => button.getAttribute('aria-label'));
     expect(labels).toEqual([
-      'execute_tool runCommand details at +80 ms',
-      'execute_tool runCommand details at +400 ms',
+      'execute_tool runCommand : détails à +80 ms',
+      'execute_tool runCommand : détails à +400 ms',
     ]);
   });
 

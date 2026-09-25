@@ -136,7 +136,7 @@ export function App() {
           ) : activeTab === 'export' ? (
             <ExportPage options={options} />
           ) : activeTab === 'agent-traces' ? (
-            <AgentTracesPage selection={selectedTrace} />
+            <AgentTracesPage />
           ) : dataUnavailable ? (
             <EmptyState
               title="Couldn't load Copilot CLI usage data."

@@ -17,23 +17,23 @@ export function AgentTraceTree({ session }: AgentTraceTreeProps) {
       <Card>
         <CardHeader className="gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base text-foreground">Agent trace spans</CardTitle>
+            <CardTitle className="text-base text-foreground">Spans de trace agent</CardTitle>
             <Badge>{session.source}</Badge>
             <Badge>{session.availability}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
             {session.availability === 'partial'
-              ? 'Partial trace'
+              ? 'Trace partielle'
               : session.availability === 'not-collected'
-                ? 'Not collected'
-                : 'Trace available'}
+                ? 'Trace non collectée'
+                : 'Trace disponible'}
           </p>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {turns.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No spans stored for this session.</p>
+            <p className="text-sm text-muted-foreground">Aucun span stocké pour cette session.</p>
           ) : (
-            <section aria-label="Agent trace spans" className="flex flex-col gap-4">
+            <section aria-label="Spans de trace agent" className="flex flex-col gap-4">
               {turns.map((turn) => {
                 const turnStart = turn.roots[0]?.span.startedAt ?? null;
                 const headingId = `agent-trace-turn-heading-${turn.traceId}`;
@@ -46,7 +46,7 @@ export function AgentTraceTree({ session }: AgentTraceTreeProps) {
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <h3 id={headingId} className="text-sm font-medium text-foreground">{turn.traceId}</h3>
                       <span className="text-xs text-muted-foreground">
-                        {turn.roots.length} root{turn.roots.length === 1 ? '' : 's'}
+                        {turn.roots.length} racine{turn.roots.length === 1 ? '' : 's'}
                       </span>
                     </div>
                     <ul aria-labelledby={headingId} className="flex flex-col gap-3">
@@ -98,7 +98,7 @@ function AgentTraceTreeNodeView({ node, turnStart }: AgentTraceTreeNodeViewProps
               <span className="text-sm font-medium text-foreground">{span.name}</span>
               <Badge>{span.status}</Badge>
               <Badge>{span.contentState}</Badge>
-              {node.unparented && <Badge>unparented</Badge>}
+              {node.unparented && <Badge>parent manquant</Badge>}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{new Date(span.startedAt).toISOString()}</span>
@@ -115,7 +115,7 @@ function AgentTraceTreeNodeView({ node, turnStart }: AgentTraceTreeNodeViewProps
               type="button"
               aria-expanded={expanded}
               aria-controls={detailsId}
-              aria-label={`${span.name} details at ${offsetLabel}`}
+              aria-label={`${span.name} : détails à ${offsetLabel}`}
               className="rounded-md border border-border px-2 py-1 text-xs text-foreground hover:bg-muted"
               onClick={() => setExpanded((current) => !current)}
             >
@@ -139,7 +139,7 @@ function AgentTraceTreeNodeView({ node, turnStart }: AgentTraceTreeNodeViewProps
             {span.resultText !== null && (
               <section>
                 <h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Result
+                  Résultat
                 </h4>
                 <pre className="overflow-x-auto whitespace-pre-wrap break-all text-xs text-foreground">
                   {span.resultText}
@@ -151,7 +151,7 @@ function AgentTraceTreeNodeView({ node, turnStart }: AgentTraceTreeNodeViewProps
 
         {node.children.length > 0 && (
           <ul
-            aria-label={`Calls under ${span.name}`}
+            aria-label={`Appels sous ${span.name}`}
             className="ml-4 flex flex-col gap-3 border-l border-border pl-4"
           >
             {node.children.map((child) => (
