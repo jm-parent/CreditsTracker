@@ -1,3 +1,33 @@
+# [1.18.0](https://github.com/jm-parent/CreditsTracker/compare/v1.17.0...v1.18.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* clear agent trace partial warnings ([29a77a0](https://github.com/jm-parent/CreditsTracker/commit/29a77a0f50bc0ebd8f1f2407e2752915e1606240))
+* correct OTLP trace decoder review fixes ([8d5e102](https://github.com/jm-parent/CreditsTracker/commit/8d5e102493938a3a2f7926acb7486fcb097871d0))
+* distinguish unsupported OTLP trace sources ([b6c3f14](https://github.com/jm-parent/CreditsTracker/commit/b6c3f147c80f9843e865dcb468444e609ab31625))
+* guard agent trace status refresh races ([d180225](https://github.com/jm-parent/CreditsTracker/commit/d1802255490cb0be8efd1f9d2ea97011753c79a9))
+* guard stale trace reloads ([30b640d](https://github.com/jm-parent/CreditsTracker/commit/30b640d339607376a44d6c98bb41917ba25b216c))
+* harden agent trace ingestion after final review ([af08642](https://github.com/jm-parent/CreditsTracker/commit/af086429b4e6e65ed7017cea753001236f1cc34e))
+* harden agent trace lifecycle ([9871cd8](https://github.com/jm-parent/CreditsTracker/commit/9871cd8e3332d0b5533337d3c267a364a7b0cb9f))
+* project persisted agent trace spans ([f204926](https://github.com/jm-parent/CreditsTracker/commit/f2049262c99de1e3c9048ca1ff7285387faa2ed7))
+* refresh agent trace status after clear ([7f4f2f5](https://github.com/jm-parent/CreditsTracker/commit/7f4f2f557cb3beb7f5e42ecf27db88cad6ee44bc))
+* restore task 9 validation checks ([49df03d](https://github.com/jm-parent/CreditsTracker/commit/49df03d1314bc76f056a73c1c10e1dd9addc5b67))
+* split test TypeScript project ([2af2346](https://github.com/jm-parent/CreditsTracker/commit/2af2346a40cdbb46c07f98b55f7a5d877c7814a1))
+
+
+### Features
+
+* add per-conversation agent trace view ([89b2ada](https://github.com/jm-parent/CreditsTracker/commit/89b2adab538fbfe6417b53318797cbd656304ca8))
+* decode Copilot OpenTelemetry spans ([8d823f3](https://github.com/jm-parent/CreditsTracker/commit/8d823f3c43acf8b01d4eabf6bda757cf787d2623))
+* identify source on conversation rows ([4c2f2e8](https://github.com/jm-parent/CreditsTracker/commit/4c2f2e824cb88376e20f5b180431f340ed078f92))
+* keep trace drilldown in project detail ([f225613](https://github.com/jm-parent/CreditsTracker/commit/f225613fadc74a8516b6988989891488c98c9847))
+* manage local agent trace collection ([ca426e7](https://github.com/jm-parent/CreditsTracker/commit/ca426e7f2603e1088b4abb97ffcfc2fbed173d5d))
+* persist sanitized agent traces locally ([e819b98](https://github.com/jm-parent/CreditsTracker/commit/e819b989af6b362cf525f05ce6360032fefd0329))
+* receive OTLP spans on loopback ([fce0988](https://github.com/jm-parent/CreditsTracker/commit/fce098812dbbe131f2cf5d7ac6113cec20881ec1))
+* redact agent trace payloads ([c4eb39d](https://github.com/jm-parent/CreditsTracker/commit/c4eb39d6a876ab850ef6166648741bdea4c33148))
+* render agent trace span trees ([fb04e9c](https://github.com/jm-parent/CreditsTracker/commit/fb04e9c189667011a47ea5dc720f0954d0b0e6e0))
+
 # [1.17.0](https://github.com/jm-parent/CreditsTracker/compare/v1.16.0...v1.17.0) (2026-09-18)
 
 
