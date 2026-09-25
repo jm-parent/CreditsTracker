@@ -68,8 +68,16 @@ propres traces, sous forme de traces racines indépendantes.
 
 Un onglet dédié **Traces agents** fournit l'état de collecte, les instructions
 de configuration et l'accès aux traces conservées. Une action **Voir la
-trace** est disponible depuis chaque conversation ; elle ouvre cet onglet sur
-la session sélectionnée.
+trace** est disponible depuis chaque conversation du détail d'un projet.
+Depuis ce contexte, elle ouvre une sous-vue de trace dans le détail du projet,
+sans changer d'onglet principal ni désélectionner le projet. La sous-vue
+conserve la sélection `{ source, sessionId }`, les filtres et le détail courant.
+
+La sous-vue affiche l'arbre de spans et les états `not-collected`/`partial`
+avec le composant `AgentTraceTree`. Un bouton **Retour au projet** ferme
+uniquement la sous-vue et restaure le même détail projet sans nouvelle
+navigation. L'onglet global **Traces agents** reste disponible dans la
+navigation pour l'opt-in, les réglages locaux et la consultation générale.
 
 Le détail de session présente un arbre de spans, avec les appels frères
 ordonnés chronologiquement et leurs durées. Les appels parallèles restent des
