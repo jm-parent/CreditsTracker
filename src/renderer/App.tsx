@@ -105,9 +105,11 @@ export function App() {
   function handleViewTrace(selection: AgentTraceSelection): void {
     logInfo('App', `Opening agent trace for ${selection.source}:${selection.sessionId}`);
     setSelectedTrace(selection);
-    setActiveTab('agent-traces');
-    setSelectedProject(null);
-    setSelectedDate(null);
+  }
+
+  function handleProjectSelect(project: string): void {
+    setSelectedTrace(null);
+    setSelectedProject(project);
   }
 
   const dataUnavailable = Boolean(optionsError || error) && !data;
@@ -166,6 +168,8 @@ export function App() {
                   onFiltersChange={setFilters}
                   onBack={() => setSelectedProject(null)}
                   onViewTrace={handleViewTrace}
+                  traceSelection={selectedTrace}
+                  onBackFromTrace={() => setSelectedTrace(null)}
                 />
               </div>
             )}
@@ -196,7 +200,7 @@ export function App() {
               <div className="mt-6">
                 <ProjectsPage
                   byProject={data.byProject}
-                  onProjectClick={setSelectedProject}
+                  onProjectClick={handleProjectSelect}
                   updateContextKey={usageUpdateContextKey}
                 />
               </div>

@@ -3,16 +3,19 @@ import { FilterBar } from './FilterBar';
 import { SummaryCards } from './SummaryCards';
 import { TimeSeriesChart } from './TimeSeriesChart';
 import { ConversationsTable } from './ConversationsTable';
+import { ProjectTraceSubview } from './ProjectTraceSubview';
 import { Skeleton } from './ui/skeleton';
 import type { AgentTraceSelection, FilterOptions, UsageFilters } from '../../shared/types';
 
-interface ProjectDetailPageProps {
+export interface ProjectDetailPageProps {
   project: string;
   filters: UsageFilters;
   options: FilterOptions;
   onFiltersChange: (filters: UsageFilters) => void;
   onBack: () => void;
   onViewTrace(selection: AgentTraceSelection): void;
+  traceSelection: AgentTraceSelection | null;
+  onBackFromTrace(): void;
 }
 
 export function ProjectDetailPage({
@@ -22,6 +25,8 @@ export function ProjectDetailPage({
   onFiltersChange,
   onBack,
   onViewTrace,
+  traceSelection,
+  onBackFromTrace,
 }: ProjectDetailPageProps) {
   const { data, loading, error } = useProjectDetail(project, filters);
   const updateContextKey = JSON.stringify({
@@ -30,6 +35,16 @@ export function ProjectDetailPage({
     from: filters.from ?? null,
     to: filters.to ?? null,
   });
+
+  if (traceSelection) {
+    return (
+      <ProjectTraceSubview
+        project={project}
+        selection={traceSelection}
+        onBack={onBackFromTrace}
+      />
+    );
+  }
 
   return (
     <div className="project-detail-page flex flex-col gap-6">
