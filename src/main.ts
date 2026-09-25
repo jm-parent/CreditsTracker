@@ -1,14 +1,19 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
-import { registerIpcHandlers } from './main/ipc-handlers';
+import { registerAgentTraceIpcHandlers, registerIpcHandlers } from './main/ipc-handlers';
 import { resolveDefaultDbPath, DatabaseNotFoundError } from './main/db';
 import { resolveDefaultWorkspaceStorageDir } from './main/vscode-chat-store';
 import { handleSquirrelEvent } from './main/squirrel-events';
 import { startUpdateChecks } from './main/updater';
 import { configureLogFile, logError, logInfo, logWarn } from './main/logger';
+import { createAgentTraceService, type AgentTraceService } from './main/agent-trace-service';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
+
+let agentTraceService: AgentTraceService | null = null;
+let shuttingDownAgentTraceService = false;
+let agentTraceShutdownPromise: Promise<void> | null = null;
 
 function createWindow(): void {
   logInfo('window', 'Creating the main window');
@@ -51,7 +56,7 @@ if (!handleSquirrelEvent()) {
     logError('process', 'Unhandled promise rejection in the main process', reason);
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     try {
       configureLogFile(path.join(app.getPath('userData'), 'logs', 'app.log'));
     } catch (error) {
@@ -65,6 +70,10 @@ if (!handleSquirrelEvent()) {
       platform: process.platform,
       packaged: app.isPackaged,
     });
+
+    agentTraceService = createAgentTraceService(app.getPath('userData'));
+    registerAgentTraceIpcHandlers(agentTraceService);
+    await agentTraceService.initialize();
 
     try {
       registerIpcHandlers(resolveDefaultDbPath(), resolveDefaultWorkspaceStorageDir());
@@ -92,5 +101,26 @@ if (!handleSquirrelEvent()) {
     if (process.platform !== 'darwin') {
       app.quit();
     }
+  });
+
+  app.on('before-quit', (event) => {
+    if (shuttingDownAgentTraceService || !agentTraceService) {
+      return;
+    }
+
+    event.preventDefault();
+    if (agentTraceShutdownPromise) {
+      return;
+    }
+
+    agentTraceShutdownPromise = agentTraceService.shutdown()
+      .catch((error) => {
+        logError('shutdown', 'Failed to stop the local agent trace service cleanly', error);
+      })
+      .finally(() => {
+        shuttingDownAgentTraceService = true;
+        agentTraceShutdownPromise = null;
+        app.quit();
+      });
   });
 }

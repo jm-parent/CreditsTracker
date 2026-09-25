@@ -14,5 +14,13 @@
     "noEmit": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-globals.d.ts",
+    "src/test-utils/**/*",
+    "src/renderer/test-utils/**/*",
+    "vitest.setup.ts"
+  ]
 }

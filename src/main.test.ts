@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { startUpdateChecks } from './main/updater';
 
 const mockedWhenReadyThen = vi.hoisted(() => vi.fn());
-const mockedSpawn = vi.hoisted(() => vi.fn(() => ({ unref: vi.fn(), on: vi.fn() })));
+const mockedSpawn = vi.hoisted(() => vi.fn((..._args: unknown[]) => ({ unref: vi.fn(), on: vi.fn() })));
 
 vi.mock('electron', () => ({
   app: {

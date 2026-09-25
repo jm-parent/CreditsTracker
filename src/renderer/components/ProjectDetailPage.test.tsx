@@ -3,7 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProjectDetailPage } from './ProjectDetailPage';
 import { createWindowApi } from '../test-utils/windowApi';
-import type { FilterOptions, ProjectDetailResult } from '../../shared/types';
+import type { AgentTraceSession, FilterOptions, ProjectDetailResult } from '../../shared/types';
+import { makeAgentTraceSpan } from '../../test-utils/agent-trace-fixtures';
 
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
@@ -31,6 +32,7 @@ const detail: ProjectDetailResult = {
   timeSeries: [{ date: '2026-09-01', aiuCredits: 3.5 }],
   conversations: [
     {
+      source: 'copilot-cli',
       sessionId: 's1',
       createdAt: '2026-09-01 10:00:00',
       summary: 'Fixed the login bug',
@@ -39,6 +41,24 @@ const detail: ProjectDetailResult = {
       tokens: 180,
       requests: 2,
     },
+  ],
+};
+
+const availableTraceSession: AgentTraceSession = {
+  source: 'vscode',
+  sessionId: 'vscode:conversation-1',
+  availability: 'available',
+  spans: [
+    makeAgentTraceSpan({
+      sessionId: 'vscode:conversation-1',
+      traceId: 'trace-1',
+      spanId: 'root-1',
+      name: 'execute_tool readFile',
+      category: 'tool',
+      toolName: 'readFile',
+      argumentsJson: '{"path":"README.md"}',
+      resultText: 'sanitized result',
+    }),
   ],
 };
 
@@ -62,6 +82,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -78,6 +101,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -93,6 +119,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -115,6 +144,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={onFiltersChange}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
     await screen.findByText('3.50');
@@ -134,6 +166,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={onBack}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
     await screen.findByText('3.50');
@@ -159,6 +194,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -178,6 +216,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -197,6 +238,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -211,6 +255,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -238,6 +285,9 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
@@ -250,10 +300,82 @@ describe('ProjectDetailPage', () => {
         options={options}
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
     expect(await screen.findByText('9.00')).toBeInTheDocument();
     expect(screen.queryByText('+5.50')).not.toBeInTheDocument();
+  });
+
+  it('forwards the selected conversation trace action to the parent callback', async () => {
+    const onViewTrace = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+        onViewTrace={onViewTrace}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
+      />,
+    );
+
+    await screen.findByText('Fixed the login bug');
+    await user.click(screen.getByRole('button', { name: /^Voir la trace : Fixed the login bug/ }));
+
+    expect(onViewTrace).toHaveBeenCalledWith({
+      source: 'copilot-cli',
+      sessionId: 's1',
+    });
+  });
+
+  it('replaces the project content with the trace subview and returns through onBackFromTrace without refetching detail', async () => {
+    window.api.getAgentTraceSession = vi.fn().mockResolvedValue(availableTraceSession);
+    const onBackFromTrace = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={onBackFromTrace}
+      />,
+    );
+
+    expect(await screen.findByText('Fixed the login bug')).toBeInTheDocument();
+    expect(window.api.getProjectDetail).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <ProjectDetailPage
+        project="org/repo-a"
+        filters={{}}
+        options={options}
+        onFiltersChange={vi.fn()}
+        onBack={vi.fn()}
+        onViewTrace={vi.fn()}
+        traceSelection={{ source: 'vscode', sessionId: 'vscode:conversation-1' }}
+        onBackFromTrace={onBackFromTrace}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Retour au projet' })).toBeInTheDocument();
+    expect(screen.queryByText('Fixed the login bug')).not.toBeInTheDocument();
+    expect(screen.getByText('Agent trace spans')).toBeInTheDocument();
+    expect(window.api.getProjectDetail).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Retour au projet' }));
+
+    expect(onBackFromTrace).toHaveBeenCalledTimes(1);
   });
 });

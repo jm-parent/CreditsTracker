@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Children, isValidElement } from 'react';
 import { TimeSeriesChart } from './TimeSeriesChart';
 import { getColorForKey } from '../lib/colors';
+import type { TimeSeriesPoint } from '../../shared/types';
 
 const barAnimationState = vi.hoisted(() => ({ suppressLabels: false }));
 
@@ -132,7 +133,7 @@ describe('TimeSeriesChart', () => {
     // on a single project's series to cover every day's grey area would
     // silently drop days where that project happened to have no activity.
     const onDayClick = vi.fn();
-    const data = [
+    const data: TimeSeriesPoint[] = [
       { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
       { date: '2026-09-02', aiuCredits: 5, byProject: { 'org/repo-b': 5 } },
       { date: '2026-09-03', aiuCredits: 1, byProject: { 'org/repo-c': 1 } },

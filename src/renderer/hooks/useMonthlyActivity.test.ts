@@ -40,14 +40,21 @@ describe('useMonthlyActivity', () => {
   });
 
   it('re-fetches when the month or filters change', async () => {
-    const { result, rerender } = renderHook(({ params }) => useMonthlyActivity(params), {
-      initialProps: { params: { year: 2026, month: 9 } },
-    });
+    const initialParams: Parameters<typeof useMonthlyActivity>[0] = { year: 2026, month: 9 };
+    const filteredParams: Parameters<typeof useMonthlyActivity>[0] = {
+      year: 2026,
+      month: 9,
+      projectSearch: 'repo-a',
+    };
+    const { result, rerender } = renderHook(
+      ({ params }: { params: Parameters<typeof useMonthlyActivity>[0] }) => useMonthlyActivity(params),
+      { initialProps: { params: initialParams } },
+    );
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
-    rerender({ params: { year: 2026, month: 9, projectSearch: 'repo-a' } });
+    rerender({ params: filteredParams });
 
     await waitFor(() => {
       expect(window.api.getMonthlyActivity).toHaveBeenLastCalledWith({

@@ -58,7 +58,15 @@ export function BreakdownChart({
                   dataKey="aiuCredits"
                   fill="#22d3ee"
                   cursor={onBarClick ? 'pointer' : undefined}
-                  onClick={onBarClick ? (entry: BreakdownPoint) => onBarClick(entry.key) : undefined}
+                  onClick={
+                    onBarClick
+                      ? (((entry: { key?: string }) => {
+                          if (typeof entry.key === 'string') {
+                            onBarClick(entry.key);
+                          }
+                        }) as React.ComponentProps<typeof Bar>['onClick'])
+                      : undefined
+                  }
                 >
                   {data.map((entry) => (
                     <Cell key={entry.key} {...(colorByKey ? { fill: getColorForKey(entry.key) } : {})} />

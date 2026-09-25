@@ -20,7 +20,7 @@ vi.mock('recharts', async () => {
 });
 const options: FilterOptions = {
   projects: ['org/repo-a'],
-  models: ['claude-sonnet-5'],
+  models: ['claude-sonnet-5', 'gpt-5.4'],
   minDate: '2026-09-01',
   maxDate: '2026-09-07',
 };
@@ -38,6 +38,17 @@ const projectDetail: ProjectDetailResult = {
   timeSeries: [{ date: '2026-09-01', aiuCredits: 1.5 }],
   conversations: [
     {
+      source: 'vscode',
+      sessionId: 'vscode:conversation-1',
+      createdAt: '2026-09-01 09:45:00',
+      summary: 'Investigated the alert noise',
+      models: 'gpt-5.4',
+      aiuCredits: 0.5,
+      tokens: 20,
+      requests: 1,
+    },
+    {
+      source: 'copilot-cli',
       sessionId: 's1',
       createdAt: '2026-09-01 10:00:00',
       summary: 'Fixed the login bug',
@@ -292,6 +303,22 @@ describe('App', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps Traces agents reachable when usage or filter data is unavailable', async () => {
+    window.api.getFilterOptions = vi.fn().mockRejectedValue(new Error('db not found'));
+    window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Couldn't load Copilot CLI usage data.");
+
+    await user.click(screen.getByRole('button', { name: 'Traces agents' }));
+
+    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Activer la collecte locale des traces agent' })).toBeInTheDocument();
+    expect(screen.getByText('Collection is disabled until you opt in from this page.')).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't load Copilot CLI usage data.")).not.toBeInTheDocument();
+  });
+
   it('logs failures and tab navigation through the bridge', async () => {
     window.api.getUsage = vi.fn().mockRejectedValue(new Error('db not found'));
 
@@ -516,6 +543,121 @@ describe('App', () => {
 
     expect(await screen.findByText('9.00')).toBeInTheDocument();
     expect(screen.queryByText('+6.00')).not.toBeInTheDocument();
+  });
+
+  it('keeps the selected project open while drilling into a trace and restores the detail view on back', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+
+    const projectChartCard = screen.getByText('Credits by project').closest('.chart-card') as HTMLElement;
+    const projectChart = within(projectChartCard).getByTestId('breakdown-chart');
+    const bar = projectChart.querySelector('.recharts-bar-rectangle');
+    await user.click(bar as Element);
+
+    expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Model'), 'gpt-5.4');
+    await waitFor(() => {
+      expect(window.api.getProjectDetail).toHaveBeenLastCalledWith({
+        model: 'gpt-5.4',
+        project: 'org/repo-a',
+      });
+    });
+
+    await user.click(screen.getByRole('button', { name: /^Voir la trace : Investigated the alert noise/ }));
+
+    expect(await screen.findByRole('button', { name: 'Retour au projet' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'By project' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('heading', { name: 'Traces agents' })).not.toBeInTheDocument();
+    expect(screen.getByText('org/repo-a')).toBeInTheDocument();
+    expect(screen.getAllByText('vscode').length).toBeGreaterThan(0);
+    expect(screen.getByText('vscode:conversation-1')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(window.api.getAgentTraceSession).toHaveBeenCalledWith({
+        source: 'vscode',
+        sessionId: 'vscode:conversation-1',
+      });
+    });
+    expect(screen.getByText('No trace has been collected yet for this conversation.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Retour au projet' }));
+
+    expect(await screen.findByRole('heading', { name: 'org/repo-a' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Model')).toHaveValue('gpt-5.4');
+    expect(screen.getAllByText('1.50').length).toBeGreaterThan(0);
+    expect(screen.getByText('Fixed the login bug')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Voir la trace : Fixed the login bug/ }));
+
+    await waitFor(() => {
+      expect(window.api.getAgentTraceSession).toHaveBeenCalledWith({
+        source: 'copilot-cli',
+        sessionId: 's1',
+      });
+    });
+  });
+
+  it('clears a stale trace selection when a different project is selected', async () => {
+    const otherUsage: UsageResult = {
+      ...usage,
+      byProject: [
+        { key: 'org/repo-a', aiuCredits: 1.5 },
+        { key: 'org/repo-b', aiuCredits: 0.75 },
+      ],
+    };
+    const otherDetail: ProjectDetailResult = {
+      ...projectDetail,
+      project: 'org/repo-b',
+      conversations: [
+        {
+          source: 'copilot-cli',
+          sessionId: 'b1',
+          createdAt: '2026-09-02 10:00:00',
+          summary: 'Updated the billing docs',
+          models: 'claude-sonnet-5',
+          aiuCredits: 0.75,
+          tokens: 40,
+          requests: 1,
+        },
+      ],
+    };
+    window.api.getUsage = vi.fn().mockResolvedValue(otherUsage);
+    window.api.getProjectDetail = vi.fn().mockImplementation(({ project }) => {
+      if (project === 'org/repo-b') {
+        return Promise.resolve(otherDetail);
+      }
+      return Promise.resolve(projectDetail);
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText('3.00');
+
+    await user.click(screen.getByRole('button', { name: 'By project' }));
+
+    let projectChartCard = screen.getByText('Credits by project').closest('.chart-card') as HTMLElement;
+    let projectChart = within(projectChartCard).getByTestId('breakdown-chart');
+    let bars = projectChart.querySelectorAll('.recharts-bar-rectangle');
+    await user.click(bars[0] as Element);
+
+    await screen.findByRole('heading', { name: 'org/repo-a' });
+    await user.click(screen.getByRole('button', { name: /^Voir la trace : Investigated the alert noise/ }));
+    await screen.findByRole('button', { name: 'Retour au projet' });
+    await user.click(screen.getByRole('button', { name: 'Retour au projet' }));
+    await user.click(screen.getByRole('button', { name: /back/i }));
+
+    projectChartCard = await screen.findByText('Credits by project').then((title) => title.closest('.chart-card') as HTMLElement);
+    projectChart = within(projectChartCard).getByTestId('breakdown-chart');
+    bars = projectChart.querySelectorAll('.recharts-bar-rectangle');
+    await user.click(bars[1] as Element);
+
+    expect(await screen.findByRole('heading', { name: 'org/repo-b' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Traces agents' }));
+
+    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(screen.getByText('Select a conversation from a project detail page to inspect its trace.')).toBeInTheDocument();
   });
 
   it('does not animate deltas when a tab is opened before a filtered refresh resolves', async () => {

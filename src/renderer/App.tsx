@@ -12,6 +12,7 @@ import { ProjectsPage } from './components/ProjectsPage';
 import { ModelsPage } from './components/ModelsPage';
 import { LogsPage } from './components/LogsPage';
 import { FeaturedProjectsPage } from './components/FeaturedProjectsPage';
+import { AgentTracesPage } from './components/AgentTracesPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { RawDataPage } from './components/RawDataPage';
@@ -22,7 +23,7 @@ import { DesktopShortcutToast } from './components/DesktopShortcutToast';
 import { Skeleton } from './components/ui/skeleton';
 import { logError, logInfo } from './lib/logger';
 import { useDesktopShortcutPrompt } from './hooks/useDesktopShortcutPrompt';
-import type { FilterOptions, UsageFilters } from '../shared/types';
+import type { AgentTraceSelection, FilterOptions, UsageFilters } from '../shared/types';
 
 const EMPTY_OPTIONS: FilterOptions = { projects: [], models: [], minDate: null, maxDate: null };
 
@@ -40,6 +41,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('daily');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTrace, setSelectedTrace] = useState<AgentTraceSelection | null>(null);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const update = useAppUpdate();
   const shortcutPrompt = useDesktopShortcutPrompt();
@@ -100,6 +102,16 @@ export function App() {
     setSelectedDate(null);
   }
 
+  function handleViewTrace(selection: AgentTraceSelection): void {
+    logInfo('App', `Opening agent trace for ${selection.source}:${selection.sessionId}`);
+    setSelectedTrace(selection);
+  }
+
+  function handleProjectSelect(project: string): void {
+    setSelectedTrace(null);
+    setSelectedProject(project);
+  }
+
   const dataUnavailable = Boolean(optionsError || error) && !data;
   return (
     <div className="app flex h-screen bg-background">
@@ -123,6 +135,8 @@ export function App() {
             <FeaturedProjectsPage />
           ) : activeTab === 'export' ? (
             <ExportPage options={options} />
+          ) : activeTab === 'agent-traces' ? (
+            <AgentTracesPage selection={selectedTrace} />
           ) : dataUnavailable ? (
             <EmptyState
               title="Couldn't load Copilot CLI usage data."
@@ -153,6 +167,9 @@ export function App() {
                   options={options}
                   onFiltersChange={setFilters}
                   onBack={() => setSelectedProject(null)}
+                  onViewTrace={handleViewTrace}
+                  traceSelection={selectedTrace}
+                  onBackFromTrace={() => setSelectedTrace(null)}
                 />
               </div>
             )}
@@ -183,7 +200,7 @@ export function App() {
               <div className="mt-6">
                 <ProjectsPage
                   byProject={data.byProject}
-                  onProjectClick={setSelectedProject}
+                  onProjectClick={handleProjectSelect}
                   updateContextKey={usageUpdateContextKey}
                 />
               </div>

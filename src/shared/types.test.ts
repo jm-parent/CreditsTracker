@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ConversationSummary, ProjectDetailResult } from './types';
+import type { AgentTraceSource, ConversationSummary, ProjectDetailResult } from './types';
 
 describe('shared types', () => {
   it('allows constructing a fully-populated UsageResult', () => {
@@ -31,6 +31,7 @@ describe('shared types', () => {
 
   it('allows constructing project detail types', () => {
     const conversation = {
+      source: 'copilot-cli',
       sessionId: 's1',
       createdAt: '2026-09-01 10:00:00',
       summary: 'Fixed a bug',
@@ -48,5 +49,11 @@ describe('shared types', () => {
     } satisfies ProjectDetailResult;
 
     expect(result.conversations[0].sessionId).toBe('s1');
+  });
+
+  it('allows only the supported agent trace sources', () => {
+    const sources = ['vscode', 'copilot-cli'] satisfies AgentTraceSource[];
+
+    expect(sources).toEqual(['vscode', 'copilot-cli']);
   });
 });
