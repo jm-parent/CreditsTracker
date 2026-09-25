@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useAgentTrace } from '../hooks/useAgentTrace';
+import { useAgentTraceSessionCount } from '../hooks/useAgentTraceSessionCount';
 import { logError } from '../lib/logger';
+import { AgentTraceSessionsView } from './AgentTraceSessionsView';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 const DEFAULT_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 const OTLP_PROTOCOL = 'OTLP/HTTP Protobuf';
-const STORAGE_VOLUME_PLACEHOLDER = '—';
-const STORAGE_VALUE_PLACEHOLDER = 'Indisponible';
 
 const VSCODE_SNIPPET = `{
   "github.copilot.chat.otel.enabled": true,
@@ -42,8 +42,15 @@ export function AgentTracesPage() {
     setCollectionEnabled,
     clearTraceData,
   } = useAgentTrace(null);
+  const {
+    count,
+    loading: countLoading,
+    error: countError,
+    refresh: refreshCount,
+  } = useAgentTraceSessionCount();
   const [updatingEnabled, setUpdatingEnabled] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [showSessionsView, setShowSessionsView] = useState(false);
   const [activeExporter, setActiveExporter] = useState<ExporterTab>('vscode');
   const [copyTarget, setCopyTarget] = useState<CopyTarget | null>(null);
   const [copyErrors, setCopyErrors] = useState<{ endpoint: string | null; snippet: string | null }>({
@@ -61,22 +68,6 @@ export function AgentTracesPage() {
   const activeTab = EXPORTER_TABS.find((tab) => tab.id === activeExporter) ?? EXPORTER_TABS[0];
   const activeSnippet = activeTab.snippet;
   const activeError = error?.message ?? collectionStatus?.errorMessage ?? null;
-  const summaryBadgeLabel = statusLoading
-    ? 'Chargement'
-    : !collectionStatus
-      ? 'Indisponible'
-      : enabled
-        ? 'Collecte active'
-        : 'Collecte inactive';
-  const summaryBadgeClassName = statusLoading
-    ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-100'
-    : !collectionStatus
-      ? 'border-slate-700 bg-slate-900 text-slate-200'
-      : collectionStatus.listening
-        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100'
-        : enabled
-          ? 'border-amber-500/40 bg-amber-500/15 text-amber-100'
-          : 'border-slate-700 bg-slate-900 text-slate-200';
   const collectionMessage = statusLoading
     ? 'Chargement de l’état de collecte…'
     : !collectionStatus
@@ -86,15 +77,13 @@ export function AgentTracesPage() {
         : enabled
           ? 'Collecte activée — en attente du récepteur local'
           : 'Collecte désactivée';
-  const collectionBadgeLabel = statusLoading
-    ? 'Chargement'
-    : !collectionStatus
-      ? 'N/D'
-      : collectionStatus.listening
-        ? 'Écoute'
-        : enabled
-          ? 'En attente'
-          : 'Désactivée';
+  const sessionsCountValue = countLoading ? 'Chargement…' : countError ? 'Indisponible' : String(count ?? 0);
+  const sessionsCountDescription = countLoading
+    ? 'Chargement du nombre de sessions stockées…'
+    : countError
+      ? 'Impossible de charger le nombre de sessions pour le moment.'
+      : `${count ?? 0} session${count === 1 ? '' : 's'} stockée${count === 1 ? '' : 's'} localement.`;
+  const snippetCopyLabel = activeTab.id === 'vscode' ? 'Copier le JSON' : 'Copier les variables';
 
   useEffect(
     () => () => {
@@ -179,11 +168,21 @@ export function AgentTracesPage() {
     setClearing(true);
     try {
       await clearTraceData();
+      await refreshCount();
     } catch {
       // The hook already logs and exposes the latest bridge error state.
     } finally {
       setClearing(false);
     }
+  }
+
+  async function handleSessionsBack(): Promise<void> {
+    setShowSessionsView(false);
+    await refreshCount();
+  }
+
+  if (showSessionsView) {
+    return <AgentTraceSessionsView onBack={() => void handleSessionsBack()} />;
   }
 
   return (
@@ -196,11 +195,11 @@ export function AgentTracesPage() {
                 <Badge className="border-cyan-500/40 bg-cyan-500/15 text-cyan-100">
                   Télémétrie locale
                 </Badge>
-                <Badge
-                  className={summaryBadgeClassName}
-                >
-                  {summaryBadgeLabel}
-                </Badge>
+                {collectionStatus?.listening && (
+                  <Badge className="border-emerald-500/40 bg-emerald-500/15 text-emerald-100">
+                    <span className="motion-safe:animate-pulse">●</span> Écoute active
+                  </Badge>
+                )}
               </div>
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold tracking-tight text-slate-50">
@@ -214,27 +213,11 @@ export function AgentTracesPage() {
               </div>
             </div>
             <div className="grid gap-2 text-right text-xs text-slate-400">
-              <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-cyan-200">
-                {OTLP_PROTOCOL}
+              <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                Endpoint local
               </span>
-              <span>Port {endpointPort}</span>
-              <div className="flex items-center justify-end gap-2">
-                <span className="font-mono text-slate-300">{endpoint}</span>
-                <div className="flex flex-col items-end gap-1">
-                  <button
-                    type="button"
-                    onClick={() => void handleCopy(endpoint, 'endpoint')}
-                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
-                  >
-                    {copyTarget === 'endpoint' ? 'Copié' : 'Copier l’endpoint'}
-                  </button>
-                  {copyErrors.endpoint && (
-                    <p role="alert" className="text-xs text-red-200">
-                      {copyErrors.endpoint}
-                    </p>
-                  )}
-                </div>
-              </div>
+              <span className="font-mono text-slate-300">{endpoint}</span>
+              <span>Récepteur OTLP/HTTP protobuf en loopback uniquement.</span>
             </div>
           </div>
         </CardContent>
@@ -243,19 +226,11 @@ export function AgentTracesPage() {
         <CardHeader className="gap-4 p-6 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base text-slate-50">État de collecte</CardTitle>
-            <Badge
-              className={
-                collectionMessage === 'Écoute active'
-                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100'
-                  : collectionMessage === 'Collecte activée — en attente du récepteur local'
-                    ? 'border-amber-500/40 bg-amber-500/15 text-amber-100'
-                    : collectionMessage === 'Chargement de l’état de collecte…'
-                      ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-100'
-                      : 'border-slate-700 bg-slate-900 text-slate-200'
-              }
-            >
-              {collectionBadgeLabel}
-            </Badge>
+            {collectionStatus?.listening && (
+              <Badge className="border-emerald-500/40 bg-emerald-500/15 text-emerald-100">
+                Prêt
+              </Badge>
+            )}
           </div>
           <label className="flex items-center gap-3 text-sm text-slate-200">
             <input
@@ -268,28 +243,34 @@ export function AgentTracesPage() {
           </label>
         </CardHeader>
         <CardContent className="space-y-4 px-6 pb-6 text-sm text-slate-300">
-          <div className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:grid-cols-2">
+          <div className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:grid-cols-3">
             <div className="space-y-1">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Récepteur local</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Endpoint local</p>
               <p className="font-mono text-slate-100">{endpoint}</p>
+              <button
+                type="button"
+                onClick={() => void handleCopy(endpoint, 'endpoint')}
+                className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
+              >
+                {copyTarget === 'endpoint' ? 'Copié' : 'Copier l’endpoint'}
+              </button>
+              {copyErrors.endpoint && (
+                <p role="alert" className="text-xs text-red-200">
+                  {copyErrors.endpoint}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Protocole / port</p>
-              <p className="text-slate-100">
-                {OTLP_PROTOCOL} · {endpointPort}
-              </p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Protocole</p>
+              <p className="text-slate-100">{OTLP_PROTOCOL}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Port</p>
+              <p className="text-slate-100">{endpointPort}</p>
             </div>
           </div>
           <p className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-slate-100">
-            {statusLoading
-              ? 'Chargement de l’état de collecte…'
-              : !collectionStatus
-                ? 'État de collecte indisponible'
-                : collectionStatus.listening
-                  ? 'Écoute active'
-                  : enabled
-                    ? 'Collecte activée — en attente du récepteur local'
-                    : 'Collecte désactivée'}
+            {collectionMessage}
           </p>
           <p className="text-slate-400">
             Le récepteur accepte uniquement le loopback et conserve la valeur de secours{' '}
@@ -319,7 +300,7 @@ export function AgentTracesPage() {
           <div className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
             <p>
               Ajoutez ces réglages dans les User settings (Preferences: Open User Settings (JSON)).
-              VS Code ignore les paramètres en workspace. Rechargez la fenêtre après modification.
+              VS Code ignore les paramètres en workspace. Exécutez ensuite Reload Window.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -358,7 +339,7 @@ export function AgentTracesPage() {
                 onClick={() => void handleCopy(activeSnippet, 'snippet')}
                 className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
               >
-                {copyTarget === 'snippet' ? 'Copié' : 'Copier le snippet'}
+                {copyTarget === 'snippet' ? 'Copié' : snippetCopyLabel}
               </button>
               {copyErrors.snippet && (
                 <p role="alert" className="text-xs text-red-200">
@@ -380,7 +361,7 @@ export function AgentTracesPage() {
             </h3>
             <p className="text-sm text-slate-300">
               {activeTab.id === 'vscode'
-                ? 'Ajoutez le snippet ci-dessous dans vos User settings et rechargez la fenêtre pour l’appliquer.'
+                ? 'Ajoutez le snippet ci-dessous dans vos User settings puis exécutez Reload Window.'
                 : 'Définissez ces variables d’environnement avant de lancer Copilot CLI.'}
             </p>
             <pre
@@ -402,25 +383,40 @@ export function AgentTracesPage() {
           </p>
         </CardHeader>
         <CardContent className="space-y-5 px-6 pb-6">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Volume actuel</p>
-              <p className="mt-2 text-2xl font-semibold text-cyan-200">{STORAGE_VOLUME_PLACEHOLDER}</p>
-              <p className="mt-1 text-sm text-slate-400">{STORAGE_VALUE_PLACEHOLDER}</p>
-            </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setShowSessionsView(true)}
+              className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-left transition hover:border-cyan-500/40 hover:bg-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+              aria-label={`Sessions avec traces${countLoading ? ' : chargement' : countError ? ' : indisponible' : ` : ${count ?? 0}`}`}
+            >
+              <p className="text-xs uppercase tracking-wide text-slate-400">Sessions avec traces</p>
+              <p className="mt-2 text-2xl font-semibold text-cyan-200">{sessionsCountValue}</p>
+              <p className="mt-1 text-sm text-slate-400">{sessionsCountDescription}</p>
+            </button>
             <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-400">Politique de rétention</p>
-              <p className="mt-2 text-2xl font-semibold text-emerald-200">30 jours</p>
-            </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Dernière capture</p>
-              <p className="mt-2 text-2xl font-semibold text-cyan-200">{STORAGE_VOLUME_PLACEHOLDER}</p>
-              <p className="mt-1 text-sm text-slate-400">{STORAGE_VALUE_PLACEHOLDER}</p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-200">30 jours (auto-purge)</p>
+              <p className="mt-1 text-sm text-slate-400">Suppression automatique au-delà de 30 jours.</p>
             </div>
           </div>
+          {countError && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <p role="alert" className="text-sm text-red-200">
+                {countError.message}
+              </p>
+              <button
+                type="button"
+                onClick={() => void refreshCount()}
+                className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-sm text-slate-300">
-              Irréversible. Efface le cache local sans affecter vos IDE.
+              Irréversible. Efface le cache local sans affecter vos IDEs.
             </p>
             <button
               type="button"
