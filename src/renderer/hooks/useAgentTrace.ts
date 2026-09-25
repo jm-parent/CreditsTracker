@@ -38,7 +38,19 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
   }, []);
 
   useEffect(() => {
+    const unsubscribe = window.api.onAgentTraceStatusChange((nextStatus) => {
+      invalidateStatusRequest();
+      setCollectionStatus(nextStatus);
+      setStatusError(null);
+      setStatusLoading(false);
+    });
+
     void refreshCollectionStatus();
+
+    return () => {
+      unsubscribe();
+      invalidateStatusRequest();
+    };
   }, []);
 
   useEffect(() => {
@@ -178,6 +190,10 @@ export function useAgentTrace(selection: AgentTraceSelection | null): UseAgentTr
     statusRequestGenerationRef.current = nextGeneration;
     setStatusLoading(true);
     return nextGeneration;
+  }
+
+  function invalidateStatusRequest(): void {
+    statusRequestGenerationRef.current += 1;
   }
 
   function isActiveStatusRequest(requestGeneration: number): boolean {

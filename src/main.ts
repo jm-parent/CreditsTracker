@@ -71,7 +71,21 @@ if (!handleSquirrelEvent()) {
       packaged: app.isPackaged,
     });
 
-    agentTraceService = createAgentTraceService(app.getPath('userData'));
+    agentTraceService = createAgentTraceService(app.getPath('userData'), {
+      onStatusChange: (status) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (window.isDestroyed() || window.webContents.isDestroyed()) {
+            continue;
+          }
+
+          try {
+            window.webContents.send('agent-trace-status-changed', status);
+          } catch (error) {
+            logError('agent-trace-service', 'Failed to publish trace status to the renderer', error);
+          }
+        }
+      },
+    });
     registerAgentTraceIpcHandlers(agentTraceService);
     await agentTraceService.initialize();
 

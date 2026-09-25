@@ -632,6 +632,97 @@ describe('createAgentTraceService', () => {
       failure,
     );
   });
+
+  it('publishes copied status changes once per distinct transition', async () => {
+    const publishedStatuses: AgentTraceCollectionStatus[] = [];
+    const store = makeStoreDouble();
+    const receiver = makeReceiverDouble();
+    const dependencies: Partial<AgentTraceServiceDependencies> & {
+      onStatusChange: (status: AgentTraceCollectionStatus) => void;
+    } = {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(async () => receiver),
+      onStatusChange: (status) => {
+        publishedStatuses.push(status);
+      },
+    };
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', dependencies);
+
+    await service.initialize();
+    await service.setEnabled(true);
+    await service.setEnabled(true);
+
+    expect(publishedStatuses).toEqual([
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: null,
+      } satisfies AgentTraceCollectionStatus,
+    ]);
+    expect(publishedStatuses[0]).not.toBe(service.getStatus());
+
+    publishedStatuses[0].errorMessage = 'mutated outside the service';
+    expect(service.getStatus()).toEqual({
+      enabled: true,
+      listening: true,
+      endpoint: receiver.endpoint,
+      errorMessage: null,
+    } satisfies AgentTraceCollectionStatus);
+  });
+
+  it('publishes error and clear transitions from receiver-driven status changes', async () => {
+    const publishedStatuses: AgentTraceCollectionStatus[] = [];
+    let options: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0] | undefined;
+    const store = makeStoreDouble();
+    const receiver = makeReceiverDouble();
+    const dependencies: Partial<AgentTraceServiceDependencies> & {
+      onStatusChange: (status: AgentTraceCollectionStatus) => void;
+    } = {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(async (receiverOptions: Parameters<AgentTraceServiceDependencies['receiverFactory']>[0]) => {
+        options = receiverOptions;
+        return receiver;
+      }),
+      onStatusChange: (status) => {
+        publishedStatuses.push(status);
+      },
+    };
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', dependencies);
+
+    await service.initialize();
+    await service.setEnabled(true);
+
+    options?.onPartialSuccess?.({
+      totalRejectedSpans: 1,
+      unsupportedSourceSpans: 1,
+      missingSourceSessionSpans: 0,
+      unresolvedTraceRootSpans: 0,
+      errorMessage: 'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
+    });
+    service.clear();
+
+    expect(publishedStatuses).toEqual([
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: null,
+      } satisfies AgentTraceCollectionStatus,
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: 'partial trace coverage: rejected 1 span(s): 1 from unsupported source',
+      } satisfies AgentTraceCollectionStatus,
+      {
+        enabled: true,
+        listening: true,
+        endpoint: receiver.endpoint,
+        errorMessage: null,
+      } satisfies AgentTraceCollectionStatus,
+    ]);
+  });
 });
 
 function makeStoreDouble(overrides: Partial<AgentTraceStore> = {}): AgentTraceStore {
