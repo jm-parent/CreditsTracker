@@ -11,6 +11,8 @@ import type {
   AgentTraceCollectionStatus,
   AgentTraceSelection,
   AgentTraceSession,
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
 } from '../shared/types';
 
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -90,6 +92,38 @@ export class AgentTraceService {
     } catch (error) {
       this.recordError('Failed to read local agent trace data', error);
       return notCollected(selection);
+    }
+  }
+
+  getSessionCount(): number {
+    const store = this.ensureStore();
+    if (!store) {
+      const error = new Error('Local agent trace store is unavailable');
+      logError('AgentTraceService', 'Failed to count stored trace sessions', error);
+      throw error;
+    }
+
+    try {
+      return store.countSessions();
+    } catch (error) {
+      logError('AgentTraceService', 'Failed to count stored trace sessions', error);
+      throw error;
+    }
+  }
+
+  listSessions(filters: AgentTraceSessionListFilters): AgentTraceSessionListPage {
+    const store = this.ensureStore();
+    if (!store) {
+      const error = new Error('Local agent trace store is unavailable');
+      logError('AgentTraceService', 'Failed to list stored trace sessions', error);
+      throw error;
+    }
+
+    try {
+      return store.listSessions(filters);
+    } catch (error) {
+      logError('AgentTraceService', 'Failed to list stored trace sessions', error);
+      throw error;
     }
   }
 

@@ -1,13 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AgentTraceCollectionStatus, AgentTraceSession } from '../shared/types';
+import type {
+  AgentTraceCollectionStatus,
+  AgentTraceSession,
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
+} from '../shared/types';
 import type { AgentTracePartialSuccess, AgentTraceReceiver } from './agent-trace-receiver';
 import type { AgentTraceStore } from './agent-trace-store';
+import { logError } from './logger';
 import { createAgentTraceService, type AgentTraceServiceDependencies } from './agent-trace-service';
 
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+vi.mock('./logger', () => ({
+  logError: vi.fn(),
+}));
+
 describe('createAgentTraceService', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.useFakeTimers();
   });
 
@@ -494,6 +505,133 @@ describe('createAgentTraceService', () => {
       spans: [],
     } satisfies AgentTraceSession);
   });
+
+  it('returns the exact stored trace session count', async () => {
+    const store = makeStoreDouble({
+      countSessions: vi.fn(() => 42),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(service.getSessionCount()).toBe(42);
+    expect(store.countSessions).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs and propagates count failures when storage is unavailable', async () => {
+    const storeError = new Error('disk unavailable');
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => {
+        throw storeError;
+      }),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.getSessionCount()).toThrow('Local agent trace store is unavailable');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to count stored trace sessions',
+      expect.objectContaining({ message: 'Local agent trace store is unavailable' }),
+    );
+  });
+
+  it('logs and propagates store count failures without returning zero', async () => {
+    const failure = new Error('count failed');
+    const store = makeStoreDouble({
+      countSessions: vi.fn(() => {
+        throw failure;
+      }),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.getSessionCount()).toThrow('count failed');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to count stored trace sessions',
+      failure,
+    );
+  });
+
+  it('forwards exact filters and returns the exact stored session list page', async () => {
+    const filters = makeSessionFilters({
+      query: 'model-a',
+      source: 'copilot-cli',
+      from: '2026-09-24',
+      to: '2026-09-25',
+      category: 'tool',
+      status: 'error',
+      page: 2,
+    });
+    const page: AgentTraceSessionListPage = {
+      items: [{ source: 'copilot-cli', sessionId: 'cli-session', spanCount: 7 }],
+      total: 23,
+      page: 2,
+      pageSize: 50,
+    };
+    const store = makeStoreDouble({
+      listSessions: vi.fn(() => page),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(service.listSessions(filters)).toBe(page);
+    expect(store.listSessions).toHaveBeenCalledWith(filters);
+  });
+
+  it('logs and propagates list failures when storage is unavailable', async () => {
+    const storeError = new Error('disk unavailable');
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => {
+        throw storeError;
+      }),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.listSessions(makeSessionFilters())).toThrow('Local agent trace store is unavailable');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to list stored trace sessions',
+      expect.objectContaining({ message: 'Local agent trace store is unavailable' }),
+    );
+  });
+
+  it('logs and propagates store list failures without returning an empty page', async () => {
+    const failure = new Error('list failed');
+    const store = makeStoreDouble({
+      listSessions: vi.fn(() => {
+        throw failure;
+      }),
+    });
+    const service = createAgentTraceService('C:\\Users\\jm-parent\\AppData\\Roaming\\CreditsTracker', {
+      storeFactory: vi.fn(() => store),
+      receiverFactory: vi.fn(),
+    });
+
+    await service.initialize();
+
+    expect(() => service.listSessions(makeSessionFilters())).toThrow('list failed');
+    expect(logError).toHaveBeenCalledWith(
+      'AgentTraceService',
+      'Failed to list stored trace sessions',
+      failure,
+    );
+  });
 });
 
 function makeStoreDouble(overrides: Partial<AgentTraceStore> = {}): AgentTraceStore {
@@ -540,6 +678,19 @@ function disabledStatus(): AgentTraceCollectionStatus {
     listening: false,
     endpoint: null,
     errorMessage: null,
+  };
+}
+
+function makeSessionFilters(overrides: Partial<AgentTraceSessionListFilters> = {}): AgentTraceSessionListFilters {
+  return {
+    query: '',
+    source: null,
+    from: null,
+    to: null,
+    category: null,
+    status: null,
+    page: 0,
+    ...overrides,
   };
 }
 

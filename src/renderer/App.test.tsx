@@ -91,6 +91,13 @@ beforeEach(() => {
     onUpdateStateChange: vi.fn(() => () => {}),
     shouldPromptDesktopShortcut: vi.fn().mockResolvedValue(false),
     createDesktopShortcut: vi.fn().mockResolvedValue(true),
+    getAgentTraceSessionCount: vi.fn().mockResolvedValue(0),
+    listAgentTraceSessions: vi.fn().mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      pageSize: 50,
+    }),
     getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),

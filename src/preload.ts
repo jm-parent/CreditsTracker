@@ -3,6 +3,8 @@ import type {
   AgentTraceCollectionStatus,
   AgentTraceSelection,
   AgentTraceSession,
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
   ExportPreview,
   ExportRequest,
   ExportResult,
@@ -69,6 +71,10 @@ contextBridge.exposeInMainWorld('api', {
   createDesktopShortcut: (): Promise<boolean> => ipcRenderer.invoke('create-desktop-shortcut'),
   getAgentTraceCollectionStatus: (): Promise<AgentTraceCollectionStatus> =>
     ipcRenderer.invoke('get-agent-trace-collection-status'),
+  getAgentTraceSessionCount: (): Promise<number> =>
+    ipcRenderer.invoke('get-agent-trace-session-count'),
+  listAgentTraceSessions: (filters: AgentTraceSessionListFilters): Promise<AgentTraceSessionListPage> =>
+    ipcRenderer.invoke('list-agent-trace-sessions', filters),
   setAgentTraceCollectionEnabled: (enabled: boolean): Promise<AgentTraceCollectionStatus> =>
     ipcRenderer.invoke('set-agent-trace-collection-enabled', enabled),
   getAgentTraceSession: (selection: AgentTraceSelection): Promise<AgentTraceSession> =>
