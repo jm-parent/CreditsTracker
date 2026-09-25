@@ -202,7 +202,7 @@ export function AgentTracesPage() {
                 </Badge>
               </div>
               <div className="space-y-2">
-                <h2 aria-label="Traces agents" className="text-2xl font-semibold tracking-tight text-slate-50">
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-50">
                   Traces agents &amp; Télémétrie locale
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-300">
@@ -231,11 +231,6 @@ export function AgentTracesPage() {
           </div>
         </CardContent>
       </Card>
-      <div className="sr-only">
-        <p>Collection is disabled until you opt in from this page.</p>
-        <p>Select a conversation from a project detail page to inspect its trace.</p>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <Card className="rounded-[28px] border-slate-800/80 bg-slate-950/95 shadow-lg shadow-slate-950/30">
           <CardHeader className="gap-4 p-6 pb-4">
@@ -386,7 +381,9 @@ export function AgentTracesPage() {
                   className="space-y-2"
                 >
                   <h3 className="text-sm font-medium text-slate-100">
-                    {activeTab.id === 'vscode' ? 'VS Code User settings' : 'Copilot CLI environment'}
+                    {activeTab.id === 'vscode'
+                      ? 'Paramètres utilisateur VS Code'
+                      : 'Environnement Copilot CLI'}
                   </h3>
                   <pre
                     tabIndex={0}

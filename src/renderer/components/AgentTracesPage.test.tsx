@@ -54,6 +54,12 @@ describe('AgentTracesPage', () => {
       await screen.findByText('Traces agents & Télémétrie locale'),
     ).toBeInTheDocument();
     expect(
+      screen.queryByText('Collection is disabled until you opt in from this page.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Select a conversation from a project detail page to inspect its trace.'),
+    ).not.toBeInTheDocument();
+    expect(
       screen.getByText(
         (_, element) =>
           element?.textContent?.includes(
@@ -139,12 +145,14 @@ describe('AgentTracesPage', () => {
     const cliTab = screen.getByRole('tab', { name: /Copilot CLI/i });
 
     expect(vscodeTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Paramètres utilisateur VS Code' })).toBeInTheDocument();
     expect(screen.getByText(/github\.copilot\.chat\.otel\.enabled/)).toBeInTheDocument();
     expect(screen.queryByText(/COPILOT_OTEL_ENABLED=true/)).not.toBeInTheDocument();
 
     await user.click(cliTab);
 
     expect(cliTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Environnement Copilot CLI' })).toBeInTheDocument();
     expect(screen.getByText(/COPILOT_OTEL_ENABLED=true/)).toBeInTheDocument();
     expect(screen.queryByText(/github\.copilot\.chat\.otel\.enabled/)).not.toBeInTheDocument();
 

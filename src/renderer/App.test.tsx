@@ -313,9 +313,11 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Traces agents' }));
 
-    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Activer la collecte locale des traces agent' })).toBeInTheDocument();
-    expect(screen.getByText('Collection is disabled until you opt in from this page.')).toBeInTheDocument();
+    expect(screen.getByText(/Le récepteur accepte uniquement le loopback/i)).toBeInTheDocument();
     expect(screen.queryByText("Couldn't load Copilot CLI usage data.")).not.toBeInTheDocument();
   });
 
@@ -656,8 +658,10 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Traces agents' }));
 
-    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
-    expect(screen.getByText('Select a conversation from a project detail page to inspect its trace.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Le récepteur accepte uniquement le loopback/i)).toBeInTheDocument();
   });
 
   it('does not animate deltas when a tab is opened before a filtered refresh resolves', async () => {
