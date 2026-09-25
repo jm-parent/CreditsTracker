@@ -68,12 +68,13 @@ describe('AgentTracesPage', () => {
         { selector: 'p' },
       ),
     ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Configuration des exporteurs locaux' })).toBeInTheDocument();
     expect(screen.getByText('Volume actuel')).toBeInTheDocument();
     expect(screen.getByText('Politique de rétention')).toBeInTheDocument();
     expect(screen.getByText('Dernière capture')).toBeInTheDocument();
     expect(screen.getByText('30 jours')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('Indisponible')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getAllByText('Indisponible')).toHaveLength(2);
   });
 
   it('does not show conversation details in the global trace page', async () => {
@@ -101,6 +102,42 @@ describe('AgentTracesPage', () => {
     expect(screen.getByText('Traces agents & Télémétrie locale')).toBeInTheDocument();
     expect(screen.getByText(/Chargement de l’état de collecte/i)).toBeInTheDocument();
     expect(screen.queryByText(/Collecte inactive/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the disabled and waiting collection states without guessing', () => {
+    const useAgentTraceSpy = vi.spyOn(useAgentTraceModule, 'useAgentTrace');
+    useAgentTraceSpy.mockReturnValue({
+      collectionStatus: disabledStatus,
+      session: null,
+      statusLoading: false,
+      sessionLoading: false,
+      error: null,
+      setCollectionEnabled: vi.fn().mockResolvedValue(undefined),
+      clearTraceData: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const { rerender } = render(<AgentTracesPage />);
+
+    expect(screen.getByText('Collecte désactivée')).toBeInTheDocument();
+    expect(screen.getByText('Désactivée')).toBeInTheDocument();
+
+    useAgentTraceSpy.mockReturnValue({
+      collectionStatus: {
+        ...listeningStatus,
+        listening: false,
+      },
+      session: null,
+      statusLoading: false,
+      sessionLoading: false,
+      error: null,
+      setCollectionEnabled: vi.fn().mockResolvedValue(undefined),
+      clearTraceData: vi.fn().mockResolvedValue(undefined),
+    });
+
+    rerender(<AgentTracesPage />);
+
+    expect(screen.getByText('Collecte activée — en attente du récepteur local')).toBeInTheDocument();
+    expect(screen.getByText('En attente')).toBeInTheDocument();
   });
 
   it('shows the collection status unavailable after an error without claiming disabled collection', () => {
@@ -141,11 +178,12 @@ describe('AgentTracesPage', () => {
 
     render(<AgentTracesPage />);
 
-    const vscodeTab = screen.getByRole('tab', { name: /VS Code/i });
-    const cliTab = screen.getByRole('tab', { name: /Copilot CLI/i });
+    const vscodeTab = screen.getByRole('tab', { name: /VS Code \(settings\.json\)/i });
+    const cliTab = screen.getByRole('tab', { name: /Copilot CLI \(variables d’env\)/i });
 
     expect(vscodeTab).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Paramètres utilisateur VS Code' })).toBeInTheDocument();
+    expect(screen.getByText(/Ajoutez le snippet ci-dessous dans vos User settings/i)).toBeInTheDocument();
     expect(screen.getByText(/github\.copilot\.chat\.otel\.enabled/)).toBeInTheDocument();
     expect(screen.queryByText(/COPILOT_OTEL_ENABLED=true/)).not.toBeInTheDocument();
 
@@ -153,8 +191,23 @@ describe('AgentTracesPage', () => {
 
     expect(cliTab).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Environnement Copilot CLI' })).toBeInTheDocument();
+    expect(screen.getByText(/Définissez ces variables d’environnement/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Ajoutez le snippet ci-dessous dans vos User settings/i)).not.toBeInTheDocument();
     expect(screen.getByText(/COPILOT_OTEL_ENABLED=true/)).toBeInTheDocument();
     expect(screen.queryByText(/github\.copilot\.chat\.otel\.enabled/)).not.toBeInTheDocument();
+
+    vscodeTab.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(cliTab).toHaveFocus();
+    expect(cliTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/COPILOT_OTEL_ENABLED=true/)).toBeInTheDocument();
+
+    await user.keyboard('{ArrowLeft}');
+
+    expect(vscodeTab).toHaveFocus();
+    expect(vscodeTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/github\.copilot\.chat\.otel\.enabled/)).toBeInTheDocument();
 
     await user.keyboard('{Home}');
 
@@ -167,7 +220,7 @@ describe('AgentTracesPage', () => {
     expect(screen.getByText(/COPILOT_OTEL_ENABLED=true/)).toBeInTheDocument();
   });
 
-  it('copies the active snippet and endpoint, and reports copy failures', async () => {
+  it('copies the active snippet and endpoint, and reports copy failures next to the failing control', async () => {
     const user = userEvent.setup();
     const writeText = mockClipboardWriteText();
     render(<AgentTracesPage />);
@@ -191,16 +244,24 @@ describe('AgentTracesPage', () => {
     );
   });
 
-  it('reports a clipboard rejection when copying the active snippet', async () => {
+  it('reports a clipboard rejection when copying the endpoint and the active snippet', async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockRejectedValue(new Error('clipboard denied'));
     mockClipboardWriteText(writeText);
 
     render(<AgentTracesPage />);
 
-    await user.click(screen.getByRole('button', { name: /Copier le snippet/i }));
+    await user.click(await screen.findByRole('button', { name: /Copier l’endpoint/i }));
 
     expect(writeText).toHaveBeenCalledWith(
+      'http://127.0.0.1:4318',
+    );
+    expect(await screen.findByText('Échec de la copie')).toBeInTheDocument();
+    expect(screen.getByText('Échec de la copie')).toHaveTextContent('Échec de la copie');
+
+    await user.click(screen.getByRole('button', { name: /Copier le snippet/i }));
+
+    expect(writeText).toHaveBeenLastCalledWith(
       `{
   "github.copilot.chat.otel.enabled": true,
   "github.copilot.chat.otel.exporterType": "otlp-http",
@@ -209,7 +270,6 @@ describe('AgentTracesPage', () => {
   "github.copilot.chat.otel.captureContent": true
 }`,
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent('Échec de la copie');
   });
 
   it('enables collection on demand, shows the listening endpoint, and never changes settings automatically', async () => {

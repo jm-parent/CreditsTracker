@@ -23,15 +23,15 @@ OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`;
 
 type ExporterTab = 'vscode' | 'cli';
-type CopyTarget = 'endpoint' | 'snippet' | null;
+type CopyTarget = 'endpoint' | 'snippet';
 
 const EXPORTER_TABS: Array<{
   id: ExporterTab;
   label: string;
   snippet: string;
 }> = [
-  { id: 'vscode', label: 'VS Code', snippet: VSCODE_SNIPPET },
-  { id: 'cli', label: 'Copilot CLI', snippet: CLI_SNIPPET },
+  { id: 'vscode', label: 'VS Code (settings.json)', snippet: VSCODE_SNIPPET },
+  { id: 'cli', label: 'Copilot CLI (variables d’env)', snippet: CLI_SNIPPET },
 ];
 
 export function AgentTracesPage() {
@@ -45,9 +45,12 @@ export function AgentTracesPage() {
   const [updatingEnabled, setUpdatingEnabled] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [activeExporter, setActiveExporter] = useState<ExporterTab>('vscode');
-  const [copyTarget, setCopyTarget] = useState<CopyTarget>(null);
-  const [copyError, setCopyError] = useState<string | null>(null);
-  const copyTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const [copyTarget, setCopyTarget] = useState<CopyTarget | null>(null);
+  const [copyErrors, setCopyErrors] = useState<{ endpoint: string | null; snippet: string | null }>({
+    endpoint: null,
+    snippet: null,
+  });
+  const copyTimer = useRef<number | null>(null);
   const tabRefs = useRef<Record<ExporterTab, HTMLButtonElement | null>>({
     vscode: null,
     cli: null,
@@ -55,7 +58,8 @@ export function AgentTracesPage() {
   const enabled = collectionStatus?.enabled ?? false;
   const endpoint = collectionStatus?.endpoint ?? DEFAULT_OTLP_ENDPOINT;
   const endpointPort = new URL(endpoint).port || '4318';
-  const activeSnippet = EXPORTER_TABS.find((tab) => tab.id === activeExporter)?.snippet ?? VSCODE_SNIPPET;
+  const activeTab = EXPORTER_TABS.find((tab) => tab.id === activeExporter) ?? EXPORTER_TABS[0];
+  const activeSnippet = activeTab.snippet;
   const activeError = error?.message ?? collectionStatus?.errorMessage ?? null;
   const summaryBadgeLabel = statusLoading
     ? 'Chargement'
@@ -144,20 +148,17 @@ export function AgentTracesPage() {
   }
 
   async function handleCopy(text: string, target: CopyTarget): Promise<void> {
-    setCopyError(null);
-
     try {
       await navigator.clipboard.writeText(text);
       setCopyTarget(target);
+      setCopyErrors((current) => ({ ...current, [target]: null }));
       scheduleCopyReset();
     } catch (err) {
       logError('AgentTracesPage', `Failed to copy ${target ?? 'text'} to the clipboard`, err);
       setCopyTarget(null);
-      setCopyError('Échec de la copie');
+      setCopyErrors((current) => ({ ...current, [target]: 'Échec de la copie' }));
     }
   }
-
-  const activeTab = EXPORTER_TABS.find((tab) => tab.id === activeExporter) ?? EXPORTER_TABS[0];
 
   async function handleCollectionToggle(nextEnabled: boolean): Promise<void> {
     setUpdatingEnabled(true);
@@ -219,202 +220,219 @@ export function AgentTracesPage() {
               <span>Port {endpointPort}</span>
               <div className="flex items-center justify-end gap-2">
                 <span className="font-mono text-slate-300">{endpoint}</span>
-                <button
-                  type="button"
-                  onClick={() => void handleCopy(endpoint, 'endpoint')}
-                  className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
-                >
-                  {copyTarget === 'endpoint' ? 'Copié' : 'Copier l’endpoint'}
-                </button>
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void handleCopy(endpoint, 'endpoint')}
+                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
+                  >
+                    {copyTarget === 'endpoint' ? 'Copié' : 'Copier l’endpoint'}
+                  </button>
+                  {copyErrors.endpoint && (
+                    <p role="alert" className="text-xs text-red-200">
+                      {copyErrors.endpoint}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <Card className="rounded-[28px] border-slate-800/80 bg-slate-950/95 shadow-lg shadow-slate-950/30">
-          <CardHeader className="gap-4 p-6 pb-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle className="text-base text-slate-50">État de collecte</CardTitle>
-              <Badge
-                className={
-                  collectionMessage === 'Écoute active'
-                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100'
-                    : collectionMessage === 'Collecte activée — en attente du récepteur local'
-                      ? 'border-amber-500/40 bg-amber-500/15 text-amber-100'
-                      : collectionMessage === 'Chargement de l’état de collecte…'
-                        ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-100'
-                        : 'border-slate-700 bg-slate-900 text-slate-200'
-                }
-              >
-                {collectionBadgeLabel}
-              </Badge>
+      <Card className="rounded-[28px] border-slate-800/80 bg-slate-950/95 shadow-lg shadow-slate-950/30">
+        <CardHeader className="gap-4 p-6 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-base text-slate-50">État de collecte</CardTitle>
+            <Badge
+              className={
+                collectionMessage === 'Écoute active'
+                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100'
+                  : collectionMessage === 'Collecte activée — en attente du récepteur local'
+                    ? 'border-amber-500/40 bg-amber-500/15 text-amber-100'
+                    : collectionMessage === 'Chargement de l’état de collecte…'
+                      ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-100'
+                      : 'border-slate-700 bg-slate-900 text-slate-200'
+              }
+            >
+              {collectionBadgeLabel}
+            </Badge>
+          </div>
+          <label className="flex items-center gap-3 text-sm text-slate-200">
+            <input
+              type="checkbox"
+              checked={enabled}
+              disabled={statusLoading || updatingEnabled}
+              onChange={(event) => void handleCollectionToggle(event.currentTarget.checked)}
+            />
+            Activer la collecte locale des traces agent
+          </label>
+        </CardHeader>
+        <CardContent className="space-y-4 px-6 pb-6 text-sm text-slate-300">
+          <div className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Récepteur local</p>
+              <p className="font-mono text-slate-100">{endpoint}</p>
             </div>
-            <label className="flex items-center gap-3 text-sm text-slate-200">
-              <input
-                type="checkbox"
-                checked={enabled}
-                disabled={statusLoading || updatingEnabled}
-                onChange={(event) => void handleCollectionToggle(event.currentTarget.checked)}
-              />
-              Activer la collecte locale des traces agent
-            </label>
-          </CardHeader>
-          <CardContent className="space-y-4 px-6 pb-6 text-sm text-slate-300">
-            <div className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Récepteur local</p>
-                <p className="font-mono text-slate-100">{endpoint}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Protocole / port</p>
-                <p className="text-slate-100">
-                  {OTLP_PROTOCOL} · {endpointPort}
-                </p>
-              </div>
-            </div>
-            <p className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-slate-100">
-              {statusLoading
-                ? 'Chargement de l’état de collecte…'
-                : !collectionStatus
-                  ? 'État de collecte indisponible'
-                  : collectionStatus.listening
-                    ? 'Écoute active'
-                    : enabled
-                      ? 'Collecte activée — en attente du récepteur local'
-                      : 'Collecte désactivée'}
-            </p>
-            <p className="text-slate-400">
-              Le récepteur accepte uniquement le loopback et conserve la valeur de secours{' '}
-              <span className="font-mono text-slate-200">{DEFAULT_OTLP_ENDPOINT}</span>.
-            </p>
-            {activeError && (
-              <p
-                role="alert"
-                className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200"
-              >
-                {activeError}
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Protocole / port</p>
+              <p className="text-slate-100">
+                {OTLP_PROTOCOL} · {endpointPort}
               </p>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+          <p className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-slate-100">
+            {statusLoading
+              ? 'Chargement de l’état de collecte…'
+              : !collectionStatus
+                ? 'État de collecte indisponible'
+                : collectionStatus.listening
+                  ? 'Écoute active'
+                  : enabled
+                    ? 'Collecte activée — en attente du récepteur local'
+                    : 'Collecte désactivée'}
+          </p>
+          <p className="text-slate-400">
+            Le récepteur accepte uniquement le loopback et conserve la valeur de secours{' '}
+            <span className="font-mono text-slate-200">{DEFAULT_OTLP_ENDPOINT}</span>.
+          </p>
+          {activeError && (
+            <p
+              role="alert"
+              className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200"
+            >
+              {activeError}
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-        <Card className="rounded-[28px] border-slate-800/80 bg-slate-950/95 shadow-lg shadow-slate-950/30">
-          <CardHeader className="gap-3 p-6 pb-4">
-            <CardTitle className="text-base text-slate-50">Stockage local</CardTitle>
-            <p className="text-sm leading-6 text-slate-300">
-              Les traces stockées sont purgées après 30 jours. La suppression reste manuelle et
-              confirmée.
+      <Card className="rounded-[28px] border-slate-800/80 bg-slate-950/95 shadow-lg shadow-slate-950/30">
+        <CardHeader className="gap-3 p-6 pb-4">
+          <CardTitle className="text-base text-slate-50">Configuration des exporteurs locaux</CardTitle>
+          <p className="text-sm leading-6 text-slate-300">
+            L’activation de <code className="font-mono text-cyan-200">captureContent</code> peut
+            faire transiter les prompts et réponses localement avant filtrage. La vue des traces
+            stockées n’utilise que des payloads assainis via <span className="font-medium">AgentTraceTree</span> et n’affiche jamais le raisonnement masqué.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4 px-6 pb-6">
+          <div className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+            <p>
+              Ajoutez ces réglages dans les User settings (Preferences: Open User Settings (JSON)).
+              VS Code ignore les paramètres en workspace. Rechargez la fenêtre après modification.
             </p>
-          </CardHeader>
-          <CardContent className="space-y-5 px-6 pb-6">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Volume actuel</p>
-                <p className="mt-2 text-2xl font-semibold text-cyan-200">{STORAGE_VOLUME_PLACEHOLDER}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Politique de rétention</p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-200">30 jours</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Dernière capture</p>
-                <p className="mt-2 text-2xl font-semibold text-cyan-200">{STORAGE_VALUE_PLACEHOLDER}</p>
-              </div>
-            </div>
-            <div className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              <p>
-                À insérer dans les User settings (Preferences: Open User Settings (JSON)). VS Code
-                ignore les paramètres en workspace. Rechargez la fenêtre après modification.
-              </p>
-              <p>Définissez ces variables d’environnement avant de lancer copilot.</p>
-              <p className="rounded-xl border border-amber-500/20 bg-slate-950/50 p-3 text-slate-100">
-                L’activation de <code className="font-mono text-cyan-200">captureContent</code> peut
-                faire transiter les prompts et réponses localement avant filtrage. La vue des traces
-                stockées n’utilise que des payloads assainis via <span className="font-medium">AgentTraceTree</span> et n’affiche jamais le raisonnement masqué.
-              </p>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <section className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div
-                    role="tablist"
-                    aria-label="Sélecteur de l’exporteur"
-                    className="flex flex-wrap gap-2"
-                  >
-                    {EXPORTER_TABS.map((tab) => (
-                      <button
-                        key={tab.id}
-                        ref={(node) => {
-                          tabRefs.current[tab.id] = node;
-                        }}
-                        type="button"
-                        role="tab"
-                        id={`exporter-tab-${tab.id}`}
-                        aria-controls={`exporter-panel-${tab.id}`}
-                        aria-selected={activeExporter === tab.id}
-                        tabIndex={activeExporter === tab.id ? 0 : -1}
-                        onClick={() => handleTabSelect(tab.id)}
-                        onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-                        className={`rounded-full px-3 py-1.5 text-sm transition ${
-                          activeExporter === tab.id
-                            ? 'bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-500/40'
-                            : 'border border-slate-800 text-slate-200 hover:border-slate-600 hover:bg-slate-900'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleCopy(activeSnippet, 'snippet')}
-                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
-                  >
-                    {copyTarget === 'snippet' ? 'Copié' : 'Copier le snippet'}
-                  </button>
-                </div>
-                <div
-                  role="tabpanel"
-                  id={`exporter-panel-${activeTab.id}`}
-                  aria-labelledby={`exporter-tab-${activeTab.id}`}
-                  className="space-y-2"
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div
+              role="tablist"
+              aria-label="Sélecteur de l’exporteur"
+              className="flex flex-wrap gap-2"
+            >
+              {EXPORTER_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  ref={(node) => {
+                    tabRefs.current[tab.id] = node;
+                  }}
+                  type="button"
+                  role="tab"
+                  id={`exporter-tab-${tab.id}`}
+                  aria-controls={`exporter-panel-${tab.id}`}
+                  aria-selected={activeExporter === tab.id}
+                  tabIndex={activeExporter === tab.id ? 0 : -1}
+                  onClick={() => handleTabSelect(tab.id)}
+                  onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+                  className={`rounded-full px-3 py-1.5 text-sm transition ${
+                    activeExporter === tab.id
+                      ? 'bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-500/40'
+                      : 'border border-slate-800 text-slate-200 hover:border-slate-600 hover:bg-slate-900'
+                  }`}
                 >
-                  <h3 className="text-sm font-medium text-slate-100">
-                    {activeTab.id === 'vscode'
-                      ? 'Paramètres utilisateur VS Code'
-                      : 'Environnement Copilot CLI'}
-                  </h3>
-                  <pre
-                    tabIndex={0}
-                    className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-100"
-                  >
-                    {activeTab.snippet}
-                  </pre>
-                </div>
-              </section>
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            {copyError && (
-              <p role="alert" className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                {copyError}
-              </p>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-              <p className="text-sm text-slate-300">
-                Irréversible. Efface le cache local sans affecter vos IDE.
-              </p>
+            <div className="flex flex-col items-end gap-1">
               <button
                 type="button"
-                disabled={clearing}
-                onClick={() => void handleDelete()}
-                className="rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => void handleCopy(activeSnippet, 'snippet')}
+                className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
               >
-                Supprimer les traces stockées
+                {copyTarget === 'snippet' ? 'Copié' : 'Copier le snippet'}
               </button>
+              {copyErrors.snippet && (
+                <p role="alert" className="text-xs text-red-200">
+                  {copyErrors.snippet}
+                </p>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <div
+            role="tabpanel"
+            id={`exporter-panel-${activeTab.id}`}
+            aria-labelledby={`exporter-tab-${activeTab.id}`}
+            className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"
+          >
+            <h3 className="text-sm font-medium text-slate-100">
+              {activeTab.id === 'vscode'
+                ? 'Paramètres utilisateur VS Code'
+                : 'Environnement Copilot CLI'}
+            </h3>
+            <p className="text-sm text-slate-300">
+              {activeTab.id === 'vscode'
+                ? 'Ajoutez le snippet ci-dessous dans vos User settings et rechargez la fenêtre pour l’appliquer.'
+                : 'Définissez ces variables d’environnement avant de lancer Copilot CLI.'}
+            </p>
+            <pre
+              tabIndex={0}
+              className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-100"
+            >
+              {activeTab.snippet}
+            </pre>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-[28px] border-slate-800/80 bg-slate-950/95 shadow-lg shadow-slate-950/30">
+        <CardHeader className="gap-3 p-6 pb-4">
+          <CardTitle className="text-base text-slate-50">Stockage local</CardTitle>
+          <p className="text-sm leading-6 text-slate-300">
+            Les traces stockées sont purgées après 30 jours. La suppression reste manuelle et
+            confirmée.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5 px-6 pb-6">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Volume actuel</p>
+              <p className="mt-2 text-2xl font-semibold text-cyan-200">{STORAGE_VOLUME_PLACEHOLDER}</p>
+              <p className="mt-1 text-sm text-slate-400">{STORAGE_VALUE_PLACEHOLDER}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Politique de rétention</p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-200">30 jours</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Dernière capture</p>
+              <p className="mt-2 text-2xl font-semibold text-cyan-200">{STORAGE_VOLUME_PLACEHOLDER}</p>
+              <p className="mt-1 text-sm text-slate-400">{STORAGE_VALUE_PLACEHOLDER}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="text-sm text-slate-300">
+              Irréversible. Efface le cache local sans affecter vos IDE.
+            </p>
+            <button
+              type="button"
+              disabled={clearing}
+              onClick={() => void handleDelete()}
+              className="rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Supprimer les traces stockées
+            </button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
