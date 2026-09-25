@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AgentTraceCollectionStatus } from '../../shared/types';
 import { createWindowApi } from '../test-utils/windowApi';
+import * as useAgentTraceModule from '../hooks/useAgentTrace';
 import { AgentTracesPage } from './AgentTracesPage';
 
 const disabledStatus: AgentTraceCollectionStatus = {
@@ -23,14 +24,65 @@ beforeEach(() => {
   window.api = createWindowApi({
     getAgentTraceCollectionStatus: vi.fn().mockResolvedValue(disabledStatus),
   });
+  vi.restoreAllMocks();
 });
 
 describe('AgentTracesPage', () => {
+  it('shows the telemetry panels and only real storage information', async () => {
+    render(<AgentTracesPage />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Volume actuel')).toBeInTheDocument();
+    expect(screen.getByText('Politique de rétention')).toBeInTheDocument();
+    expect(screen.getByText('Dernière capture')).toBeInTheDocument();
+    expect(screen.getByText('30 jours')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Indisponible')).toBeInTheDocument();
+  });
+
   it('does not show conversation details in the global trace page', async () => {
     render(<AgentTracesPage />);
 
-    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Selected conversation' })).not.toBeInTheDocument();
+  });
+
+  it('shows loading explicitly before the collection status resolves', () => {
+    vi.spyOn(useAgentTraceModule, 'useAgentTrace').mockReturnValue({
+      collectionStatus: null,
+      session: null,
+      statusLoading: true,
+      sessionLoading: false,
+      error: null,
+      setCollectionEnabled: vi.fn().mockResolvedValue(undefined),
+      clearTraceData: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(<AgentTracesPage />);
+
+    expect(screen.getByText(/Chargement de l’état de collecte/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Collecte désactivée/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the collection status unavailable after an error without claiming disabled collection', () => {
+    vi.spyOn(useAgentTraceModule, 'useAgentTrace').mockReturnValue({
+      collectionStatus: null,
+      session: null,
+      statusLoading: false,
+      sessionLoading: false,
+      error: new Error('Bridge connection failed'),
+      setCollectionEnabled: vi.fn().mockResolvedValue(undefined),
+      clearTraceData: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(<AgentTracesPage />);
+
+    expect(screen.getByText('État de collecte indisponible')).toBeInTheDocument();
+    expect(screen.queryByText(/Collecte désactivée/i)).not.toBeInTheDocument();
   });
 
   it('shows an exporter wire-format rejection reported by the receiver', async () => {
@@ -46,7 +98,7 @@ describe('AgentTracesPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'set the exporter protocol to http/protobuf',
     );
-    expect(screen.getByText('Listening for local OTLP traces.')).toBeInTheDocument();
+    expect(screen.getByText('Écoute active')).toBeInTheDocument();
   });
 
   it('enables collection on demand, shows the listening endpoint, and never changes settings automatically', async () => {
@@ -61,7 +113,7 @@ describe('AgentTracesPage', () => {
     await user.click(toggle);
 
     expect(window.api.setAgentTraceCollectionEnabled).toHaveBeenCalledWith(true);
-    expect(await screen.findByText('Listening for local OTLP traces.')).toBeInTheDocument();
+    expect(await screen.findByText('Écoute active')).toBeInTheDocument();
     expect(screen.getAllByText('http://127.0.0.1:4318').length).toBeGreaterThan(0);
   });
 
@@ -76,7 +128,7 @@ describe('AgentTracesPage', () => {
     render(<AgentTracesPage />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Port 4318 is already in use.');
-    expect(screen.getByText('http://127.0.0.1:4318')).toBeInTheDocument();
+    expect(screen.getAllByText('http://127.0.0.1:4318').length).toBeGreaterThan(0);
   });
 
   it('does not delete stored traces when the confirmation is canceled', async () => {
@@ -90,7 +142,7 @@ describe('AgentTracesPage', () => {
     );
 
     expect(window.confirm).toHaveBeenCalledWith(
-      'Delete all stored agent traces? This cannot be undone.',
+      'Supprimer toutes les traces agent stockées ? Cette action est irréversible.',
     );
     expect(window.api.clearAgentTraceData).not.toHaveBeenCalled();
   });
@@ -106,7 +158,7 @@ describe('AgentTracesPage', () => {
     );
 
     expect(window.confirm).toHaveBeenCalledWith(
-      'Delete all stored agent traces? This cannot be undone.',
+      'Supprimer toutes les traces agent stockées ? Cette action est irréversible.',
     );
     expect(window.api.clearAgentTraceData).toHaveBeenCalledTimes(1);
   });
