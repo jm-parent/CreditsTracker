@@ -79,6 +79,21 @@ uniquement la sous-vue et restaure le même détail projet sans nouvelle
 navigation. L'onglet global **Traces agents** reste disponible dans la
 navigation pour l'opt-in, les réglages locaux et la consultation générale.
 
+### Navigation dans le détail projet
+
+- Cliquer **Voir la trace** conserve l'onglet principal `projects` et le
+  `selectedProject` courant ; l'application ne route pas vers l'onglet global.
+- La sélection `{ source, sessionId }` est conservée pendant la sous-vue afin
+  d'afficher la conversation correcte même si deux sources partagent un même
+  identifiant brut.
+- **Retour au projet** efface uniquement la sélection de trace. Les filtres,
+  la page de détail et le tableau des conversations restent ceux qui étaient
+  affichés avant l'ouverture de la trace.
+- La sous-vue réutilise les états de chargement, d'erreur,
+  `not-collected` et `partial` existants. Elle n'ajoute pas de second contrôle
+  d'opt-in ni de copie des instructions ; ces actions restent dans l'onglet
+  global **Traces agents**.
+
 Le détail de session présente un arbre de spans, avec les appels frères
 ordonnés chronologiquement et leurs durées. Les appels parallèles restent des
 branches distinctes et leur chevauchement temporel est visible.
