@@ -1,13 +1,7 @@
 import { useState } from 'react';
-import type { AgentTraceSelection } from '../../shared/types';
 import { useAgentTrace } from '../hooks/useAgentTrace';
-import { AgentTraceTree } from './AgentTraceTree';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-
-export interface AgentTracesPageProps {
-  selection: AgentTraceSelection | null;
-}
 
 const DEFAULT_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 
@@ -24,16 +18,14 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`;
 
-export function AgentTracesPage({ selection }: AgentTracesPageProps) {
+export function AgentTracesPage() {
   const {
     collectionStatus,
-    session,
     statusLoading,
-    sessionLoading,
     error,
     setCollectionEnabled,
     clearTraceData,
-  } = useAgentTrace(selection);
+  } = useAgentTrace(null);
   const [updatingEnabled, setUpdatingEnabled] = useState(false);
   const [clearing, setClearing] = useState(false);
   const enabled = collectionStatus?.enabled ?? false;
@@ -72,14 +64,13 @@ export function AgentTracesPage({ selection }: AgentTracesPageProps) {
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold text-foreground">Traces agents</h2>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Inspect sanitized agent/tool spans captured locally for a selected conversation. The app
-            never changes VS Code or Copilot CLI settings automatically.
+            Inspect sanitized agent/tool spans captured locally on this machine. The app never
+            changes VS Code or Copilot CLI settings automatically.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge>{enabled ? 'enabled' : 'disabled'}</Badge>
           <Badge>{collectionStatus?.listening ? 'listening' : 'idle'}</Badge>
-          <Badge>{selection?.source ?? 'no selection'}</Badge>
         </div>
       </div>
 
@@ -180,42 +171,6 @@ export function AgentTracesPage({ selection }: AgentTracesPageProps) {
           >
             Supprimer les traces stockées
           </button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="gap-3">
-          <CardTitle className="text-base text-foreground">Selected conversation</CardTitle>
-          {selection ? (
-            <div className="flex flex-wrap gap-2">
-              <Badge>{selection.source}</Badge>
-              <Badge>{selection.sessionId}</Badge>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Select a conversation from a project detail page to inspect its trace.
-            </p>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!selection ? null : sessionLoading ? (
-            <p className="text-sm text-muted-foreground">Loading selected trace…</p>
-          ) : session?.availability === 'not-collected' ? (
-            <p className="text-sm text-muted-foreground">
-              No trace has been collected yet for this conversation.
-            </p>
-          ) : session ? (
-            <>
-              {session.availability === 'partial' && (
-                <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-                  Some spans were stored without a complete parent chain, so this trace is partial.
-                </p>
-              )}
-              <AgentTraceTree session={session} />
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">No stored trace is available right now.</p>
-          )}
         </CardContent>
       </Card>
     </div>
