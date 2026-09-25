@@ -501,6 +501,13 @@ function makeStoreDouble(overrides: Partial<AgentTraceStore> = {}): AgentTraceSt
 
   return {
     insertSpans: vi.fn(),
+    countSessions: vi.fn(() => 0),
+    listSessions: vi.fn((filters) => ({
+      items: [],
+      total: 0,
+      page: filters.page,
+      pageSize: 50,
+    })),
     getSession: vi.fn((selection) => ({
       source: selection.source,
       sessionId: selection.sessionId,
