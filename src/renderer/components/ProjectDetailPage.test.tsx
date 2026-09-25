@@ -301,6 +301,8 @@ describe('ProjectDetailPage', () => {
         onFiltersChange={vi.fn()}
         onBack={vi.fn()}
         onViewTrace={vi.fn()}
+        traceSelection={null}
+        onBackFromTrace={vi.fn()}
       />,
     );
 
