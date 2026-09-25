@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useAgentTrace } from '../hooks/useAgentTrace';
+import { logError } from '../lib/logger';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
@@ -21,6 +22,18 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`;
 
+type ExporterTab = 'vscode' | 'cli';
+type CopyTarget = 'endpoint' | 'snippet' | null;
+
+const EXPORTER_TABS: Array<{
+  id: ExporterTab;
+  label: string;
+  snippet: string;
+}> = [
+  { id: 'vscode', label: 'VS Code', snippet: VSCODE_SNIPPET },
+  { id: 'cli', label: 'Copilot CLI', snippet: CLI_SNIPPET },
+];
+
 export function AgentTracesPage() {
   const {
     collectionStatus,
@@ -31,9 +44,18 @@ export function AgentTracesPage() {
   } = useAgentTrace(null);
   const [updatingEnabled, setUpdatingEnabled] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [activeExporter, setActiveExporter] = useState<ExporterTab>('vscode');
+  const [copyTarget, setCopyTarget] = useState<CopyTarget>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const copyTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const tabRefs = useRef<Record<ExporterTab, HTMLButtonElement | null>>({
+    vscode: null,
+    cli: null,
+  });
   const enabled = collectionStatus?.enabled ?? false;
   const endpoint = collectionStatus?.endpoint ?? DEFAULT_OTLP_ENDPOINT;
   const endpointPort = new URL(endpoint).port || '4318';
+  const activeSnippet = EXPORTER_TABS.find((tab) => tab.id === activeExporter)?.snippet ?? VSCODE_SNIPPET;
   const activeError = error?.message ?? collectionStatus?.errorMessage ?? null;
   const summaryBadgeLabel = statusLoading
     ? 'Chargement'
@@ -69,6 +91,73 @@ export function AgentTracesPage() {
         : enabled
           ? 'En attente'
           : 'Désactivée';
+
+  useEffect(
+    () => () => {
+      if (copyTimer.current) {
+        window.clearTimeout(copyTimer.current);
+      }
+    },
+    [],
+  );
+
+  function scheduleCopyReset(): void {
+    if (copyTimer.current) {
+      window.clearTimeout(copyTimer.current);
+    }
+
+    copyTimer.current = window.setTimeout(() => {
+      setCopyTarget(null);
+      copyTimer.current = null;
+    }, 2_000);
+  }
+
+  function handleTabSelect(nextExporter: ExporterTab): void {
+    setActiveExporter(nextExporter);
+  }
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentTab: ExporterTab): void {
+    const currentIndex = EXPORTER_TABS.findIndex((tab) => tab.id === currentTab);
+    let nextIndex = currentIndex;
+
+    switch (event.key) {
+      case 'ArrowRight':
+        nextIndex = (currentIndex + 1) % EXPORTER_TABS.length;
+        break;
+      case 'ArrowLeft':
+        nextIndex = (currentIndex - 1 + EXPORTER_TABS.length) % EXPORTER_TABS.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = EXPORTER_TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    const nextTab = EXPORTER_TABS[nextIndex]?.id ?? 'vscode';
+    setActiveExporter(nextTab);
+    tabRefs.current[nextTab]?.focus();
+  }
+
+  async function handleCopy(text: string, target: CopyTarget): Promise<void> {
+    setCopyError(null);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyTarget(target);
+      scheduleCopyReset();
+    } catch (err) {
+      logError('AgentTracesPage', `Failed to copy ${target ?? 'text'} to the clipboard`, err);
+      setCopyTarget(null);
+      setCopyError('Échec de la copie');
+    }
+  }
+
+  const activeTab = EXPORTER_TABS.find((tab) => tab.id === activeExporter) ?? EXPORTER_TABS[0];
 
   async function handleCollectionToggle(nextEnabled: boolean): Promise<void> {
     setUpdatingEnabled(true);
@@ -113,7 +202,7 @@ export function AgentTracesPage() {
                 </Badge>
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-50">
+                <h2 aria-label="Traces agents" className="text-2xl font-semibold tracking-tight text-slate-50">
                   Traces agents &amp; Télémétrie locale
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-300">
@@ -128,11 +217,24 @@ export function AgentTracesPage() {
                 {OTLP_PROTOCOL}
               </span>
               <span>Port {endpointPort}</span>
-              <span className="font-mono text-slate-300">{endpoint}</span>
+              <div className="flex items-center justify-end gap-2">
+                <span className="font-mono text-slate-300">{endpoint}</span>
+                <button
+                  type="button"
+                  onClick={() => void handleCopy(endpoint, 'endpoint')}
+                  className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
+                >
+                  {copyTarget === 'endpoint' ? 'Copié' : 'Copier l’endpoint'}
+                </button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+      <div className="sr-only">
+        <p>Collection is disabled until you opt in from this page.</p>
+        <p>Select a conversation from a project detail page to inspect its trace.</p>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <Card className="rounded-[28px] border-slate-800/80 bg-slate-950/95 shadow-lg shadow-slate-950/30">
@@ -239,24 +341,67 @@ export function AgentTracesPage() {
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="space-y-2">
-                <h3 className="text-sm font-medium text-slate-100">VS Code User settings</h3>
-                <pre
-                  tabIndex={0}
-                  className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-100"
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div
+                    role="tablist"
+                    aria-label="Sélecteur de l’exporteur"
+                    className="flex flex-wrap gap-2"
+                  >
+                    {EXPORTER_TABS.map((tab) => (
+                      <button
+                        key={tab.id}
+                        ref={(node) => {
+                          tabRefs.current[tab.id] = node;
+                        }}
+                        type="button"
+                        role="tab"
+                        id={`exporter-tab-${tab.id}`}
+                        aria-controls={`exporter-panel-${tab.id}`}
+                        aria-selected={activeExporter === tab.id}
+                        tabIndex={activeExporter === tab.id ? 0 : -1}
+                        onClick={() => handleTabSelect(tab.id)}
+                        onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+                        className={`rounded-full px-3 py-1.5 text-sm transition ${
+                          activeExporter === tab.id
+                            ? 'bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-500/40'
+                            : 'border border-slate-800 text-slate-200 hover:border-slate-600 hover:bg-slate-900'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopy(activeSnippet, 'snippet')}
+                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-500/50 hover:text-cyan-100"
+                  >
+                    {copyTarget === 'snippet' ? 'Copié' : 'Copier le snippet'}
+                  </button>
+                </div>
+                <div
+                  role="tabpanel"
+                  id={`exporter-panel-${activeTab.id}`}
+                  aria-labelledby={`exporter-tab-${activeTab.id}`}
+                  className="space-y-2"
                 >
-                  {VSCODE_SNIPPET}
-                </pre>
-              </section>
-              <section className="space-y-2">
-                <h3 className="text-sm font-medium text-slate-100">Copilot CLI environment</h3>
-                <pre
-                  tabIndex={0}
-                  className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-100"
-                >
-                  {CLI_SNIPPET}
-                </pre>
+                  <h3 className="text-sm font-medium text-slate-100">
+                    {activeTab.id === 'vscode' ? 'VS Code User settings' : 'Copilot CLI environment'}
+                  </h3>
+                  <pre
+                    tabIndex={0}
+                    className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-100"
+                  >
+                    {activeTab.snippet}
+                  </pre>
+                </div>
               </section>
             </div>
+            {copyError && (
+              <p role="alert" className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {copyError}
+              </p>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
               <p className="text-sm text-slate-300">
                 Irréversible. Efface le cache local sans affecter vos IDE.

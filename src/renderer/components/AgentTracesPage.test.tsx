@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AgentTraceCollectionStatus } from '../../shared/types';
@@ -20,11 +20,30 @@ const listeningStatus: AgentTraceCollectionStatus = {
   errorMessage: null,
 };
 
+let clipboardDescriptor: PropertyDescriptor | undefined;
+
+function mockClipboardWriteText(writeText = vi.fn().mockResolvedValue(undefined)) {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText },
+  });
+  return writeText;
+}
+
 beforeEach(() => {
+  clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   window.api = createWindowApi({
     getAgentTraceCollectionStatus: vi.fn().mockResolvedValue(disabledStatus),
   });
   vi.restoreAllMocks();
+});
+
+afterEach(() => {
+  if (clipboardDescriptor) {
+    Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+  } else {
+    Reflect.deleteProperty(navigator, 'clipboard');
+  }
 });
 
 describe('AgentTracesPage', () => {
@@ -32,7 +51,7 @@ describe('AgentTracesPage', () => {
     render(<AgentTracesPage />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+      await screen.findByText('Traces agents & Télémétrie locale'),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -55,7 +74,7 @@ describe('AgentTracesPage', () => {
     render(<AgentTracesPage />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+      await screen.findByText('Traces agents & Télémétrie locale'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Selected conversation' })).not.toBeInTheDocument();
   });
@@ -73,7 +92,7 @@ describe('AgentTracesPage', () => {
 
     render(<AgentTracesPage />);
 
-    expect(screen.getByRole('heading', { name: 'Traces agents & Télémétrie locale' })).toBeInTheDocument();
+    expect(screen.getByText('Traces agents & Télémétrie locale')).toBeInTheDocument();
     expect(screen.getByText(/Chargement de l’état de collecte/i)).toBeInTheDocument();
     expect(screen.queryByText(/Collecte inactive/i)).not.toBeInTheDocument();
   });
@@ -109,6 +128,80 @@ describe('AgentTracesPage', () => {
       'set the exporter protocol to http/protobuf',
     );
     expect(screen.getByText('Écoute active')).toBeInTheDocument();
+  });
+
+  it('defaults to VS Code, switches exporter snippets, and supports keyboard navigation', async () => {
+    const user = userEvent.setup();
+
+    render(<AgentTracesPage />);
+
+    const vscodeTab = screen.getByRole('tab', { name: /VS Code/i });
+    const cliTab = screen.getByRole('tab', { name: /Copilot CLI/i });
+
+    expect(vscodeTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/github\.copilot\.chat\.otel\.enabled/)).toBeInTheDocument();
+    expect(screen.queryByText(/COPILOT_OTEL_ENABLED=true/)).not.toBeInTheDocument();
+
+    await user.click(cliTab);
+
+    expect(cliTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/COPILOT_OTEL_ENABLED=true/)).toBeInTheDocument();
+    expect(screen.queryByText(/github\.copilot\.chat\.otel\.enabled/)).not.toBeInTheDocument();
+
+    await user.keyboard('{Home}');
+
+    expect(vscodeTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/github\.copilot\.chat\.otel\.enabled/)).toBeInTheDocument();
+
+    await user.keyboard('{End}');
+
+    expect(cliTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/COPILOT_OTEL_ENABLED=true/)).toBeInTheDocument();
+  });
+
+  it('copies the active snippet and endpoint, and reports copy failures', async () => {
+    const user = userEvent.setup();
+    const writeText = mockClipboardWriteText();
+    render(<AgentTracesPage />);
+
+    const endpointCopyButton = await screen.findByRole('button', {
+      name: /Copier.*endpoint/i,
+    });
+    await user.click(endpointCopyButton);
+
+    expect(writeText).toHaveBeenCalledWith('http://127.0.0.1:4318');
+    expect(await screen.findByRole('button', { name: /Copié/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /Copilot CLI/i }));
+    await user.click(screen.getByRole('button', { name: /Copier le snippet/i }));
+
+    expect(writeText).toHaveBeenLastCalledWith(
+      'COPILOT_OTEL_ENABLED=true\n'
+        + 'OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318\n'
+        + 'OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf\n'
+        + 'OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true',
+    );
+  });
+
+  it('reports a clipboard rejection when copying the active snippet', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockRejectedValue(new Error('clipboard denied'));
+    mockClipboardWriteText(writeText);
+
+    render(<AgentTracesPage />);
+
+    await user.click(screen.getByRole('button', { name: /Copier le snippet/i }));
+
+    expect(writeText).toHaveBeenCalledWith(
+      `{
+  "github.copilot.chat.otel.enabled": true,
+  "github.copilot.chat.otel.exporterType": "otlp-http",
+  "github.copilot.chat.otel.protocol": "http/protobuf",
+  "github.copilot.chat.otel.otlpEndpoint": "http://127.0.0.1:4318",
+  "github.copilot.chat.otel.captureContent": true
+}`,
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('Échec de la copie');
   });
 
   it('enables collection on demand, shows the listening endpoint, and never changes settings automatically', async () => {
