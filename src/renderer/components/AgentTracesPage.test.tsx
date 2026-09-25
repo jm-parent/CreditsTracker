@@ -78,4 +78,36 @@ describe('AgentTracesPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Port 4318 is already in use.');
     expect(screen.getByText('http://127.0.0.1:4318')).toBeInTheDocument();
   });
+
+  it('does not delete stored traces when the confirmation is canceled', async () => {
+    const user = userEvent.setup();
+    window.confirm = vi.fn().mockReturnValue(false);
+
+    render(<AgentTracesPage />);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Supprimer les traces stockées' }),
+    );
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Delete all stored agent traces? This cannot be undone.',
+    );
+    expect(window.api.clearAgentTraceData).not.toHaveBeenCalled();
+  });
+
+  it('deletes stored traces once when the confirmation is accepted', async () => {
+    const user = userEvent.setup();
+    window.confirm = vi.fn().mockReturnValue(true);
+
+    render(<AgentTracesPage />);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Supprimer les traces stockées' }),
+    );
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Delete all stored agent traces? This cannot be undone.',
+    );
+    expect(window.api.clearAgentTraceData).toHaveBeenCalledTimes(1);
+  });
 });
