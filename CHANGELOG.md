@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/jm-parent/CreditsTracker/compare/v1.18.0...v1.19.0) (2026-10-06)
+
+
+### Features
+
+* enhance getUsage and related functions to handle missing credit values ([b5439e3](https://github.com/jm-parent/CreditsTracker/commit/b5439e30844407e6aa6bf09ee1df7f384fc311c4))
+
 # [1.18.0](https://github.com/jm-parent/CreditsTracker/compare/v1.17.0...v1.18.0) (2026-09-25)
 
 
