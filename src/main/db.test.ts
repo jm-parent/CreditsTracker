@@ -143,6 +143,68 @@ describe('getFilterOptions', () => {
 });
 
 describe('getUsage', () => {
+  it('returns numeric credits for groups with only missing credit values', () => {
+    const db = new Database(':memory:');
+    try {
+      seedSchemaAndFixtures(db);
+      db.prepare('UPDATE assistant_usage_events SET total_nano_aiu = NULL WHERE session_id = ?')
+        .run('s2');
+
+      const result = getUsage(db, {});
+
+      expect(result.totals).toEqual({ aiuCredits: 3, tokens: 180, requests: 2 });
+      expect(result.byProject).toEqual([
+        { key: 'C:/repo-b', aiuCredits: 0 },
+        { key: 'org/repo-a', aiuCredits: 3 },
+      ]);
+      expect(result.byModel).toEqual([
+        { key: 'claude-sonnet-5', aiuCredits: 3 },
+        { key: 'gpt-5.4', aiuCredits: 0 },
+      ]);
+      expect(result.timeSeries).toEqual([
+        { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-a': 3 } },
+        { date: '2026-09-03', aiuCredits: 0, byProject: { 'C:/repo-b': 0 } },
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it('returns numeric credits in drilldowns with only missing credit values', () => {
+    const db = new Database(':memory:');
+    try {
+      seedSchemaAndFixtures(db);
+      db.exec('ALTER TABLE sessions ADD COLUMN summary TEXT');
+      db.prepare('UPDATE assistant_usage_events SET total_nano_aiu = NULL WHERE session_id = ?')
+        .run('s2');
+
+      expect(getMonthlyActivity(db, { year: 2026, month: 9, project: 'C:/repo-b' }))
+        .toEqual([{ date: '2026-09-03', aiuCredits: 0 }]);
+      expect(getHourlyDetail(db, { date: '2026-09-03', project: 'C:/repo-b' }))
+        .toEqual([{
+          hour: localHourLabel('2026-09-03 11:00:00'),
+          aiuCredits: 0,
+          byProject: { 'C:/repo-b': 0 },
+        }]);
+
+      const detail = getProjectDetail(db, { project: 'C:/repo-b' });
+      expect(detail.totals).toEqual({ aiuCredits: 0, tokens: 60, requests: 1 });
+      expect(detail.timeSeries).toEqual([{ date: '2026-09-03', aiuCredits: 0 }]);
+      expect(detail.conversations).toEqual([{
+        source: 'copilot-cli',
+        sessionId: 's2',
+        createdAt: '2026-09-03 10:00:00',
+        summary: null,
+        models: 'gpt-5.4',
+        aiuCredits: 0,
+        tokens: 60,
+        requests: 1,
+      }]);
+    } finally {
+      db.close();
+    }
+  });
+
   it('returns totals, a daily time series, and breakdowns by project and model, unfiltered', () => {
     const db = new Database(':memory:');
     seedSchemaAndFixtures(db);

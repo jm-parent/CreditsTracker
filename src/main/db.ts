@@ -130,7 +130,7 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
 
   const timeSeriesRows = db
     .prepare(
-      `SELECT date(e.created_at) AS date, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT date(e.created_at) AS date, COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY date(e.created_at)
        ORDER BY date(e.created_at)`,
@@ -139,7 +139,7 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
 
   const timeSeriesByProjectRows = db
     .prepare(
-      `SELECT date(e.created_at) AS date, COALESCE(s.repository, s.cwd) AS project, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT date(e.created_at) AS date, COALESCE(s.repository, s.cwd) AS project, COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY date(e.created_at), project
        ORDER BY date(e.created_at)`,
@@ -161,7 +161,7 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
 
   const byProject = db
     .prepare(
-      `SELECT COALESCE(s.repository, s.cwd) AS key, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT COALESCE(s.repository, s.cwd) AS key, COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY key
        ORDER BY key`,
@@ -170,7 +170,7 @@ export function getUsage(db: Database.Database, filters: UsageFilters): UsageRes
 
   const byModel = db
     .prepare(
-      `SELECT e.model AS key, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT e.model AS key, COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY e.model
        ORDER BY e.model`,
@@ -199,7 +199,7 @@ export function getHourlyDetail(
 
   const hourlyByProjectRows = db
     .prepare(
-      `SELECT strftime('%H:00', e.created_at, 'localtime') AS hour, COALESCE(s.repository, s.cwd) AS project, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT strftime('%H:00', e.created_at, 'localtime') AS hour, COALESCE(s.repository, s.cwd) AS project, COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY hour, project
        ORDER BY hour`,
@@ -235,7 +235,7 @@ export function getMonthlyActivity(
 
   const rows = db
     .prepare(
-      `SELECT date(e.created_at) AS date, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT date(e.created_at) AS date, COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY date(e.created_at)
        ORDER BY date(e.created_at)`,
@@ -264,7 +264,7 @@ export function getProjectDetail(
 
   const timeSeries = db
     .prepare(
-      `SELECT date(e.created_at) AS date, SUM(e.total_nano_aiu) / 1e9 AS aiuCredits
+      `SELECT date(e.created_at) AS date, COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits
        ${baseFrom}
        GROUP BY date(e.created_at)
        ORDER BY date(e.created_at)`,
@@ -282,7 +282,7 @@ export function getProjectDetail(
          s.created_at AS createdAt,
          s.summary AS summary,
          GROUP_CONCAT(DISTINCT e.model) AS models,
-         SUM(e.total_nano_aiu) / 1e9 AS aiuCredits,
+         COALESCE(SUM(e.total_nano_aiu), 0) / 1e9 AS aiuCredits,
          SUM(e.input_tokens + e.output_tokens) AS tokens,
          COUNT(*) AS requests
        ${baseFrom}
