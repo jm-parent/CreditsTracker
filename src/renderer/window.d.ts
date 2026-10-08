@@ -2,6 +2,8 @@ import type {
   AgentTraceCollectionStatus,
   AgentTraceSelection,
   AgentTraceSession,
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
   ExportPreview,
   ExportRequest,
   ExportResult,
@@ -40,6 +42,9 @@ declare global {
       shouldPromptDesktopShortcut: () => Promise<boolean>;
       createDesktopShortcut: () => Promise<boolean>;
       getAgentTraceCollectionStatus: () => Promise<AgentTraceCollectionStatus>;
+      onAgentTraceStatusChange: (listener: (status: AgentTraceCollectionStatus) => void) => () => void;
+      getAgentTraceSessionCount: () => Promise<number>;
+      listAgentTraceSessions: (filters: AgentTraceSessionListFilters) => Promise<AgentTraceSessionListPage>;
       setAgentTraceCollectionEnabled: (enabled: boolean) => Promise<AgentTraceCollectionStatus>;
       getAgentTraceSession: (selection: AgentTraceSelection) => Promise<AgentTraceSession>;
       clearAgentTraceData: () => Promise<void>;

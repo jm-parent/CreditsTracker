@@ -371,7 +371,7 @@ describe('ProjectDetailPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Retour au projet' })).toBeInTheDocument();
     expect(screen.queryByText('Fixed the login bug')).not.toBeInTheDocument();
-    expect(screen.getByText('Agent trace spans')).toBeInTheDocument();
+    expect(screen.getByText('Spans de trace agent')).toBeInTheDocument();
     expect(window.api.getProjectDetail).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole('button', { name: 'Retour au projet' }));

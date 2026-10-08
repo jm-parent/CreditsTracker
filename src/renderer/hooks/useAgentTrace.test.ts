@@ -96,6 +96,44 @@ describe('useAgentTrace', () => {
     expect(window.api.getAgentTraceSession).not.toHaveBeenCalled();
   });
 
+  it('subscribes to status changes, updates the status state, and unsubscribes on unmount', async () => {
+    const unsubscribe = vi.fn();
+    let statusListener: ((status: AgentTraceCollectionStatus) => void) | null = null;
+
+    Object.assign(window.api as object, {
+      onAgentTraceStatusChange: vi.fn((listener: (status: AgentTraceCollectionStatus) => void) => {
+        statusListener = listener;
+        return unsubscribe;
+      }),
+    });
+
+    const statusWithError: AgentTraceCollectionStatus = {
+      enabled: true,
+      listening: false,
+      endpoint: 'http://127.0.0.1:4318',
+      errorMessage: 'Receiver unavailable',
+    };
+
+    const { result, unmount } = renderHook(() => useAgentTrace(null));
+
+    await waitFor(() => expect(result.current.statusLoading).toBe(false));
+    expect((window.api as Window['api'] & {
+      onAgentTraceStatusChange: ReturnType<typeof vi.fn>;
+    }).onAgentTraceStatusChange).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      statusListener?.(statusWithError);
+    });
+
+    expect(result.current.collectionStatus).toEqual(statusWithError);
+    expect(result.current.error).toBeNull();
+    expect(result.current.statusLoading).toBe(false);
+
+    unmount();
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('loads the selected session, preserves availability, and keeps status independent from selection changes', async () => {
     window.api.getAgentTraceSession = vi
       .fn()
@@ -184,6 +222,7 @@ describe('useAgentTrace', () => {
 
     expect(result.current.session).toBeNull();
     expect(result.current.error).toEqual(boom);
+    expect(result.current.sessionError).toEqual(boom);
     expect(logError).toHaveBeenCalledWith(
       'useAgentTrace',
       `getAgentTraceSession failed for ${selectionA.source}:${selectionA.sessionId}`,
@@ -313,6 +352,45 @@ describe('useAgentTrace', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.statusLoading).toBe(false);
     expect(window.api.getAgentTraceCollectionStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a stale initial status snapshot from overwriting a newer status event', async () => {
+    const initialStatus = createDeferred<AgentTraceCollectionStatus>();
+    let statusListener: ((status: AgentTraceCollectionStatus) => void) | null = null;
+
+    window.api.getAgentTraceCollectionStatus = vi.fn().mockImplementationOnce(() => initialStatus.promise);
+    Object.assign(window.api as object, {
+      onAgentTraceStatusChange: vi.fn((listener: (status: AgentTraceCollectionStatus) => void) => {
+        statusListener = listener;
+        return () => {};
+      }),
+    });
+
+    const { result } = renderHook(() => useAgentTrace(null));
+
+    const pushedStatus: AgentTraceCollectionStatus = {
+      enabled: true,
+      listening: true,
+      endpoint: 'http://127.0.0.1:4318',
+      errorMessage: null,
+    };
+
+    await act(async () => {
+      statusListener?.(pushedStatus);
+    });
+
+    expect(result.current.collectionStatus).toEqual(pushedStatus);
+    expect(result.current.error).toBeNull();
+    expect(result.current.statusLoading).toBe(false);
+
+    await act(async () => {
+      initialStatus.resolve(disabledStatus);
+      await initialStatus.promise;
+    });
+
+    expect(result.current.collectionStatus).toEqual(pushedStatus);
+    expect(result.current.error).toBeNull();
+    expect(result.current.statusLoading).toBe(false);
   });
 
   it('ignores stale clear-triggered reloads after the selection changes', async () => {

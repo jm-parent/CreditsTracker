@@ -158,6 +158,32 @@ export interface AgentTraceSession {
   spans: AgentTraceSpan[];
 }
 
+export const AGENT_TRACE_SESSION_PAGE_SIZE = 50;
+export const MAX_AGENT_TRACE_SESSION_SEARCH_LENGTH = 200;
+
+export interface AgentTraceSessionSummary {
+  source: AgentTraceSource;
+  sessionId: string;
+  spanCount: number;
+}
+
+export interface AgentTraceSessionListFilters {
+  query: string;
+  source: AgentTraceSource | null;
+  from: string | null;
+  to: string | null;
+  category: AgentTraceCategory | null;
+  status: AgentTraceSpan['status'] | null;
+  page: number;
+}
+
+export interface AgentTraceSessionListPage {
+  items: AgentTraceSessionSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface AgentTraceCollectionStatus {
   enabled: boolean;
   listening: boolean;

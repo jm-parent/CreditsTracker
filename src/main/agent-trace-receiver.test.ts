@@ -940,6 +940,13 @@ function makeStoreDouble(overrides: {
 }): AgentTraceStore {
   return {
     insertSpans: overrides.insertSpans,
+    countSessions: () => 0,
+    listSessions: (filters) => ({
+      items: [],
+      total: 0,
+      page: filters.page,
+      pageSize: 50,
+    }),
     getSession: () => ({
       source: 'vscode',
       sessionId: 'vscode:conversation-1',

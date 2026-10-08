@@ -1,7 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
+import {
+  AGENT_TRACE_SESSION_PAGE_SIZE,
+  MAX_AGENT_TRACE_SESSION_SEARCH_LENGTH,
+} from '../shared/types';
 import type {
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
+  AgentTraceSessionSummary,
   AgentTraceCategory,
   AgentTraceSelection,
   AgentTraceSession,
@@ -25,6 +32,8 @@ const VALID_STATUSES = new Set(['unset', 'ok', 'error']);
 
 export interface AgentTraceStore {
   insertSpans(spans: readonly AgentTraceSpan[]): void;
+  countSessions(): number;
+  listSessions(filters: AgentTraceSessionListFilters): AgentTraceSessionListPage;
   getSession(selection: AgentTraceSelection): AgentTraceSession;
   getCollectionEnabled(): boolean;
   setCollectionEnabled(enabled: boolean): void;
@@ -45,6 +54,46 @@ interface SpanRow {
 interface MetadataRow {
   value: string;
 }
+
+interface SessionCountRow {
+  total: number;
+}
+
+interface SessionSummaryRow {
+  source: AgentTraceSpan['source'];
+  session_id: string;
+  span_count: number;
+}
+
+interface SessionListQueryParams {
+  source: AgentTraceSpan['source'] | null;
+  fromInclusive: string | null;
+  toExclusive: string | null;
+  category: AgentTraceSpan['category'] | null;
+  status: AgentTraceSpan['status'] | null;
+  query: string;
+  limit: number;
+  offset: number;
+}
+
+const FILTERED_SESSIONS_CTE = `
+  WITH filtered_sessions AS (
+    SELECT DISTINCT source, session_id
+    FROM agent_trace_spans
+    WHERE (@source IS NULL OR source = @source)
+      AND (@fromInclusive IS NULL OR started_at >= @fromInclusive)
+      AND (@toExclusive IS NULL OR started_at < @toExclusive)
+      AND (@category IS NULL OR json_extract(span_json, '$.category') = @category)
+      AND (@status IS NULL OR json_extract(span_json, '$.status') = @status)
+      AND (
+        @query = ''
+        OR instr(lower(session_id), lower(@query)) > 0
+        OR instr(lower(COALESCE(json_extract(span_json, '$.toolName'), '')), lower(@query)) > 0
+        OR instr(lower(COALESCE(json_extract(span_json, '$.skillName'), '')), lower(@query)) > 0
+        OR instr(lower(COALESCE(json_extract(span_json, '$.model'), '')), lower(@query)) > 0
+      )
+  )
+`;
 
 export function openAgentTraceStore(dbPath: string): AgentTraceStore {
   if (isProtectedUsageDatabasePath(dbPath)) {
@@ -137,6 +186,34 @@ export function openAgentTraceStore(dbPath: string): AgentTraceStore {
     WHERE received_at < ?
   `);
   const clearSpans = db.prepare('DELETE FROM agent_trace_spans');
+  const countSessionsStatement = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM (
+      SELECT source, session_id
+      FROM agent_trace_spans
+      GROUP BY source, session_id
+    )
+  `);
+  const countListedSessionsStatement = db.prepare(`
+    ${FILTERED_SESSIONS_CTE}
+    SELECT COUNT(*) AS total
+    FROM filtered_sessions
+  `);
+  const listSessionsStatement = db.prepare(`
+    ${FILTERED_SESSIONS_CTE},
+    session_counts AS (
+      SELECT source, session_id, COUNT(*) AS span_count, MAX(started_at) AS latest_started_at
+      FROM agent_trace_spans
+      GROUP BY source, session_id
+    )
+    SELECT filtered_sessions.source, filtered_sessions.session_id, session_counts.span_count
+    FROM filtered_sessions
+    INNER JOIN session_counts
+      ON session_counts.source = filtered_sessions.source
+      AND session_counts.session_id = filtered_sessions.session_id
+    ORDER BY session_counts.latest_started_at DESC, filtered_sessions.source ASC, filtered_sessions.session_id ASC
+    LIMIT @limit OFFSET @offset
+  `);
 
   const store: AgentTraceStore = {
     insertSpans(spans) {
@@ -145,6 +222,33 @@ export function openAgentTraceStore(dbPath: string): AgentTraceStore {
         return;
       }
       insertSpansTransaction(spans);
+    },
+
+    countSessions() {
+      ensureOpen(closed);
+      store.pruneExpired(new Date());
+      const row = countSessionsStatement.get() as SessionCountRow | undefined;
+      return row?.total ?? 0;
+    },
+
+    listSessions(filters) {
+      ensureOpen(closed);
+      store.pruneExpired(new Date());
+
+      const params = buildSessionListParams(filters);
+      const totalRow = countListedSessionsStatement.get(params) as SessionCountRow | undefined;
+      const rows = listSessionsStatement.all(params) as SessionSummaryRow[];
+
+      return {
+        items: rows.map((row): AgentTraceSessionSummary => ({
+          source: row.source,
+          sessionId: row.session_id,
+          spanCount: row.span_count,
+        })),
+        total: totalRow?.total ?? 0,
+        page: filters.page,
+        pageSize: AGENT_TRACE_SESSION_PAGE_SIZE,
+      };
     },
 
     getSession(selection) {
@@ -373,6 +477,49 @@ function ensureOpen(closed: boolean): void {
   if (closed) {
     throw new Error('Agent trace store is closed');
   }
+}
+
+function buildSessionListParams(filters: AgentTraceSessionListFilters): SessionListQueryParams {
+  return {
+    source: filters.source,
+    fromInclusive: filters.from ? toLocalDayBoundary(filters.from, 0).toISOString() : null,
+    toExclusive: filters.to ? toLocalDayBoundary(filters.to, 1).toISOString() : null,
+    category: filters.category,
+    status: filters.status,
+    query: filters.query.trim().slice(0, MAX_AGENT_TRACE_SESSION_SEARCH_LENGTH),
+    limit: AGENT_TRACE_SESSION_PAGE_SIZE,
+    offset: validatePage(filters.page) * AGENT_TRACE_SESSION_PAGE_SIZE,
+  };
+}
+
+function validatePage(page: number): number {
+  if (!Number.isInteger(page) || page < 0) {
+    throw new RangeError(`Agent trace session page must be a non-negative integer, received: ${page}`);
+  }
+  return page;
+}
+
+function toLocalDayBoundary(localDate: string, dayOffset: number): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(localDate);
+  if (!match) {
+    throw new Error(`Invalid local date filter: ${localDate}`);
+  }
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const baseBoundary = new Date(year, month - 1, day, 0, 0, 0, 0);
+
+  if (
+    baseBoundary.getFullYear() !== year
+    || baseBoundary.getMonth() !== month - 1
+    || baseBoundary.getDate() !== day
+  ) {
+    throw new Error(`Invalid local date filter: ${localDate}`);
+  }
+
+  return new Date(year, month - 1, day + dayOffset, 0, 0, 0, 0);
 }
 
 function isIsoDate(value: unknown): value is string {

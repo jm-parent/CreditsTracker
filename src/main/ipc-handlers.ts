@@ -32,8 +32,12 @@ import {
   recordRendererLog,
 } from './logger';
 import type { AgentTraceService } from './agent-trace-service';
+import { MAX_AGENT_TRACE_SESSION_SEARCH_LENGTH } from '../shared/types';
 import type {
+  AgentTraceCategory,
   AgentTraceSelection,
+  AgentTraceSessionListFilters,
+  AgentTraceSource,
   HourlyDetailParams,
   LogsSnapshot,
   MonthlyActivityParams,
@@ -46,6 +50,10 @@ import type {
 import type { VscodeUsageData } from './vscode-chat-store';
 
 const CANONICAL_GITHUB_REPOSITORY_PATH = /^\/[^/%?#]+\/[^/%?#]+$/;
+const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const AGENT_TRACE_SOURCES: readonly AgentTraceSource[] = ['vscode', 'copilot-cli'];
+const AGENT_TRACE_CATEGORIES: readonly AgentTraceCategory[] = ['agent', 'llm', 'tool', 'skill', 'shell', 'mcp', 'hook', 'other'];
+const AGENT_TRACE_STATUSES = ['unset', 'ok', 'error'] as const;
 
 function validateExternalRepositoryUrl(value: unknown): string {
   if (typeof value !== 'string') {
@@ -212,6 +220,10 @@ function snapshot(): LogsSnapshot {
 
 export function registerAgentTraceIpcHandlers(traceService: AgentTraceService): void {
   handle('get-agent-trace-collection-status', () => traceService.getStatus());
+  handle('get-agent-trace-session-count', () => traceService.getSessionCount());
+  handle('list-agent-trace-sessions', (_event: unknown, filters: unknown) => {
+    return traceService.listSessions(validateAgentTraceSessionListFilters(filters));
+  });
 
   handle('set-agent-trace-collection-enabled', (_event: unknown, enabled: unknown) => {
     return traceService.setEnabled(validateAgentTraceCollectionEnabled(enabled));
@@ -381,4 +393,109 @@ function validateAgentTraceSelection(value: unknown): AgentTraceSelection {
     source,
     sessionId,
   };
+}
+
+function validateAgentTraceSessionListFilters(value: unknown): AgentTraceSessionListFilters {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Agent trace session filters must be an object');
+  }
+
+  const candidate = value as Partial<AgentTraceSessionListFilters>;
+  const query = validateSessionListQuery(candidate.query);
+  const source = validateSessionListSource(candidate.source);
+  const from = validateSessionListDate(candidate.from, 'from');
+  const to = validateSessionListDate(candidate.to, 'to');
+  const category = validateSessionListCategory(candidate.category);
+  const status = validateSessionListStatus(candidate.status);
+  const page = validateSessionListPage(candidate.page);
+
+  if (from && to && from > to) {
+    throw new Error('Agent trace session "from" date must be on or before "to"');
+  }
+
+  return {
+    query,
+    source,
+    from,
+    to,
+    category,
+    status,
+    page,
+  };
+}
+
+function validateSessionListQuery(value: unknown): string {
+  if (typeof value !== 'string') {
+    throw new Error('Agent trace session search query must be a string');
+  }
+  if (value.length > MAX_AGENT_TRACE_SESSION_SEARCH_LENGTH) {
+    throw new Error('Agent trace session search query must be 200 characters or fewer');
+  }
+  return value;
+}
+
+function validateSessionListSource(value: unknown): AgentTraceSource | null {
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== 'string' || !AGENT_TRACE_SOURCES.includes(value as AgentTraceSource)) {
+    throw new Error('Agent trace session list source must be "vscode", "copilot-cli", or null');
+  }
+  return value as AgentTraceSource;
+}
+
+function validateSessionListDate(value: unknown, field: 'from' | 'to'): string | null {
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    throw new Error(`Agent trace session "${field}" must be a calendar date in YYYY-MM-DD format`);
+  }
+
+  const match = CALENDAR_DATE_PATTERN.exec(value);
+  if (!match) {
+    throw new Error(`Agent trace session "${field}" must be a calendar date in YYYY-MM-DD format`);
+  }
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    candidate.getUTCFullYear() !== year
+    || candidate.getUTCMonth() !== month - 1
+    || candidate.getUTCDate() !== day
+  ) {
+    throw new Error(`Agent trace session "${field}" must be a calendar date in YYYY-MM-DD format`);
+  }
+
+  return value;
+}
+
+function validateSessionListCategory(value: unknown): AgentTraceCategory | null {
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== 'string' || !AGENT_TRACE_CATEGORIES.includes(value as AgentTraceCategory)) {
+    throw new Error('Agent trace session category must be one of "agent", "llm", "tool", "skill", "shell", "mcp", "hook", "other", or null');
+  }
+  return value as AgentTraceCategory;
+}
+
+function validateSessionListStatus(value: unknown): AgentTraceSessionListFilters['status'] {
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== 'string' || !AGENT_TRACE_STATUSES.includes(value as (typeof AGENT_TRACE_STATUSES)[number])) {
+    throw new Error('Agent trace session status must be "unset", "ok", "error", or null');
+  }
+  return value as AgentTraceSessionListFilters['status'];
+}
+
+function validateSessionListPage(value: unknown): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    throw new Error('Agent trace session list page must be a safe non-negative integer');
+  }
+  return value as number;
 }
