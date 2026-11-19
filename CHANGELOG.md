@@ -1,3 +1,13 @@
+# [1.20.0](https://github.com/jm-parent/CreditsTracker/compare/v1.19.0...v1.20.0) (2026-11-19)
+
+
+### Features
+
+* add month filter with per-project bars to Monthly consumption ([6f070c8](https://github.com/jm-parent/CreditsTracker/commit/6f070c8be4cf3a7b51e79c9bf7ad8c187907c34c))
+* add Monthly consumption view with month filter ([#27](https://github.com/jm-parent/CreditsTracker/issues/27)) ([a04a736](https://github.com/jm-parent/CreditsTracker/commit/a04a736eb81e7d59a0d360dcbb2513582291839f))
+* add Monthly consumption view with per-project totals ([2ea1ac1](https://github.com/jm-parent/CreditsTracker/commit/2ea1ac14ef5db8e4481f3c995416f961b76a0947))
+* move Month filter into the shared filter bar ([3474591](https://github.com/jm-parent/CreditsTracker/commit/3474591caa4ef32b9ed4b60d1a8d089ffaefa50e))
+
 # [1.19.0](https://github.com/jm-parent/CreditsTracker/compare/v1.18.0...v1.19.0) (2026-10-06)
 
 
