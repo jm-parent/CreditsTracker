@@ -7,6 +7,7 @@ import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
 import { Sidebar, type DashboardTab } from './components/Sidebar';
 import { DailyConsumptionPage } from './components/DailyConsumptionPage';
+import { MonthlyConsumptionPage } from './components/MonthlyConsumptionPage';
 import { ActivityHeatmapPage } from './components/ActivityHeatmapPage';
 import { ProjectsPage } from './components/ProjectsPage';
 import { ModelsPage } from './components/ModelsPage';
@@ -179,6 +180,15 @@ export function App() {
                   totals={data.totals}
                   timeSeries={data.timeSeries}
                   onDayClick={setSelectedDate}
+                  updateContextKey={usageUpdateContextKey}
+                />
+              </div>
+            )}
+            {data && !selectedProject && activeTab === 'monthly-consumption' && (
+              <div className="mt-6">
+                <MonthlyConsumptionPage
+                  timeSeries={data.timeSeries}
+                  byProject={data.byProject}
                   updateContextKey={usageUpdateContextKey}
                 />
               </div>

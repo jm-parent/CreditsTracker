@@ -21,6 +21,7 @@ interface TimeSeriesChartProps {
   data: TimeSeriesPoint[];
   onDayClick?: (date: string) => void;
   updateContextKey: string;
+  title?: string;
 }
 
 const CREDIT_CHART_ANIMATION_DURATION_MS = 1_200;
@@ -61,7 +62,12 @@ function StackedTooltip({ active, payload, label }: TooltipContentProps<ValueTyp
   );
 }
 
-export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeriesChartProps) {
+export function TimeSeriesChart({
+  data,
+  onDayClick,
+  updateContextKey,
+  title = 'Credits over time',
+}: TimeSeriesChartProps) {
   // Collect every project key seen across the whole range so each gets a
   // stable stacked-bar series, even on days it had no activity.
   const currentProjectKeys = Array.from(
@@ -96,7 +102,7 @@ export function TimeSeriesChart({ data, onDayClick, updateContextKey }: TimeSeri
   return (
     <Card className="chart-card">
       <CardHeader>
-        <CardTitle>Credits over time</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
