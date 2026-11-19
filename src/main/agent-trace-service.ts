@@ -11,6 +11,8 @@ import type {
   AgentTraceCollectionStatus,
   AgentTraceSelection,
   AgentTraceSession,
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
 } from '../shared/types';
 
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -19,6 +21,7 @@ const AGENT_TRACE_DB_NAME = 'agent-trace-store.db';
 export interface AgentTraceServiceDependencies {
   storeFactory(path: string): AgentTraceStore;
   receiverFactory: typeof startAgentTraceReceiver;
+  onStatusChange?(status: AgentTraceCollectionStatus): void;
 }
 
 const DEFAULT_DEPENDENCIES: AgentTraceServiceDependencies = {
@@ -93,6 +96,38 @@ export class AgentTraceService {
     }
   }
 
+  getSessionCount(): number {
+    const store = this.ensureStore();
+    if (!store) {
+      const error = new Error('Local agent trace store is unavailable');
+      logError('AgentTraceService', 'Failed to count stored trace sessions', error);
+      throw error;
+    }
+
+    try {
+      return store.countSessions();
+    } catch (error) {
+      logError('AgentTraceService', 'Failed to count stored trace sessions', error);
+      throw error;
+    }
+  }
+
+  listSessions(filters: AgentTraceSessionListFilters): AgentTraceSessionListPage {
+    const store = this.ensureStore();
+    if (!store) {
+      const error = new Error('Local agent trace store is unavailable');
+      logError('AgentTraceService', 'Failed to list stored trace sessions', error);
+      throw error;
+    }
+
+    try {
+      return store.listSessions(filters);
+    } catch (error) {
+      logError('AgentTraceService', 'Failed to list stored trace sessions', error);
+      throw error;
+    }
+  }
+
   clear(): void {
     const store = this.ensureStore();
     if (!store) {
@@ -103,10 +138,10 @@ export class AgentTraceService {
       this.receiver?.discardPending();
       store.clear();
       this.partialCoverageMessage = null;
-      this.status = {
+      this.publishStatus({
         ...this.status,
         errorMessage: this.currentErrorMessage(),
-      };
+      });
     } catch (error) {
       this.recordError('Failed to clear local agent trace data', error);
     }
@@ -172,10 +207,10 @@ export class AgentTraceService {
       this.startPurgeTimer();
       this.store = store;
       this.lifecycleErrorMessage = null;
-      this.status = {
+      this.publishStatus({
         ...this.status,
         errorMessage: this.currentErrorMessage(),
-      };
+      });
       return this.store;
     } catch (error) {
       if (store) {
@@ -331,10 +366,10 @@ export class AgentTraceService {
   private recordError(message: string, error: unknown): void {
     logError('agent-trace-service', message, error);
     this.lifecycleErrorMessage = `${message}: ${getErrorMessage(error)}`;
-    this.status = {
+    this.publishStatus({
       ...this.status,
       errorMessage: this.currentErrorMessage(),
-    };
+    });
   }
 
   private recordExportOutcome(partialSuccess: AgentTracePartialSuccess | null): void {
@@ -342,18 +377,18 @@ export class AgentTraceService {
     if (partialSuccess === null) {
       this.exportRejectionMessage = null;
     }
-    this.status = {
+    this.publishStatus({
       ...this.status,
       errorMessage: this.currentErrorMessage(),
-    };
+    });
   }
 
   private recordExportRejection(rejection: AgentTraceExportRejection): void {
     this.exportRejectionMessage = rejection.errorMessage;
-    this.status = {
+    this.publishStatus({
       ...this.status,
       errorMessage: this.currentErrorMessage(),
-    };
+    });
   }
 
   private currentErrorMessage(): string | null {
@@ -361,10 +396,23 @@ export class AgentTraceService {
   }
 
   private setStatus(status: Omit<AgentTraceCollectionStatus, 'errorMessage'>): void {
-    this.status = {
+    this.publishStatus({
       ...status,
       errorMessage: this.currentErrorMessage(),
-    };
+    });
+  }
+
+  private publishStatus(next: AgentTraceCollectionStatus): void {
+    const unchanged = this.status.enabled === next.enabled
+      && this.status.listening === next.listening
+      && this.status.endpoint === next.endpoint
+      && this.status.errorMessage === next.errorMessage;
+    if (unchanged) {
+      return;
+    }
+
+    this.status = { ...next };
+    this.dependencies.onStatusChange?.({ ...this.status });
   }
 
   private enqueueLifecycle<T>(operation: () => Promise<T>): Promise<T> {

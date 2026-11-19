@@ -54,8 +54,8 @@ describe('ProjectTraceSubview', () => {
     expect(await screen.findByRole('button', { name: 'Retour au projet' })).toBeInTheDocument();
     expect(screen.getByText('org/repo-a')).toBeInTheDocument();
     expect(screen.getByText('vscode:conversation-1')).toBeInTheDocument();
-    expect(screen.getByText('Agent trace spans')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /execute_tool readFile details/i }));
+    expect(screen.getByText('Spans de trace agent')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /execute_tool readFile : détails/i }));
     expect(screen.getByText('sanitized result')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Retour au projet' }));
@@ -83,7 +83,7 @@ describe('ProjectTraceSubview', () => {
     expect(await screen.findByText('Loading selected trace…')).toBeInTheDocument();
 
     resolveSession(availableSession);
-    expect(await screen.findByText('Agent trace spans')).toBeInTheDocument();
+    expect(await screen.findByText('Spans de trace agent')).toBeInTheDocument();
   });
 
   it('shows an error reported while loading the selected trace', async () => {
@@ -114,7 +114,7 @@ describe('ProjectTraceSubview', () => {
       />,
     );
 
-    expect(await screen.findByText('Partial trace')).toBeInTheDocument();
+    expect(await screen.findByText('Trace partielle')).toBeInTheDocument();
     expect(screen.getByText(/Some spans were stored without a complete parent chain/i)).toBeInTheDocument();
   });
 

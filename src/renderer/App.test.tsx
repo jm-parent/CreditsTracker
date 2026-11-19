@@ -91,6 +91,13 @@ beforeEach(() => {
     onUpdateStateChange: vi.fn(() => () => {}),
     shouldPromptDesktopShortcut: vi.fn().mockResolvedValue(false),
     createDesktopShortcut: vi.fn().mockResolvedValue(true),
+    getAgentTraceSessionCount: vi.fn().mockResolvedValue(0),
+    listAgentTraceSessions: vi.fn().mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      pageSize: 50,
+    }),
     getLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     clearLogs: vi.fn().mockResolvedValue({ entries: [], filePath: 'C:\\logs\\app.log' }),
     openLogFile: vi.fn().mockResolvedValue('C:\\logs\\app.log'),
@@ -313,9 +320,11 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Traces agents' }));
 
-    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Activer la collecte locale des traces agent' })).toBeInTheDocument();
-    expect(screen.getByText('Collection is disabled until you opt in from this page.')).toBeInTheDocument();
+    expect(screen.getByText(/Le récepteur accepte uniquement le loopback/i)).toBeInTheDocument();
     expect(screen.queryByText("Couldn't load Copilot CLI usage data.")).not.toBeInTheDocument();
   });
 
@@ -656,8 +665,10 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Traces agents' }));
 
-    expect(await screen.findByRole('heading', { name: 'Traces agents' })).toBeInTheDocument();
-    expect(screen.getByText('Select a conversation from a project detail page to inspect its trace.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Traces agents & Télémétrie locale' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Le récepteur accepte uniquement le loopback/i)).toBeInTheDocument();
   });
 
   it('does not animate deltas when a tab is opened before a filtered refresh resolves', async () => {

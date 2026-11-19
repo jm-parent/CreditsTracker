@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AgentTraceSpan } from '../shared/types';
 import { makeAgentTraceSpan } from '../test-utils/agent-trace-fixtures';
 import { resolveDefaultDbPath } from './db';
 import { openAgentTraceStore, type AgentTraceStore } from './agent-trace-store';
@@ -39,6 +40,56 @@ function createPersistentStore(): { dbPath: string; store: AgentTraceStore } {
   const store = openAgentTraceStore(dbPath);
   openStores.add(store);
   return { dbPath, store };
+}
+
+function makeSpan(overrides: Partial<AgentTraceSpan> = {}): AgentTraceSpan {
+  return {
+    source: 'vscode',
+    sessionId: 'session-1',
+    traceId: 'trace-1',
+    spanId: 'span-1',
+    parentSpanId: null,
+    name: 'tool call',
+    category: 'tool',
+    toolName: 'search',
+    skillName: null,
+    model: 'model-a',
+    startedAt: '2026-09-25T10:00:00.000Z',
+    endedAt: '2026-09-25T10:00:00.001Z',
+    durationMs: 1,
+    status: 'ok',
+    errorType: null,
+    toolCallId: null,
+    argumentsJson: null,
+    resultText: null,
+    contentState: 'unavailable',
+    ...overrides,
+  };
+}
+
+function makeLocalIso(year: number, month: number, day: number, hour = 12): string {
+  return new Date(year, month - 1, day, hour, 0, 0, 0).toISOString();
+}
+
+function makeSessionFilters(overrides: Partial<{
+  query: string;
+  source: AgentTraceSpan['source'] | null;
+  from: string | null;
+  to: string | null;
+  category: AgentTraceSpan['category'] | null;
+  status: AgentTraceSpan['status'] | null;
+  page: number;
+}> = {}) {
+  return {
+    query: '',
+    source: null,
+    from: null,
+    to: null,
+    category: null,
+    status: null,
+    page: 0,
+    ...overrides,
+  };
 }
 
 describe('openAgentTraceStore', () => {
@@ -382,5 +433,277 @@ describe('openAgentTraceStore', () => {
 
   it('refuses to open the Copilot CLI usage database path for writable trace storage', () => {
     expect(() => openAgentTraceStore(resolveDefaultDbPath())).toThrow(/Copilot CLI/i);
+  });
+
+  it('counts distinct source/session pairs, not session IDs alone', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans([
+        makeSpan({ source: 'vscode', sessionId: 'shared', traceId: 'vscode-trace', spanId: 'vscode-1' }),
+        makeSpan({ source: 'vscode', sessionId: 'shared', traceId: 'vscode-trace', spanId: 'vscode-2' }),
+        makeSpan({ source: 'copilot-cli', sessionId: 'shared', traceId: 'cli-trace', spanId: 'cli-1' }),
+      ]);
+
+      expect(store.countSessions()).toBe(2);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('returns an empty first page when no sessions match filters', () => {
+    const store = openMemoryStore();
+    try {
+      expect(store.listSessions(makeSessionFilters())).toEqual({
+        items: [],
+        total: 0,
+        page: 0,
+        pageSize: 50,
+      });
+    } finally {
+      store.close();
+    }
+  });
+
+  it('searches session IDs, tool names, skill names, and models with a trimmed literal query', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans([
+        makeSpan({ sessionId: 'literal%session', traceId: 'literal', spanId: 'literal-1' }),
+        makeSpan({ sessionId: 'tool-session', traceId: 'tool', spanId: 'tool-1', toolName: 'literal search' }),
+        makeSpan({ sessionId: 'skill-session', traceId: 'skill', spanId: 'skill-1', skillName: 'literal helper' }),
+        makeSpan({ sessionId: 'model-session', traceId: 'model', spanId: 'model-1', model: 'literal-model' }),
+        makeSpan({ sessionId: 'literal_session', traceId: 'underscore', spanId: 'underscore-1' }),
+      ]);
+
+      expect(store.listSessions(makeSessionFilters({ query: '  literal%  ' })).items).toEqual([
+        { source: 'vscode', sessionId: 'literal%session', spanCount: 1 },
+      ]);
+      expect(store.listSessions(makeSessionFilters({ query: 'literal' })).items).toEqual([
+        { source: 'vscode', sessionId: 'literal%session', spanCount: 1 },
+        { source: 'vscode', sessionId: 'literal_session', spanCount: 1 },
+        { source: 'vscode', sessionId: 'model-session', spanCount: 1 },
+        { source: 'vscode', sessionId: 'skill-session', spanCount: 1 },
+        { source: 'vscode', sessionId: 'tool-session', spanCount: 1 },
+      ]);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('truncates search queries to 200 characters before matching', () => {
+    const store = openMemoryStore();
+    try {
+      const exactSessionId = 'x'.repeat(200);
+      store.insertSpans([
+        makeSpan({ sessionId: exactSessionId, traceId: 'long', spanId: 'long-1' }),
+      ]);
+
+      expect(store.listSessions(makeSessionFilters({ query: `${'x'.repeat(210)}trimmed-away` })).items).toEqual([
+        { source: 'vscode', sessionId: exactSessionId, spanCount: 1 },
+      ]);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('filters sessions by source', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans([
+        makeSpan({ source: 'vscode', sessionId: 'editor-session', traceId: 'editor', spanId: 'editor-1' }),
+        makeSpan({ source: 'copilot-cli', sessionId: 'cli-session', traceId: 'cli', spanId: 'cli-1' }),
+      ]);
+
+      expect(store.listSessions(makeSessionFilters({ source: 'copilot-cli' })).items).toEqual([
+        { source: 'copilot-cli', sessionId: 'cli-session', spanCount: 1 },
+      ]);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('filters sessions by inclusive local-day date bounds', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans([
+        makeSpan({
+          sessionId: 'day-before',
+          traceId: 'day-before',
+          spanId: 'day-before-1',
+          startedAt: makeLocalIso(2026, 9, 24),
+        }),
+        makeSpan({
+          sessionId: 'day-of',
+          traceId: 'day-of',
+          spanId: 'day-of-1',
+          startedAt: makeLocalIso(2026, 9, 25),
+        }),
+        makeSpan({
+          sessionId: 'day-after',
+          traceId: 'day-after',
+          spanId: 'day-after-1',
+          startedAt: makeLocalIso(2026, 9, 26),
+        }),
+      ]);
+
+      expect(store.listSessions(makeSessionFilters({ from: '2026-09-25', to: '2026-09-25' })).items).toEqual([
+        { source: 'vscode', sessionId: 'day-of', spanCount: 1 },
+      ]);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('filters sessions by category', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans([
+        makeSpan({ sessionId: 'tool-session', traceId: 'tool', spanId: 'tool-1', category: 'tool' }),
+        makeSpan({ sessionId: 'llm-session', traceId: 'llm', spanId: 'llm-1', category: 'llm' }),
+      ]);
+
+      expect(store.listSessions(makeSessionFilters({ category: 'llm' })).items).toEqual([
+        { source: 'vscode', sessionId: 'llm-session', spanCount: 1 },
+      ]);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('filters sessions by status', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans([
+        makeSpan({ sessionId: 'ok-session', traceId: 'ok', spanId: 'ok-1', status: 'ok' }),
+        makeSpan({ sessionId: 'error-session', traceId: 'error', spanId: 'error-1', status: 'error' }),
+      ]);
+
+      expect(store.listSessions(makeSessionFilters({ status: 'error' })).items).toEqual([
+        { source: 'vscode', sessionId: 'error-session', spanCount: 1 },
+      ]);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('filters sessions by fields from the same matching span', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans([
+        makeSpan({ source: 'vscode', sessionId: 'matching', traceId: 'match', spanId: 'match-1' }),
+        makeSpan({ source: 'vscode', sessionId: 'matching', traceId: 'match', spanId: 'match-2', category: 'llm', status: 'error', model: 'model-b' }),
+        makeSpan({ source: 'vscode', sessionId: 'split-match', traceId: 'split', spanId: 'split-1', category: 'llm' }),
+        makeSpan({ source: 'vscode', sessionId: 'split-match', traceId: 'split', spanId: 'split-2', model: 'model-b' }),
+        makeSpan({ source: 'copilot-cli', sessionId: 'wrong-source', traceId: 'source', spanId: 'source-1' }),
+      ]);
+
+      const page = store.listSessions({
+        query: 'model-a',
+        source: 'vscode',
+        from: '2026-09-25',
+        to: '2026-09-25',
+        category: 'tool',
+        status: 'ok',
+        page: 0,
+      });
+
+      expect(page.items).toEqual([{ source: 'vscode', sessionId: 'matching', spanCount: 2 }]);
+      expect(page.total).toBe(1);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('paginates distinct sessions with 50 items on page 0 and the remainder on page 1', () => {
+    const store = openMemoryStore();
+    try {
+      store.insertSpans(
+        Array.from({ length: 51 }, (_, index) => makeSpan({
+          sessionId: `session-${index.toString().padStart(2, '0')}`,
+          traceId: `trace-${index.toString().padStart(2, '0')}`,
+          spanId: `span-${index.toString().padStart(2, '0')}`,
+          startedAt: '2026-09-25T10:00:00.000Z',
+        })),
+      );
+
+      expect(store.listSessions(makeSessionFilters({ page: 0 }))).toEqual({
+        items: Array.from({ length: 50 }, (_, index) => ({
+          source: 'vscode' as const,
+          sessionId: `session-${index.toString().padStart(2, '0')}`,
+          spanCount: 1,
+        })),
+        total: 51,
+        page: 0,
+        pageSize: 50,
+      });
+      expect(store.listSessions(makeSessionFilters({ page: 1 }))).toEqual({
+        items: [{ source: 'vscode', sessionId: 'session-50', spanCount: 1 }],
+        total: 51,
+        page: 1,
+        pageSize: 50,
+      });
+    } finally {
+      store.close();
+    }
+  });
+
+  it('orders filtered sessions by their latest stored span, even when that newest span does not match the active filter', () => {
+    const store = openMemoryStore();
+    try {
+      const fillerSpans = Array.from({ length: 50 }, (_, index) => makeSpan({
+        sessionId: `filler-${index.toString().padStart(2, '0')}`,
+        traceId: `filler-${index.toString().padStart(2, '0')}`,
+        spanId: `filler-${index.toString().padStart(2, '0')}`,
+        category: 'tool',
+        startedAt: new Date(Date.UTC(2026, 11, 29 - index, 12, 0, 0, 0)).toISOString(),
+      }));
+
+      store.insertSpans([
+        makeSpan({
+          sessionId: 'latest-overall',
+          traceId: 'latest-overall',
+          spanId: 'latest-overall-tool',
+          category: 'tool',
+          startedAt: '2026-09-01T12:00:00.000Z',
+        }),
+        makeSpan({
+          sessionId: 'latest-overall',
+          traceId: 'latest-overall',
+          spanId: 'latest-overall-llm',
+          category: 'llm',
+          startedAt: '2026-12-31T12:00:00.000Z',
+        }),
+        makeSpan({
+          sessionId: 'latest-matching',
+          traceId: 'latest-matching',
+          spanId: 'latest-matching-tool',
+          category: 'tool',
+          startedAt: '2026-12-30T12:00:00.000Z',
+        }),
+        ...fillerSpans,
+      ]);
+
+      const firstPage = store.listSessions(makeSessionFilters({ category: 'tool', page: 0 }));
+      const secondPage = store.listSessions(makeSessionFilters({ category: 'tool', page: 1 }));
+
+      expect(firstPage.total).toBe(52);
+      expect(firstPage.items).toHaveLength(50);
+      expect(firstPage.items.slice(0, 3)).toEqual([
+        { source: 'vscode', sessionId: 'latest-overall', spanCount: 2 },
+        { source: 'vscode', sessionId: 'latest-matching', spanCount: 1 },
+        { source: 'vscode', sessionId: 'filler-00', spanCount: 1 },
+      ]);
+      expect(secondPage).toEqual({
+        items: [
+          { source: 'vscode', sessionId: 'filler-48', spanCount: 1 },
+          { source: 'vscode', sessionId: 'filler-49', spanCount: 1 },
+        ],
+        total: 52,
+        page: 1,
+        pageSize: 50,
+      });
+    } finally {
+      store.close();
+    }
   });
 });

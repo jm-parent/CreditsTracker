@@ -9,6 +9,8 @@ import type {
   AgentTraceCollectionStatus,
   AgentTraceSelection,
   AgentTraceSession,
+  AgentTraceSessionListFilters,
+  AgentTraceSessionListPage,
 } from '../shared/types';
 import type { AgentTraceService } from './agent-trace-service';
 
@@ -259,7 +261,7 @@ describe('registerIpcHandlers', () => {
   describe('registerAgentTraceIpcHandlers', () => {
     function createTraceServiceDouble(
       overrides: Partial<AgentTraceService> = {},
-    ): Pick<AgentTraceService, 'getStatus' | 'setEnabled' | 'getSession' | 'clear'> {
+    ): Pick<AgentTraceService, 'getStatus' | 'setEnabled' | 'getSession' | 'getSessionCount' | 'listSessions' | 'clear'> {
       return {
         getStatus: vi.fn(() => ({
           enabled: false,
@@ -279,6 +281,13 @@ describe('registerIpcHandlers', () => {
           availability: 'not-collected',
           spans: [],
         } satisfies AgentTraceSession)),
+        getSessionCount: vi.fn(() => 2),
+        listSessions: vi.fn((filters: AgentTraceSessionListFilters) => ({
+          items: [{ source: 'vscode', sessionId: `session-page-${filters.page}`, spanCount: 3 }],
+          total: 1,
+          page: filters.page,
+          pageSize: 50,
+        } satisfies AgentTraceSessionListPage)),
         clear: vi.fn(),
         ...overrides,
       };
@@ -290,10 +299,12 @@ describe('registerIpcHandlers', () => {
       resetLoggerForTests();
     });
 
-    it('registers the trace collection status, opt-in, session, and clear channels', () => {
+    it('registers the trace collection status, count, list, opt-in, session, and clear channels', () => {
       registerAgentTraceIpcHandlers(createTraceServiceDouble() as AgentTraceService);
 
       expect(ipcMain.handle).toHaveBeenCalledWith('get-agent-trace-collection-status', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('get-agent-trace-session-count', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('list-agent-trace-sessions', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('set-agent-trace-collection-enabled', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('get-agent-trace-session', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('clear-agent-trace-data', expect.any(Function));
@@ -334,6 +345,85 @@ describe('registerIpcHandlers', () => {
         'Agent trace collection opt-in must be a boolean',
       );
       expect(service.setEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns the exact stored trace session count', () => {
+      const service = createTraceServiceDouble({
+        getSessionCount: vi.fn(() => 42),
+      });
+      registerAgentTraceIpcHandlers(service as AgentTraceService);
+      const handlers = (ipcMain as unknown as {
+        __handlers: Map<string, (...args: unknown[]) => unknown>;
+      }).__handlers;
+
+      expect(handlers.get('get-agent-trace-session-count')!({})).toBe(42);
+      expect(service.getSessionCount).toHaveBeenCalledTimes(1);
+    });
+
+    it('validates filters before listing agent trace sessions', () => {
+      const page: AgentTraceSessionListPage = {
+        items: [{ source: 'copilot-cli', sessionId: 'cli-session', spanCount: 7 }],
+        total: 1,
+        page: 2,
+        pageSize: 50,
+      };
+      const service = createTraceServiceDouble({
+        listSessions: vi.fn(() => page),
+      });
+      registerAgentTraceIpcHandlers(service as AgentTraceService);
+      const handlers = (ipcMain as unknown as {
+        __handlers: Map<string, (...args: unknown[]) => unknown>;
+      }).__handlers;
+      const validFilters = makeSessionFilters({
+        query: 'model-a',
+        source: 'copilot-cli',
+        from: '2026-09-24',
+        to: '2026-09-25',
+        category: 'tool',
+        status: 'error',
+        page: 2,
+      });
+
+      expect(handlers.get('list-agent-trace-sessions')!({}, validFilters)).toBe(page);
+      expect(service.listSessions).toHaveBeenCalledWith(validFilters);
+
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, null)).toThrow(
+        'Agent trace session filters must be an object',
+      );
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, 'bad')).toThrow(
+        'Agent trace session filters must be an object',
+      );
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ page: -1 }))).toThrow(
+        'Agent trace session list page must be a safe non-negative integer',
+      );
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ page: 1.5 }))).toThrow(
+        'Agent trace session list page must be a safe non-negative integer',
+      );
+      expect(
+        () => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ page: Number.MAX_SAFE_INTEGER + 1 })),
+      ).toThrow('Agent trace session list page must be a safe non-negative integer');
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ source: 'other' as never }))).toThrow(
+        'Agent trace session list source must be "vscode", "copilot-cli", or null',
+      );
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ category: 'invalid' as never }))).toThrow(
+        'Agent trace session category must be one of "agent", "llm", "tool", "skill", "shell", "mcp", "hook", "other", or null',
+      );
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ status: 'invalid' as never }))).toThrow(
+        'Agent trace session status must be "unset", "ok", "error", or null',
+      );
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ from: '2026-2-30' }))).toThrow(
+        'Agent trace session "from" must be a calendar date in YYYY-MM-DD format',
+      );
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ to: '2026-02-30' }))).toThrow(
+        'Agent trace session "to" must be a calendar date in YYYY-MM-DD format',
+      );
+      expect(
+        () => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ from: '2026-09-26', to: '2026-09-25' })),
+      ).toThrow('Agent trace session "from" date must be on or before "to"');
+      expect(() => handlers.get('list-agent-trace-sessions')!({}, makeSessionFilters({ query: 'x'.repeat(201) }))).toThrow(
+        'Agent trace session search query must be 200 characters or fewer',
+      );
+      expect(service.listSessions).toHaveBeenCalledTimes(1);
     });
 
     it('validates session selection before reading agent trace sessions', () => {
@@ -402,6 +492,19 @@ describe('registerIpcHandlers', () => {
       ]));
     });
   });
+
+  function makeSessionFilters(overrides: Partial<AgentTraceSessionListFilters> = {}): AgentTraceSessionListFilters {
+    return {
+      query: '',
+      source: null,
+      from: null,
+      to: null,
+      category: null,
+      status: null,
+      page: 0,
+      ...overrides,
+    };
+  }
 
   it('get-project-detail handler forwards filters and returns a ProjectDetailResult shape', async () => {
     registerIpcHandlers('/fake/path.db');

@@ -51,6 +51,14 @@ export function createWindowApi(overrides: Partial<Window['api']> = {}): Window[
       endpoint: null,
       errorMessage: null,
     }),
+    onAgentTraceStatusChange: vi.fn(() => () => {}),
+    getAgentTraceSessionCount: vi.fn().mockResolvedValue(0),
+    listAgentTraceSessions: vi.fn().mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      pageSize: 50,
+    }),
     setAgentTraceCollectionEnabled: vi.fn().mockResolvedValue({
       enabled: false,
       listening: false,
