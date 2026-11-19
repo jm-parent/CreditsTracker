@@ -48,6 +48,28 @@ describe('FilterBar', () => {
     expect(screen.queryByRole('option', { name: 'org/repo-a' })).not.toBeInTheDocument();
   });
 
+  it('renders a Month select only when month options are provided', async () => {
+    const user = userEvent.setup();
+    const onMonthChange = vi.fn();
+    const { rerender } = render(<FilterBar options={options} filters={{}} onChange={vi.fn()} />);
+
+    expect(screen.queryByLabelText('Month')).not.toBeInTheDocument();
+
+    rerender(
+      <FilterBar
+        options={options}
+        filters={{}}
+        onChange={vi.fn()}
+        monthOptions={['2026-08', '2026-09']}
+        selectedMonth={null}
+        onMonthChange={onMonthChange}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Month'), '2026-09');
+    expect(onMonthChange).toHaveBeenCalledWith('2026-09');
+  });
+
   it('debounces project path search until typing pauses', () => {
     vi.useFakeTimers();
     const onChange = vi.fn();

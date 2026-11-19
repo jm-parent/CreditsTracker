@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MonthlyConsumptionPage } from './MonthlyConsumptionPage';
 
 vi.mock('recharts', async () => {
@@ -34,11 +33,8 @@ describe('MonthlyConsumptionPage', () => {
     expect(items).toEqual(['org/repo-b4.00', 'org/repo-a3.00']);
   });
 
-  it('scopes the chart and project totals to the selected month', async () => {
-    const user = userEvent.setup();
-    render(<MonthlyConsumptionPage timeSeries={timeSeries} updateContextKey="all" />);
-
-    await user.selectOptions(screen.getByLabelText('Month'), '2026-09');
+  it('scopes the chart and project totals to the selected month', () => {
+    render(<MonthlyConsumptionPage timeSeries={timeSeries} selectedMonth="2026-09" updateContextKey="all" />);
 
     expect(screen.getByText('Credits per project — 2026-09')).toBeInTheDocument();
     const legend = screen.getByRole('list', { name: 'Total credits per project' });
