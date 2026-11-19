@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MonthlyConsumptionPage } from './MonthlyConsumptionPage';
 
 vi.mock('recharts', async () => {
@@ -16,21 +17,14 @@ vi.mock('recharts', async () => {
 });
 
 describe('MonthlyConsumptionPage', () => {
+  const timeSeries = [
+    { date: '2026-08-15', aiuCredits: 2, byProject: { 'org/repo-b': 2 } },
+    { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-a': 1, 'org/repo-b': 2 } },
+    { date: '2026-09-02', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
+  ];
+
   it('charts credits per month and lists the total credits of each project', () => {
-    render(
-      <MonthlyConsumptionPage
-        timeSeries={[
-          { date: '2026-08-15', aiuCredits: 2, byProject: { 'org/repo-b': 2 } },
-          { date: '2026-09-01', aiuCredits: 3, byProject: { 'org/repo-a': 1, 'org/repo-b': 2 } },
-          { date: '2026-09-02', aiuCredits: 2, byProject: { 'org/repo-a': 2 } },
-        ]}
-        byProject={[
-          { key: 'org/repo-a', aiuCredits: 3 },
-          { key: 'org/repo-b', aiuCredits: 4 },
-        ]}
-        updateContextKey="all"
-      />,
-    );
+    render(<MonthlyConsumptionPage timeSeries={timeSeries} updateContextKey="all" />);
 
     expect(screen.getByText('Credits per month')).toBeInTheDocument();
     expect(screen.getByTestId('time-series-chart')).toBeInTheDocument();
@@ -40,8 +34,20 @@ describe('MonthlyConsumptionPage', () => {
     expect(items).toEqual(['org/repo-b4.00', 'org/repo-a3.00']);
   });
 
+  it('scopes the chart and project totals to the selected month', async () => {
+    const user = userEvent.setup();
+    render(<MonthlyConsumptionPage timeSeries={timeSeries} updateContextKey="all" />);
+
+    await user.selectOptions(screen.getByLabelText('Month'), '2026-09');
+
+    expect(screen.getByText('Credits per project — 2026-09')).toBeInTheDocument();
+    const legend = screen.getByRole('list', { name: 'Total credits per project' });
+    const items = within(legend).getAllByRole('listitem').map((item) => item.textContent);
+    expect(items).toEqual(['org/repo-a3.00', 'org/repo-b2.00']);
+  });
+
   it('shows an empty message when no project has usage', () => {
-    render(<MonthlyConsumptionPage timeSeries={[]} byProject={[]} updateContextKey="all" />);
+    render(<MonthlyConsumptionPage timeSeries={[]} updateContextKey="all" />);
 
     expect(screen.getByText('No project usage for this selection.')).toBeInTheDocument();
   });

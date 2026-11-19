@@ -1,31 +1,54 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { CreditValue } from './CreditValue';
 import { TimeSeriesChart } from './TimeSeriesChart';
 import { getColorForKey } from '../lib/colors';
-import { aggregateTimeSeriesByMonth } from '../lib/monthly-consumption';
-import type { BreakdownPoint, TimeSeriesPoint } from '../../shared/types';
+import { aggregateTimeSeriesByMonth, sumByProject, toProjectBars } from '../lib/monthly-consumption';
+import type { TimeSeriesPoint } from '../../shared/types';
 
 export interface MonthlyConsumptionPageProps {
   /** Daily usage series for the current filters; aggregated per month here. */
   timeSeries: TimeSeriesPoint[];
-  /** Per-project totals for the current filters, shown in the legend. */
-  byProject: BreakdownPoint[];
   updateContextKey: string;
 }
 
-export function MonthlyConsumptionPage({ timeSeries, byProject, updateContextKey }: MonthlyConsumptionPageProps) {
+export function MonthlyConsumptionPage({ timeSeries, updateContextKey }: MonthlyConsumptionPageProps) {
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const monthlySeries = aggregateTimeSeriesByMonth(timeSeries);
-  const projectTotals = byProject
-    .filter((project) => Boolean(project.key))
-    .sort((a, b) => b.aiuCredits - a.aiuCredits);
+  const monthOptions = monthlySeries.map((point) => point.date);
+  // Falls back to all months when the filters no longer contain the selected month.
+  const activeMonth = selectedMonth && monthOptions.includes(selectedMonth) ? selectedMonth : null;
+
+  const scopedPoints = activeMonth
+    ? timeSeries.filter((point) => point.date.slice(0, 7) === activeMonth)
+    : timeSeries;
+  const projectTotals = sumByProject(scopedPoints);
+  const chartData = activeMonth ? toProjectBars(projectTotals) : monthlySeries;
+  const chartTitle = activeMonth ? `Credits per project — ${activeMonth}` : 'Credits per month';
 
   return (
     <div className="monthly-consumption-page flex flex-col gap-6">
-      <TimeSeriesChart
-        data={monthlySeries}
-        updateContextKey={updateContextKey}
-        title="Credits per month"
-      />
+      <div className="filter-bar flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="month-filter" className="text-xs font-medium text-muted-foreground">
+            Month
+          </label>
+          <select
+            id="month-filter"
+            className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            value={activeMonth ?? ''}
+            onChange={(event) => setSelectedMonth(event.target.value || null)}
+          >
+            <option value="">All months</option>
+            {monthOptions.map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <TimeSeriesChart data={chartData} updateContextKey={updateContextKey} title={chartTitle} />
       <Card>
         <CardHeader>
           <CardTitle>Total per project</CardTitle>

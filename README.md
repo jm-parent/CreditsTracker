@@ -34,7 +34,8 @@ static, offline-friendly catalogue and HTML export has its own report filters:
   that day.
 - **Monthly consumption** — the same filtered usage aggregated per calendar
   month as a stacked bar chart by project, with a legend listing each
-  project's total credits for the selection.
+  project's total credits for the selection. The **Month** filter narrows the
+  view to one month, where each bar is a project.
 - **Monthly activity** — a calendar-style heatmap for scanning which days of
   the current month were active, with project/model filtering carried through
   from the main dashboard controls.

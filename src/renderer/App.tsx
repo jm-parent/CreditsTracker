@@ -188,7 +188,6 @@ export function App() {
               <div className="mt-6">
                 <MonthlyConsumptionPage
                   timeSeries={data.timeSeries}
-                  byProject={data.byProject}
                   updateContextKey={usageUpdateContextKey}
                 />
               </div>
