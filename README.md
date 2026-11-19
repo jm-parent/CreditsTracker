@@ -32,6 +32,10 @@ static, offline-friendly catalogue and HTML export has its own report filters:
   project (hover a bar to see the per-project breakdown for that day).
   Click a day to open an hourly breakdown showing usage trends throughout
   that day.
+- **Monthly consumption** — the same filtered usage aggregated per calendar
+  month as a stacked bar chart by project, with a legend listing each
+  project's total credits for the selection. The **Month** filter narrows the
+  view to one month, where each bar is a project.
 - **Monthly activity** — a calendar-style heatmap for scanning which days of
   the current month were active, with project/model filtering carried through
   from the main dashboard controls.

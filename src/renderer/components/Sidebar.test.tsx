@@ -21,6 +21,7 @@ describe('Sidebar', () => {
 
     expect(buttonsInGroup('Overview')).toEqual([
       'Daily consumption',
+      'Monthly consumption',
       'Monthly activity',
     ]);
     expect(buttonsInGroup('Analysis')).toEqual([

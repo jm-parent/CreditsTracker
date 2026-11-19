@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useUsageData } from './hooks/useUsageData';
 import { useHourlyDetail } from './hooks/useHourlyDetail';
 import { useMonthlyActivity } from './hooks/useMonthlyActivity';
 import { useAppUpdate } from './hooks/useAppUpdate';
+import { aggregateTimeSeriesByMonth } from './lib/monthly-consumption';
 import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
 import { Sidebar, type DashboardTab } from './components/Sidebar';
 import { DailyConsumptionPage } from './components/DailyConsumptionPage';
+import { MonthlyConsumptionPage } from './components/MonthlyConsumptionPage';
 import { ActivityHeatmapPage } from './components/ActivityHeatmapPage';
 import { ProjectsPage } from './components/ProjectsPage';
 import { ModelsPage } from './components/ModelsPage';
@@ -50,6 +52,14 @@ export function App() {
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   });
   const { data, loading, error, dataFilters } = useUsageData(filters);
+  const [consumptionMonth, setConsumptionMonth] = useState<string | null>(null);
+  const consumptionMonthOptions = useMemo(
+    () => aggregateTimeSeriesByMonth(data?.timeSeries ?? []).map((point) => point.date),
+    [data],
+  );
+  // Falls back to all months when the filters no longer contain the selected month.
+  const activeConsumptionMonth =
+    consumptionMonth && consumptionMonthOptions.includes(consumptionMonth) ? consumptionMonth : null;
   const hourlyDetail = useHourlyDetail(selectedDate, filters);
   const monthlyActivity = useMonthlyActivity({
     year: activityMonth.year,
@@ -146,7 +156,20 @@ export function App() {
             <RawDataPage onBack={() => setActiveTab('daily')} />
           ) : (
           <>
-            {!selectedProject && <FilterBar options={options} filters={filters} onChange={setFilters} />}
+            {!selectedProject && (
+              <FilterBar
+                options={options}
+                filters={filters}
+                onChange={setFilters}
+                {...(activeTab === 'monthly-consumption'
+                  ? {
+                      monthOptions: consumptionMonthOptions,
+                      selectedMonth: activeConsumptionMonth,
+                      onMonthChange: setConsumptionMonth,
+                    }
+                  : {})}
+              />
+            )}
             {error && data && (
               <p className="refresh-notice mt-4 rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
                 Couldn't refresh — showing last known data.
@@ -179,6 +202,15 @@ export function App() {
                   totals={data.totals}
                   timeSeries={data.timeSeries}
                   onDayClick={setSelectedDate}
+                  updateContextKey={usageUpdateContextKey}
+                />
+              </div>
+            )}
+            {data && !selectedProject && activeTab === 'monthly-consumption' && (
+              <div className="mt-6">
+                <MonthlyConsumptionPage
+                  timeSeries={data.timeSeries}
+                  selectedMonth={activeConsumptionMonth}
                   updateContextKey={usageUpdateContextKey}
                 />
               </div>

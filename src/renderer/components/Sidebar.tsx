@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowDownToLine,
   CalendarDays,
+  CalendarRange,
   Cpu,
   Database,
   Download,
@@ -15,6 +16,7 @@ import type { UpdateState } from '../../shared/types';
 
 export type DashboardTab =
   | 'daily'
+  | 'monthly-consumption'
   | 'monthly'
   | 'projects'
   | 'models'
@@ -49,6 +51,7 @@ const NAV_GROUPS: NavigationGroup[] = [
     label: 'Overview',
     entries: [
       { id: 'daily', label: 'Daily consumption', icon: CalendarDays },
+      { id: 'monthly-consumption', label: 'Monthly consumption', icon: CalendarRange },
       { id: 'monthly', label: 'Monthly activity', icon: Activity },
     ],
   },

@@ -8,9 +8,21 @@ interface FilterBarProps {
   filters: UsageFilters;
   onChange: (filters: UsageFilters) => void;
   showProjectFilter?: boolean;
+  /** When provided, a Month select is rendered after Model. */
+  monthOptions?: string[];
+  selectedMonth?: string | null;
+  onMonthChange?: (month: string | null) => void;
 }
 
-export function FilterBar({ options, filters, onChange, showProjectFilter = true }: FilterBarProps) {
+export function FilterBar({
+  options,
+  filters,
+  onChange,
+  showProjectFilter = true,
+  monthOptions,
+  selectedMonth = null,
+  onMonthChange,
+}: FilterBarProps) {
   const [projectSearchInput, setProjectSearchInput] = useState(filters.projectSearch ?? '');
   const filtersRef = useRef(filters);
   const onChangeRef = useRef(onChange);
@@ -110,6 +122,27 @@ export function FilterBar({ options, filters, onChange, showProjectFilter = true
           ))}
         </select>
       </div>
+
+      {monthOptions && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="month-filter" className="text-xs font-medium text-muted-foreground">
+            Month
+          </label>
+          <select
+            id="month-filter"
+            className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            value={selectedMonth ?? ''}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => onMonthChange?.(event.target.value || null)}
+          >
+            <option value="">All months</option>
+            {monthOptions.map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
