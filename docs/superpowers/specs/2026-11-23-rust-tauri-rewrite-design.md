@@ -205,13 +205,12 @@ Whole-app parity is checked separately, once the units are in place:
 
 Ranked by how much the answer changes the plan.
 
+- Answered: installed 1.20.0 users receive one final Squirrel release that
+  guides them to the Tauri installer. The current updater uses Electron
+  `autoUpdater` and Squirrel `RELEASES` (`src/main/updater.ts`), which Tauri
+  cannot read.
+- Answered: the first Tauri release includes updates, with a Tauri signing key
+  stored as a CI secret. `specs/012` is preserved.
+- Answered: Electron code is deleted at cutover, in a separate commit.
 - Why does the user want the rewrite? The answer may change which units
   matter most.
-- How do installed 1.20.0 users reach the Tauri build? Options are one final
-  Squirrel release that points to Tauri, or a manual reinstall. The current
-  updater uses Electron `autoUpdater` and Squirrel `RELEASES`
-  (`src/main/updater.ts`), which Tauri cannot read.
-- Should updates ship in the first Tauri release? That requires a Tauri
-  signing key stored as a CI secret. Without updates, `specs/012` regresses.
-- Should Electron code be deleted at cutover, or kept for one release as a
-  rollback?
