@@ -1,0 +1,72 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "C:\\Users\\jeanmarie.parent\\.copilot\\repos\\copilot-worktrees\\CreditsTrackerExtension\\jeanmarie-parent-exakisc-miniature-broccoli",
+  "unit": "reference/src/agent-trace-sanitizer.ts",
+  "language": "ts",
+  "kind": "napi",
+  "crate_name": "agent_trace_sanitizer",
+  "exports": [
+    {
+      "name": "sanitizeAgentTraceSpan",
+      "file": "reference/src/agent-trace-sanitizer.ts",
+      "line": 34,
+      "params": [
+        {
+          "name": "span",
+          "ts_type": "DecodedAgentTraceSpan",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "AgentTraceSpan | null",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "sanitizeUnattributedAgentTraceSpan",
+      "file": "reference/src/agent-trace-sanitizer.ts",
+      "line": 49,
+      "params": [
+        {
+          "name": "span",
+          "ts_type": "DecodedAgentTraceSpan",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "(Omit<AgentTraceSpan, 'source' | 'sessionId'>)",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "attributeAgentTraceSpan",
+      "file": "reference/src/agent-trace-sanitizer.ts",
+      "line": 96,
+      "params": [
+        {
+          "name": "span",
+          "ts_type": "(Omit<AgentTraceSpan, 'source' | 'sessionId'>)",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "attribution",
+          "ts_type": "AgentTraceAttribution",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "AgentTraceSpan",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}

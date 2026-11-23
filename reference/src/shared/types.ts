@@ -1,5 +1,34 @@
 export type AgentTraceSource = 'vscode' | 'copilot-cli';
 export type AgentTraceCategory = 'agent' | 'llm' | 'tool' | 'skill' | 'shell' | 'mcp' | 'hook' | 'other';
+export type AgentTraceContentState =
+  | 'unavailable'
+  | 'stored'
+  | 'redacted'
+  | 'truncated'
+  | 'redacted-truncated'
+  | 'omitted';
+
+export interface AgentTraceSpan {
+  source: AgentTraceSource;
+  sessionId: string;
+  traceId: string;
+  spanId: string;
+  parentSpanId: string | null;
+  name: string;
+  category: AgentTraceCategory;
+  toolName: string | null;
+  skillName: string | null;
+  model: string | null;
+  startedAt: string;
+  endedAt: string;
+  durationMs: number;
+  status: 'unset' | 'ok' | 'error';
+  errorType: string | null;
+  toolCallId: string | null;
+  argumentsJson: string | null;
+  resultText: string | null;
+  contentState: AgentTraceContentState;
+}
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
