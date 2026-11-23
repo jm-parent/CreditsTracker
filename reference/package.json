@@ -1,0 +1,14 @@
+{
+  "name": "credits-tracker-reference",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Headless TypeScript reference used to record the pre-rewrite behavior of the Credits Dashboard core.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2"
+  }
+}
