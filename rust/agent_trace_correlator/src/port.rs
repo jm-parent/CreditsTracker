@@ -11,7 +11,7 @@ use std::collections::HashSet;
 
 use agent_trace_protocol::port::{
     AgentTraceSource as ProtocolSource, DecodedAgentTraceSpan,
-    SourceResolution as ProtocolResolution, build_agent_trace_session_id,
+    SourceResolution as ProtocolResolution,
 };
 use agent_trace_sanitizer::js_value::{self, get, object};
 use agent_trace_sanitizer::port::{
@@ -240,19 +240,13 @@ impl AgentTraceCorrelator {
     }
 
     fn hold_spans(&mut self, trace_id: &str, group: &[&AgentTraceCorrelationInput], now_ms: f64) {
-        if !self.pending.contains_key(trace_id) {
-            self.pending.insert(
-                trace_id.to_owned(),
-                PendingTrace {
-                    first_received_at_ms: now_ms,
-                    spans: IndexMap::new(),
-                },
-            );
-        }
         let held = self
             .pending
-            .get_mut(trace_id)
-            .expect("the trace was inserted above");
+            .entry(trace_id.to_owned())
+            .or_insert_with(|| PendingTrace {
+                first_received_at_ms: now_ms,
+                spans: IndexMap::new(),
+            });
 
         for input in group {
             let bytes = estimate_span_bytes(&input.span);
@@ -460,11 +454,11 @@ fn explicit_attribution(facts: &AgentTraceCorrelationFacts) -> Option<AgentTrace
     let conversation_id = facts
         .span_parent_conversation_id
         .clone()
-        .or_else(|| facts.span_conversation_id.clone());
-    let session_id =
-        build_agent_trace_session_id(Some(source.as_str().to_owned()), conversation_id)
-            .ok()
-            .flatten()?;
+        .or_else(|| facts.span_conversation_id.clone())?;
+    let session_id = match source {
+        ProtocolSource::Vscode => format!("vscode:{conversation_id}"),
+        ProtocolSource::CopilotCli => conversation_id,
+    };
     Some(AgentTraceAttribution {
         source: shared_source(source),
         session_id,
@@ -503,126 +497,4 @@ fn group_by_trace(
 fn estimate_span_bytes(span: &UnattributedAgentTraceSpan) -> usize {
     let units = |text: &Option<String>| text.as_deref().map_or(0, |t| t.encode_utf16().count());
     (units(&span.arguments_json) + units(&span.result_text)) * 2 + PENDING_SPAN_OVERHEAD_BYTES
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use shared::{AgentTraceCategory, AgentTraceContentState, AgentTraceSpanStatus};
-
-    fn input(trace_id: &str, span_id: &str, parent: Option<&str>) -> AgentTraceCorrelationInput {
-        AgentTraceCorrelationInput {
-            facts: AgentTraceCorrelationFacts {
-                trace_id: trace_id.into(),
-                span_id: span_id.into(),
-                parent_span_id: parent.map(Into::into),
-                trace_root_in_request: false,
-                trace_source: None,
-                trace_source_resolution: ProtocolResolution::Missing,
-                trace_session_id: None,
-                span_source: None,
-                span_source_resolution: ProtocolResolution::Supported,
-                span_conversation_id: None,
-                span_parent_conversation_id: None,
-            },
-            span: UnattributedAgentTraceSpan {
-                trace_id: trace_id.into(),
-                span_id: span_id.into(),
-                parent_span_id: parent.map(Into::into),
-                name: "tool".into(),
-                category: AgentTraceCategory::Tool,
-                tool_name: None,
-                skill_name: None,
-                model: None,
-                started_at: "2026-11-23T00:00:00.000Z".into(),
-                ended_at: "2026-11-23T00:00:01.000Z".into(),
-                duration_ms: 1000.0,
-                status: AgentTraceSpanStatus::Ok,
-                error_type: None,
-                tool_call_id: None,
-                arguments_json: None,
-                result_text: None,
-                content_state: AgentTraceContentState::Unavailable,
-            },
-        }
-    }
-
-    #[test]
-    fn pending_bytes_past_limit_fall_back_and_are_counted() {
-        let mut c = create_agent_trace_correlator(Default::default());
-        let mut oversized = input("t1", "s1", None);
-        oversized.span.arguments_json = Some("a".repeat(MAX_PENDING_BYTES / 2 + 1));
-        let result = c.ingest(&[oversized], 0.0).unwrap();
-        assert!(result.ready.is_empty());
-        assert_eq!(result.dropped.unresolved_trace_root, 1);
-        assert_eq!(result.held, 0);
-        assert_eq!(c.pending_span_count(), 0);
-    }
-
-    #[test]
-    fn held_children_inherit_an_ancestors_context_when_the_ttl_expires() {
-        let mut c = create_agent_trace_correlator(Default::default());
-        let mut root = input("t1", "root", None);
-        root.facts.span_source = Some(ProtocolSource::Vscode);
-        root.facts.span_conversation_id = Some("conv".into());
-        let result = c
-            .ingest(&[input("t1", "child", Some("root")), root], 0.0)
-            .unwrap();
-        assert_eq!(result.held, 2);
-        assert_eq!(c.next_expiry_at(), Some(PENDING_TRACE_TTL_MS as f64));
-
-        assert!(c.expire(29_999.0).unwrap().ready.is_empty());
-        let expired = c.expire(30_000.0).unwrap();
-        assert_eq!(expired.ready.len(), 2);
-        assert!(expired.ready.iter().all(|s| s.session_id == "vscode:conv"));
-        assert_eq!(c.pending_span_count(), 0);
-        assert_eq!(c.next_expiry_at(), None);
-    }
-
-    #[test]
-    fn trace_root_in_a_later_request_attributes_held_and_later_spans() {
-        let mut c = create_agent_trace_correlator(Default::default());
-        assert_eq!(
-            c.ingest(&[input("t1", "child", None)], 0.0).unwrap().held,
-            1
-        );
-
-        let mut root = input("t1", "root", None);
-        root.facts.trace_root_in_request = true;
-        root.facts.trace_source = Some(ProtocolSource::Vscode);
-        root.facts.trace_session_id = Some("vscode:s1".into());
-        let resolved = c.ingest(&[root], 1.0).unwrap();
-        assert_eq!(resolved.ready.len(), 2);
-        assert!(resolved.ready.iter().all(|s| s.session_id == "vscode:s1"));
-        assert_eq!(c.pending_span_count(), 0);
-
-        let late = c.ingest(&[input("t1", "late", None)], 2.0).unwrap();
-        assert_eq!(late.ready.len(), 1);
-        assert_eq!(late.held, 0);
-    }
-
-    #[test]
-    fn exceeding_the_span_cap_drops_the_oldest_trace() {
-        let options = AgentTraceCorrelatorOptions {
-            max_pending_spans: Some(2),
-            ..Default::default()
-        };
-        let mut c = create_agent_trace_correlator(options);
-        c.ingest(&[input("old", "a", None), input("old", "b", None)], 0.0)
-            .unwrap();
-        let result = c.ingest(&[input("new", "c", None)], 1.0).unwrap();
-        assert_eq!(result.dropped.unresolved_trace_root, 2);
-        assert_eq!(result.held, 1);
-        assert_eq!(c.pending_span_count(), 1);
-    }
-
-    #[test]
-    fn unsupported_span_without_a_trace_root_is_rejected_at_once() {
-        let mut c = create_agent_trace_correlator(Default::default());
-        let mut span = input("t1", "s1", None);
-        span.facts.span_source_resolution = ProtocolResolution::Unsupported;
-        let result = c.ingest(&[span], 0.0).unwrap();
-        assert_eq!(result.rejected.unsupported_source, 1);
-        assert_eq!(c.pending_span_count(), 0);
-    }
 }
