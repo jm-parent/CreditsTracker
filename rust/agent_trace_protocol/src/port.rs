@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 use std::collections::HashMap;
+use std::fmt;
 
 use prost::Message;
 use serde_json::{Map, Value, json};
@@ -38,78 +39,234 @@ const SPAN_ATTRIBUTE_ALLOWLIST: &[&str] = &[
     "github.copilot.tool.parameters.mcp_tool_name",
 ];
 
-/// One decoded span plus the resource/span context `applyTraceMetadata` needs, mirroring the
-/// TypeScript port's `DecodedSpanEnvelope`.
-struct Envelope {
-    resource_service_name: Option<String>,
-    attributes: HashMap<String, Value>,
-    decoded: Decoded,
+/// The `DecodeError` of `decode_otlp_trace_request`; its `Display` is the TypeScript error message.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DecodeError {
+    /// The body is not a valid `ExportTraceServiceRequest`.
+    Malformed(String),
+    /// A trace, span or parent span id is not the required length.
+    IdLength {
+        label: &'static str,
+        expected: usize,
+        received: usize,
+    },
+    /// A required trace or span id is all zeros.
+    AllZeroId { label: &'static str },
+    /// A span ends before it starts.
+    EndBeforeStart,
 }
 
-/// Mirrors the TS `DecodedAgentTraceSpan` interface field-for-field (`camelCase` keys, see
-/// `to_json`).
-struct Decoded {
-    source: Option<&'static str>,
-    source_resolution: &'static str,
-    conversation_id: Option<String>,
-    session_id: Option<String>,
-    trace_root_in_request: bool,
-    span_source: Option<&'static str>,
-    span_source_resolution: &'static str,
-    span_conversation_id: Option<String>,
-    span_parent_conversation_id: Option<String>,
-    trace_id: String,
-    span_id: String,
-    parent_span_id: Option<String>,
-    name: String,
-    category: &'static str,
-    tool_name: Option<String>,
-    skill_name: Option<String>,
-    model: Option<String>,
-    started_at_ns: String,
-    ended_at_ns: String,
-    status: &'static str,
-    error_type: Option<String>,
-    tool_call_id: Option<String>,
-    arguments_value: Value,
-    result: Value,
+impl fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Malformed(error) => write!(f, "Failed to decode OTLP trace request: {error}"),
+            Self::IdLength {
+                label,
+                expected,
+                received,
+            } => write!(
+                f,
+                "Invalid {label} id: expected {expected} bytes but received {received}"
+            ),
+            Self::AllZeroId { label } => {
+                write!(
+                    f,
+                    "Invalid {label} id: all-zero {label} ids are not allowed"
+                )
+            }
+            Self::EndBeforeStart => {
+                f.write_str("Span end timestamp is earlier than start timestamp")
+            }
+        }
+    }
 }
 
-impl Decoded {
-    fn to_json(&self) -> Value {
+impl std::error::Error for DecodeError {}
+
+/// A decoded OTLP attribute value (`AnyValue`). `Bytes` is the TypeScript `Uint8Array` of a
+/// `bytesValue`; it is a separate variant so no client-supplied `Object` can become one.
+#[derive(Debug, Clone, PartialEq)]
+pub enum AttributeValue {
+    Null,
+    Bool(bool),
+    String(String),
+    Number(f64),
+    Bytes(Vec<u8>),
+    Array(Vec<AttributeValue>),
+    Object(Vec<(String, AttributeValue)>),
+}
+
+impl AttributeValue {
+    /// The JSON form `index.cjs` revives: bytes as a `$bytes` marker, and objects inside an
+    /// `$object` wrapper, so a client key such as `$bytes` is never read as a marker.
+    pub fn to_value(&self) -> Value {
+        match self {
+            Self::Null => Value::Null,
+            Self::Bool(b) => Value::Bool(*b),
+            Self::String(s) => Value::String(s.clone()),
+            Self::Number(n) => crate::js::number(*n),
+            Self::Bytes(bytes) => json!({ "$bytes": bytes }),
+            Self::Array(items) => Value::Array(items.iter().map(Self::to_value).collect()),
+            Self::Object(entries) => {
+                let object: Map<String, Value> = entries
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.to_value()))
+                    .collect();
+                json!({ "$object": object })
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentTraceSource {
+    Vscode,
+    CopilotCli,
+}
+
+impl AgentTraceSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Vscode => "vscode",
+            Self::CopilotCli => "copilot-cli",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceResolution {
+    Supported,
+    Unsupported,
+    Missing,
+}
+
+impl SourceResolution {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Supported => "supported",
+            Self::Unsupported => "unsupported",
+            Self::Missing => "missing",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpanCategory {
+    Agent,
+    Llm,
+    Hook,
+    Skill,
+    Mcp,
+    Shell,
+    Tool,
+    Other,
+}
+
+impl SpanCategory {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Agent => "agent",
+            Self::Llm => "llm",
+            Self::Hook => "hook",
+            Self::Skill => "skill",
+            Self::Mcp => "mcp",
+            Self::Shell => "shell",
+            Self::Tool => "tool",
+            Self::Other => "other",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpanStatus {
+    Unset,
+    Ok,
+    Error,
+}
+
+impl SpanStatus {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Unset => "unset",
+            Self::Ok => "ok",
+            Self::Error => "error",
+        }
+    }
+}
+
+/// The TypeScript `DecodedAgentTraceSpan`, field for field.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DecodedAgentTraceSpan {
+    pub source: Option<AgentTraceSource>,
+    pub source_resolution: SourceResolution,
+    pub conversation_id: Option<String>,
+    pub session_id: Option<String>,
+    pub trace_root_in_request: bool,
+    pub span_source: Option<AgentTraceSource>,
+    pub span_source_resolution: SourceResolution,
+    pub span_conversation_id: Option<String>,
+    pub span_parent_conversation_id: Option<String>,
+    pub trace_id: String,
+    pub span_id: String,
+    pub parent_span_id: Option<String>,
+    pub name: String,
+    pub category: SpanCategory,
+    pub tool_name: Option<String>,
+    pub skill_name: Option<String>,
+    pub model: Option<String>,
+    pub started_at_ns: String,
+    pub ended_at_ns: String,
+    pub status: SpanStatus,
+    pub error_type: Option<String>,
+    pub tool_call_id: Option<String>,
+    pub arguments_value: AttributeValue,
+    pub result: AttributeValue,
+}
+
+impl DecodedAgentTraceSpan {
+    /// The JSON form of the span, with the TypeScript interface's `camelCase` keys.
+    pub fn to_value(&self) -> Value {
         json!({
-            "source": self.source,
-            "sourceResolution": self.source_resolution,
+            "source": self.source.map(AgentTraceSource::as_str),
+            "sourceResolution": self.source_resolution.as_str(),
             "conversationId": self.conversation_id,
             "sessionId": self.session_id,
             "traceRootInRequest": self.trace_root_in_request,
-            "spanSource": self.span_source,
-            "spanSourceResolution": self.span_source_resolution,
+            "spanSource": self.span_source.map(AgentTraceSource::as_str),
+            "spanSourceResolution": self.span_source_resolution.as_str(),
             "spanConversationId": self.span_conversation_id,
             "spanParentConversationId": self.span_parent_conversation_id,
             "traceId": self.trace_id,
             "spanId": self.span_id,
             "parentSpanId": self.parent_span_id,
             "name": self.name,
-            "category": self.category,
+            "category": self.category.as_str(),
             "toolName": self.tool_name,
             "skillName": self.skill_name,
             "model": self.model,
             "startedAtNs": self.started_at_ns,
             "endedAtNs": self.ended_at_ns,
-            "status": self.status,
+            "status": self.status.as_str(),
             "errorType": self.error_type,
             "toolCallId": self.tool_call_id,
-            "argumentsValue": self.arguments_value,
-            "result": self.result,
+            "argumentsValue": self.arguments_value.to_value(),
+            "result": self.result.to_value(),
         })
     }
 }
 
+/// One decoded span plus the resource/span context `applyTraceMetadata` needs, mirroring the
+/// TypeScript port's `DecodedSpanEnvelope`.
+struct Envelope {
+    resource_service_name: Option<String>,
+    attributes: HashMap<String, AttributeValue>,
+    decoded: DecodedAgentTraceSpan,
+}
+
 /// Port of `decodeOtlpTraceRequest` (`src/agent-trace-protocol.ts:74`).
-pub fn decode_otlp_trace_request(body: &[u8]) -> Result<Vec<Value>, String> {
+pub fn decode_otlp_trace_request(body: &[u8]) -> Result<Vec<DecodedAgentTraceSpan>, DecodeError> {
     let request = ExportTraceServiceRequest::decode(body)
-        .map_err(|error| format!("Failed to decode OTLP trace request: {error}"))?;
+        .map_err(|error| DecodeError::Malformed(error.to_string()))?;
 
     let mut envelopes: Vec<Envelope> = Vec::new();
     for resource_spans in request.resource_spans {
@@ -120,7 +277,7 @@ pub fn decode_otlp_trace_request(body: &[u8]) -> Result<Vec<Value>, String> {
         apply_trace_metadata(&mut envelopes, &indices);
     }
 
-    Ok(envelopes.iter().map(|e| e.decoded.to_json()).collect())
+    Ok(envelopes.into_iter().map(|e| e.decoded).collect())
 }
 
 /// Port of `buildAgentTraceSessionId` (`src/agent-trace-protocol.ts:205`).
@@ -128,17 +285,24 @@ pub fn build_agent_trace_session_id(
     source: Option<String>,
     conversation_id: Option<String>,
 ) -> Result<Option<String>, String> {
-    Ok(match (source.as_deref(), conversation_id) {
+    Ok(session_id_for(
+        source.as_deref(),
+        conversation_id.as_deref(),
+    ))
+}
+
+fn session_id_for(source: Option<&str>, conversation_id: Option<&str>) -> Option<String> {
+    match (source, conversation_id) {
         (Some("vscode"), Some(conversation_id)) => Some(format!("vscode:{conversation_id}")),
-        (Some(_), Some(conversation_id)) => Some(conversation_id),
+        (Some(_), Some(conversation_id)) => Some(conversation_id.to_string()),
         _ => None,
-    })
+    }
 }
 
 fn decode_resource_spans(
     resource_spans: ResourceSpans,
     envelopes: &mut Vec<Envelope>,
-) -> Result<(), String> {
+) -> Result<(), DecodeError> {
     let resource_attributes = collect_attributes(
         resource_spans
             .resource
@@ -156,7 +320,7 @@ fn decode_resource_spans(
     Ok(())
 }
 
-fn decode_span(span: Span, resource_service_name: Option<String>) -> Result<Envelope, String> {
+fn decode_span(span: Span, resource_service_name: Option<String>) -> Result<Envelope, DecodeError> {
     let trace_id = decode_required_id(&span.trace_id, 16, "trace")?;
     let span_id = decode_required_id(&span.span_id, 8, "span")?;
     let parent_span_id = decode_optional_id(&span.parent_span_id, 8, "parent span")?;
@@ -169,7 +333,7 @@ fn decode_span(span: Span, resource_service_name: Option<String>) -> Result<Enve
 
     validate_span_range(span.start_time_unix_nano, span.end_time_unix_nano)?;
 
-    let decoded = Decoded {
+    let decoded = DecodedAgentTraceSpan {
         source: None,
         source_resolution: span_source_resolution,
         conversation_id: None,
@@ -199,11 +363,11 @@ fn decode_span(span: Span, resource_service_name: Option<String>) -> Result<Enve
         arguments_value: attributes
             .get("gen_ai.tool.call.arguments")
             .cloned()
-            .unwrap_or(Value::Null),
+            .unwrap_or(AttributeValue::Null),
         result: attributes
             .get("gen_ai.tool.call.result")
             .cloned()
-            .unwrap_or(Value::Null),
+            .unwrap_or(AttributeValue::Null),
     };
 
     Ok(Envelope {
@@ -221,7 +385,7 @@ fn find_trace_root(envelopes: &[Envelope], indices: &[usize]) -> Option<usize> {
         .copied()
         .filter(|&i| {
             envelopes[i].decoded.parent_span_id.is_none()
-                && envelopes[i].decoded.category == "agent"
+                && envelopes[i].decoded.category == SpanCategory::Agent
         })
         .collect();
 
@@ -238,7 +402,7 @@ fn find_trace_root(envelopes: &[Envelope], indices: &[usize]) -> Option<usize> {
 }
 
 fn is_recognized_conversation_root(envelope: &Envelope) -> bool {
-    resolve_source(envelope.resource_service_name.as_deref()).1 == "supported"
+    resolve_source(envelope.resource_service_name.as_deref()).1 == SourceResolution::Supported
         && as_non_empty_string(envelope.attributes.get("gen_ai.conversation.id")).is_some()
 }
 
@@ -254,9 +418,10 @@ fn apply_trace_metadata(envelopes: &mut [Envelope], indices: &[usize]) {
             .attributes
             .get("gen_ai.conversation.id"),
     );
-    let session_id =
-        build_agent_trace_session_id(source.map(str::to_string), conversation_id.clone())
-            .expect("build_agent_trace_session_id never fails");
+    let session_id = session_id_for(
+        source.map(AgentTraceSource::as_str),
+        conversation_id.as_deref(),
+    );
 
     for &i in indices {
         let decoded = &mut envelopes[i].decoded;
@@ -290,62 +455,68 @@ fn group_by_trace_id(envelopes: &[Envelope]) -> Vec<Vec<usize>> {
         .collect()
 }
 
-fn resolve_source(service_name: Option<&str>) -> (Option<&'static str>, &'static str) {
+fn resolve_source(service_name: Option<&str>) -> (Option<AgentTraceSource>, SourceResolution) {
     match service_name {
-        Some("copilot-chat") => (Some("vscode"), "supported"),
-        Some("github-copilot") => (Some("copilot-cli"), "supported"),
-        Some(_) => (None, "unsupported"),
-        None => (None, "missing"),
+        Some("copilot-chat") => (Some(AgentTraceSource::Vscode), SourceResolution::Supported),
+        Some("github-copilot") => (
+            Some(AgentTraceSource::CopilotCli),
+            SourceResolution::Supported,
+        ),
+        Some(_) => (None, SourceResolution::Unsupported),
+        None => (None, SourceResolution::Missing),
     }
 }
 
 fn classify_span(
     name: &str,
-    attributes: &HashMap<String, Value>,
+    attributes: &HashMap<String, AttributeValue>,
     skill_name: Option<&str>,
-) -> &'static str {
+) -> SpanCategory {
     if name.starts_with("invoke_agent") {
-        return "agent";
+        return SpanCategory::Agent;
     }
     if name.starts_with("chat") {
-        return "llm";
+        return SpanCategory::Llm;
     }
     if name.starts_with("execute_hook") {
-        return "hook";
+        return SpanCategory::Hook;
     }
     if name.starts_with("execute_tool") {
         if skill_name.is_some() {
-            return "skill";
+            return SpanCategory::Skill;
         }
         if is_mcp_tool(attributes) {
-            return "mcp";
+            return SpanCategory::Mcp;
         }
         if matches!(
             attributes.get("github.copilot.tool.parameters.command"),
-            Some(Value::String(_))
+            Some(AttributeValue::String(_))
         ) {
-            return "shell";
+            return SpanCategory::Shell;
         }
-        return "tool";
+        return SpanCategory::Tool;
     }
-    "other"
+    SpanCategory::Other
 }
 
-fn is_mcp_tool(attributes: &HashMap<String, Value>) -> bool {
+fn is_mcp_tool(attributes: &HashMap<String, AttributeValue>) -> bool {
     let tool_type = as_string(attributes.get("gen_ai.tool.type"));
     as_non_empty_string(attributes.get("github.copilot.tool.parameters.mcp_tool_name")).is_some()
         || tool_type.is_some_and(|t| t.eq_ignore_ascii_case("mcp"))
 }
 
-fn decode_status(code: Option<i32>) -> &'static str {
+fn decode_status(code: Option<i32>) -> SpanStatus {
     match code {
-        Some(1) => "ok",
-        Some(2) => "error",
-        _ => "unset",
+        Some(1) => SpanStatus::Ok,
+        Some(2) => SpanStatus::Error,
+        _ => SpanStatus::Unset,
     }
 }
 
-fn collect_attributes(attributes: &[KeyValue], allowlist: &[&str]) -> HashMap<String, Value> {
+fn collect_attributes(
+    attributes: &[KeyValue],
+    allowlist: &[&str],
+) -> HashMap<String, AttributeValue> {
     let mut map = HashMap::new();
     for attribute in attributes {
         if attribute.key.is_empty() || !allowlist.contains(&attribute.key.as_str()) {
@@ -359,73 +530,76 @@ fn collect_attributes(attributes: &[KeyValue], allowlist: &[&str]) -> HashMap<St
     map
 }
 
-fn decode_any_value(value: Option<&AnyValue>) -> Value {
+fn decode_any_value(value: Option<&AnyValue>) -> AttributeValue {
     let Some(value) = value.and_then(|v| v.value.as_ref()) else {
-        return Value::Null;
+        return AttributeValue::Null;
     };
 
     match value {
-        any_value::Value::StringValue(s) => Value::String(s.clone()),
-        any_value::Value::BoolValue(b) => Value::Bool(*b),
-        any_value::Value::IntValue(n) => Value::String(n.to_string()),
-        any_value::Value::DoubleValue(d) => crate::js::number(*d),
-        any_value::Value::ArrayValue(array) => Value::Array(
+        any_value::Value::StringValue(s) => AttributeValue::String(s.clone()),
+        any_value::Value::BoolValue(b) => AttributeValue::Bool(*b),
+        any_value::Value::IntValue(n) => AttributeValue::String(n.to_string()),
+        any_value::Value::DoubleValue(d) => AttributeValue::Number(*d),
+        any_value::Value::ArrayValue(array) => AttributeValue::Array(
             array
                 .values
                 .iter()
                 .map(|v| decode_any_value(Some(v)))
                 .collect(),
         ),
-        any_value::Value::KvlistValue(kvlist) => {
-            let mut object = Map::new();
-            for entry in &kvlist.values {
-                if !entry.key.is_empty() {
-                    object.insert(entry.key.clone(), decode_any_value(entry.value.as_ref()));
-                }
-            }
-            Value::Object(object)
-        }
-        // Binary payloads are kept as bytes so the sanitizer fails closed instead of storing
-        // an encoding (matches the `$bytes` marker `index.cjs`/`record` use for a real
-        // `Uint8Array`).
-        any_value::Value::BytesValue(bytes) => {
-            json!({ "$bytes": bytes.iter().map(|b| Value::from(*b)).collect::<Vec<_>>() })
-        }
-        any_value::Value::StringValueStrindex(n) => Value::from(*n),
+        any_value::Value::KvlistValue(kvlist) => AttributeValue::Object(
+            kvlist
+                .values
+                .iter()
+                .filter(|entry| !entry.key.is_empty())
+                .map(|entry| (entry.key.clone(), decode_any_value(entry.value.as_ref())))
+                .collect(),
+        ),
+        // Binary payloads stay bytes so the sanitizer fails closed instead of storing an encoding.
+        any_value::Value::BytesValue(bytes) => AttributeValue::Bytes(bytes.clone()),
+        any_value::Value::StringValueStrindex(n) => AttributeValue::Number(*n as f64),
     }
 }
 
-fn validate_span_range(started_at_ns: u64, ended_at_ns: u64) -> Result<(), String> {
+fn validate_span_range(started_at_ns: u64, ended_at_ns: u64) -> Result<(), DecodeError> {
     if ended_at_ns < started_at_ns {
-        return Err("Span end timestamp is earlier than start timestamp".to_string());
+        return Err(DecodeError::EndBeforeStart);
     }
     Ok(())
 }
 
-fn decode_required_id(bytes: &[u8], size: usize, label: &str) -> Result<String, String> {
+fn decode_required_id(
+    bytes: &[u8],
+    size: usize,
+    label: &'static str,
+) -> Result<String, DecodeError> {
     if bytes.len() != size {
-        return Err(format!(
-            "Invalid {label} id: expected {size} bytes but received {}",
-            bytes.len()
-        ));
+        return Err(DecodeError::IdLength {
+            label,
+            expected: size,
+            received: bytes.len(),
+        });
     }
     if bytes.iter().all(|&b| b == 0) {
-        return Err(format!(
-            "Invalid {label} id: all-zero {label} ids are not allowed"
-        ));
+        return Err(DecodeError::AllZeroId { label });
     }
     Ok(to_hex(bytes))
 }
 
-fn decode_optional_id(bytes: &[u8], size: usize, label: &str) -> Result<Option<String>, String> {
+fn decode_optional_id(
+    bytes: &[u8],
+    size: usize,
+    label: &'static str,
+) -> Result<Option<String>, DecodeError> {
     if bytes.is_empty() {
         return Ok(None);
     }
     if bytes.len() != size {
-        return Err(format!(
-            "Invalid {label} id: expected {size} bytes but received {}",
-            bytes.len()
-        ));
+        return Err(DecodeError::IdLength {
+            label,
+            expected: size,
+            received: bytes.len(),
+        });
     }
     if bytes.iter().all(|&b| b == 0) {
         return Ok(None);
@@ -437,20 +611,21 @@ fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn as_string(value: Option<&Value>) -> Option<String> {
+fn as_string(value: Option<&AttributeValue>) -> Option<String> {
     match value {
-        Some(Value::String(s)) => Some(s.clone()),
+        Some(AttributeValue::String(s)) => Some(s.clone()),
         _ => None,
     }
 }
 
-fn as_non_empty_string(value: Option<&Value>) -> Option<String> {
+fn as_non_empty_string(value: Option<&AttributeValue>) -> Option<String> {
     as_string(value).filter(|s| !s.is_empty())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::otlp::opentelemetry::proto::common::v1::KeyValueList;
 
     #[test]
     fn truncated_body_is_an_error_not_a_panic() {
@@ -458,20 +633,40 @@ mod tests {
         assert!(decode_otlp_trace_request(body).is_err());
     }
 
-    /// `decode_otlp_trace_request` can't be round-trip tested with a `bytesValue` attribute
-    /// via a recorded case (see the NOTE above `scratch-gen-inputs.cjs`'s case 7): the wire
-    /// bridge decodes a `{"$bytes": [...]}` marker object back as a plain object rather than
-    /// reviving it to a `Uint8Array`, so this exercises `decode_any_value`'s `bytesValue`
-    /// handling directly instead, matching the TS `bytesValue` branch.
+    /// A `bytesValue` decodes to `Bytes`, the typed form of the TS `Uint8Array`.
     #[test]
-    fn bytes_value_attribute_decodes_to_a_bytes_marker() {
+    fn bytes_value_attribute_decodes_to_bytes() {
         let value = AnyValue {
             value: Some(any_value::Value::BytesValue(vec![1, 2, 3, 255])),
         };
         assert_eq!(
             decode_any_value(Some(&value)),
-            json!({ "$bytes": [1, 2, 3, 255] })
+            AttributeValue::Bytes(vec![1, 2, 3, 255])
         );
+    }
+
+    /// A client kvlist keyed `$bytes` stays an object, and its JSON form is wrapped so the
+    /// `$bytes` key is never revived as a `Uint8Array`.
+    #[test]
+    fn kvlist_with_bytes_key_stays_an_object() {
+        let entry = KeyValue {
+            key: "$bytes".into(),
+            key_strindex: 0,
+            value: Some(AnyValue {
+                value: Some(any_value::Value::IntValue(1)),
+            }),
+        };
+        let value = AnyValue {
+            value: Some(any_value::Value::KvlistValue(KeyValueList {
+                values: vec![entry],
+            })),
+        };
+        let decoded = decode_any_value(Some(&value));
+        assert_eq!(
+            decoded,
+            AttributeValue::Object(vec![("$bytes".into(), AttributeValue::String("1".into()))])
+        );
+        assert_eq!(decoded.to_value(), json!({ "$object": { "$bytes": "1" } }));
     }
 
     #[test]

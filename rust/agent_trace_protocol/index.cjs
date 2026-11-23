@@ -28,6 +28,8 @@ const revive = v => Array.isArray(v) ? v.map(revive)
       : single(v, '$bigint') ? BigInt(v.$bigint)
       : single(v, '$date') ? new Date(v.$date)
       : single(v, '$bytes') ? Uint8Array.from(v.$bytes)
+      // A client object is wrapped, so its keys are never read as markers.
+      : single(v, '$object') ? Object.fromEntries(Object.entries(v.$object).map(([k, x]) => [k, revive(x)]))
       : single(v, '$buffer') ? Buffer.from(v.$buffer)
       : single(v, '$map') ? new Map(v.$map.map(([k, x]) => [revive(k), revive(x)]))
       : single(v, '$set') ? new Set(v.$set.map(revive))
@@ -172,6 +174,7 @@ const rDyn = () => {
     case 5: return rUnits(false)
     case 6: { const n = rU32(); const a = new Array(n); for (let i = 0; i < n; i++) a[i] = rDyn(); return a }
     case 7: { const n = rU32(); const o = {}; for (let i = 0; i < n; i++) { const k = rUnits(false); o[k] = rDyn() } return o }
+    case 8: { const n = rU32(); const b = wOut.slice(p, p + n); p += n; return b }
   }
 }
 

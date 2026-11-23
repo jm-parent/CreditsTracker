@@ -3,6 +3,8 @@
 
 use napi_derive::napi;
 
+use port::{AttributeValue, DecodedAgentTraceSpan};
+
 pub mod js;
 pub mod otlp;
 pub mod port;
@@ -34,10 +36,24 @@ fn run<T>(f: impl FnOnce() -> Result<T, String>) -> napi::Result<T> {
 #[napi(js_name = "decodeOtlpTraceRequest")]
 pub fn decode_otlp_trace_request(body: String) -> napi::Result<String> {
     run(move || {
-        let body: Vec<u8> = crate::js::from_json(&body)?;
-        let out = port::decode_otlp_trace_request(&body)?;
+        let body = body_bytes(&body)?;
+        let out = port::decode_otlp_trace_request(&body).map_err(|e| e.to_string())?;
+        let out: Vec<Value> = out.iter().map(DecodedAgentTraceSpan::to_value).collect();
         crate::js::to_json(&out)
     })
+}
+
+/// The body from JS: a byte array, or a `Uint8Array`/`Buffer` as a `$bytes`/`$buffer` marker.
+fn body_bytes(text: &str) -> Result<Vec<u8>, String> {
+    let value: Value = crate::js::from_json(text)?;
+    let bytes = match value {
+        Value::Object(mut o) if o.len() == 1 => o
+            .remove("$bytes")
+            .or_else(|| o.remove("$buffer"))
+            .unwrap_or(Value::Null),
+        other => other,
+    };
+    serde_json::from_value(bytes).map_err(|e| format!("TypeError: {e}"))
 }
 
 /// `buildAgentTraceSessionId`.
@@ -185,14 +201,77 @@ pub fn decode_otlp_trace_request_wire() -> napi::Result<f64> {
     wire_io(|r, w| {
         let body: Vec<u8> =
             serde_json::from_value(wire::read_dyn(r)?).map_err(|e| format!("TypeError: {e}"))?;
-        let out = &port::decode_otlp_trace_request(&body)?;
+        let out = port::decode_otlp_trace_request(&body).map_err(|e| e.to_string())?;
         w.tag(1);
         w.count(out.len());
-        for x0 in out.iter() {
-            wire::write_value(w, x0, S_DECODE_OTLP_TRACE_REQUEST_OUT.inner())?;
+        for span in out.iter() {
+            write_span(w, span)?;
         }
         Ok(())
     })
+}
+
+/// Writes one span in the field order of `S_DECODE_OTLP_TRACE_REQUEST_OUT`. The two attribute
+/// values are written from their typed form, so client data can never become a `Uint8Array`.
+fn write_span(w: &mut wire::Writer, span: &DecodedAgentTraceSpan) -> Result<(), String> {
+    let json = span.to_value();
+    let wire::Schema::Obj(fields) = S_DECODE_OTLP_TRACE_REQUEST_OUT.inner() else {
+        return Err("rust-anything: the span schema is not an object".into());
+    };
+    w.tag(u8::try_from(fields.len()).map_err(|e| e.to_string())?);
+    for (index, (key, schema)) in fields.iter().enumerate() {
+        w.tag(u8::try_from(index).map_err(|e| e.to_string())?);
+        match *key {
+            "argumentsValue" => write_attribute(w, &span.arguments_value),
+            "result" => write_attribute(w, &span.result),
+            _ => wire::write_value(w, json.get(*key).unwrap_or(&Value::Null), schema)?,
+        }
+    }
+    Ok(())
+}
+
+/// A decoded attribute as a JS value: the tags of `wire::write_dyn`, with a `Uint8Array` as tag 8.
+fn write_attribute(w: &mut wire::Writer, value: &AttributeValue) {
+    match value {
+        AttributeValue::Null => w.tag(1),
+        AttributeValue::Bool(b) => w.tag(if *b { 3 } else { 2 }),
+        AttributeValue::Number(n) => {
+            w.tag(4);
+            w.f64(*n);
+        }
+        AttributeValue::String(s) => {
+            w.tag(5);
+            let units: Vec<u16> = s.encode_utf16().collect();
+            w.count(units.len());
+            for u in units {
+                w.0.extend_from_slice(&u.to_le_bytes());
+            }
+        }
+        AttributeValue::Bytes(bytes) => {
+            w.tag(8);
+            w.count(bytes.len());
+            w.0.extend_from_slice(bytes);
+        }
+        AttributeValue::Array(items) => {
+            w.tag(6);
+            w.count(items.len());
+            for item in items {
+                write_attribute(w, item);
+            }
+        }
+        AttributeValue::Object(entries) => {
+            w.tag(7);
+            w.count(entries.len());
+            for (key, item) in entries {
+                let units: Vec<u16> = key.encode_utf16().collect();
+                w.count(units.len());
+                for u in units {
+                    w.0.extend_from_slice(&u.to_le_bytes());
+                }
+                write_attribute(w, item);
+            }
+        }
+    }
 }
 
 /// `buildAgentTraceSessionId` over the binary wire.
