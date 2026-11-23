@@ -1,3 +1,6 @@
+export type AgentTraceSource = 'vscode' | 'copilot-cli';
+export type AgentTraceCategory = 'agent' | 'llm' | 'tool' | 'skill' | 'shell' | 'mcp' | 'hook' | 'other';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 /** Which process produced a log entry. */

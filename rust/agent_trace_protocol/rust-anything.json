@@ -1,0 +1,54 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "C:\\Users\\jeanmarie.parent\\.copilot\\repos\\copilot-worktrees\\CreditsTrackerExtension\\jeanmarie-parent-exakisc-miniature-broccoli\\reference",
+  "unit": "src/agent-trace-protocol.ts",
+  "language": "ts",
+  "kind": "napi",
+  "crate_name": "agent_trace_protocol",
+  "exports": [
+    {
+      "name": "decodeOtlpTraceRequest",
+      "file": "src/agent-trace-protocol.ts",
+      "line": 74,
+      "params": [
+        {
+          "name": "body",
+          "ts_type": "Uint8Array",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "DecodedAgentTraceSpan[]",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "buildAgentTraceSessionId",
+      "file": "src/agent-trace-protocol.ts",
+      "line": 205,
+      "params": [
+        {
+          "name": "source",
+          "ts_type": "('vscode' | 'copilot-cli') | null",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "conversationId",
+          "ts_type": "string | null",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "string | null",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}
