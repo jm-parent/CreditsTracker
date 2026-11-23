@@ -877,4 +877,19 @@ mod tests {
         assert_eq!(out.result_text.as_deref(), Some("SECRET=[REDACTED]"));
         assert_eq!(out.content_state, AgentTraceContentState::Redacted);
     }
+
+    #[test]
+    fn lone_surrogates_keep_the_prompt_and_response_filter() {
+        let out = sanitized(text(r#"{"prompt":"X","s":"\ud83d"}"#), AttributeValue::Null);
+        assert_eq!(out.arguments_json.as_deref(), Some("{\"s\":\"\u{FFFD}\"}"));
+        assert_eq!(out.content_state, AgentTraceContentState::Redacted);
+
+        let json = r#"{"prompt":"P","response":"R","a":"\ud83d\ude00","b":"\ud83d","c":"\\ud83d"}"#;
+        let out = sanitized(text(json), AttributeValue::Null);
+        let args = out.arguments_json.unwrap();
+        assert_eq!(
+            args,
+            "{\"a\":\"😀\",\"b\":\"\u{FFFD}\",\"c\":\"\\\\ud83d\"}"
+        );
+    }
 }

@@ -233,9 +233,40 @@ fn write_json_string(text: &str, out: &mut String) {
 
 /// `JSON.parse` of text that came from a string value. Its objects have no markers.
 pub fn parse_json(text: &str) -> Option<Js> {
-    crate::js::from_json::<Value>(text)
+    crate::js::from_json::<Value>(&lone_surrogates_to_replacement(text))
         .ok()
         .map(|value| from_plain_json(&value))
+}
+
+/// serde_json rejects unpaired `\uD800`-`\uDFFF` escapes, which `JSON.stringify` writes for a
+/// lone surrogate. Each becomes `\uFFFD`: a Rust string cannot hold a lone surrogate, the one
+/// loss against `JSON.parse`. Valid pairs and escaped backslashes (`\\ud83d`) are kept as written.
+fn lone_surrogates_to_replacement(text: &str) -> String {
+    let (bytes, mut out, mut copied, mut i) = (text.as_bytes(), String::new(), 0, 0);
+    while i < bytes.len() {
+        match (bytes[i], unit_at(bytes, i)) {
+            (b'\\', Some(0xD800..=0xDBFF))
+                if matches!(unit_at(bytes, i + 6), Some(0xDC00..=0xDFFF)) =>
+            {
+                i += 12
+            }
+            (b'\\', Some(0xD800..=0xDFFF)) => {
+                out += &format!("{}\\uFFFD", &text[copied..i]);
+                (copied, i) = (i + 6, i + 6);
+            }
+            (b'\\', unit) => i += if unit.is_some() { 6 } else { 2 },
+            _ => i += 1,
+        }
+    }
+    out + &text[copied..]
+}
+
+/// The code unit of the `\uXXXX` escape starting at `at`, if there is one.
+fn unit_at(bytes: &[u8], at: usize) -> Option<u32> {
+    let digits = bytes.get(at..at + 6)?.strip_prefix(br"\u")?;
+    digits
+        .iter()
+        .try_fold(0, |u, &b| Some(u * 16 + (b as char).to_digit(16)?))
 }
 
 fn from_plain_json(value: &Value) -> Js {
