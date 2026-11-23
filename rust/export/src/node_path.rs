@@ -1,11 +1,14 @@
 //! A port of Node's `path` module (`path.win32`, the default on Windows) covering exactly the
 //! four functions `src/export-files.ts` calls: `extname`, `dirname`, `basename` (with and
 //! without a suffix) and `join`. Ported from `lib/path.js` in the Node.js source so drive
-//! letters, trailing/leading dots and `.`/`..` segments match the recording byte-for-byte.
+//! letters, UNC roots (`\\server\share\...`), trailing/leading dots and `.`/`..` segments
+//! match the recording byte-for-byte.
 //!
-//! UNC roots (`\\server\share\...`) are not specially preserved (see the `ponytail:` notes on
-//! `dirname` and `normalize`): no recorded case, and no realistic native-dialog save path
-//! (always drive-letter absolute), exercises one.
+//! `dirname` and `normalize` restore Node's UNC share-root scan (`scan_unc_root`): a
+//! destination like `\\server\share\Reports\usage.html` keeps its `\\server\share` root
+//! intact end to end, instead of collapsing to a single leading backslash. `normalize` does
+//! skip two exotic Node branches that are unreachable from a Windows save dialog's output —
+//! see the `ponytail:` note on it.
 //!
 //! Operates on `Vec<char>` (Unicode scalar values) rather than UTF-16 code units: every
 //! character these algorithms treat specially (`/`, `\`, `.`, `:`, ASCII letters) is a single
@@ -16,8 +19,32 @@ fn is_sep(c: char) -> bool {
     c == '/' || c == '\\'
 }
 
-fn is_device_root(c: char) -> bool {
-    c.is_ascii_alphabetic()
+/// Advances `j` over a run of separators (`want_sep`) or non-separators (`!want_sep`),
+/// stopping at `chars.len()` if it runs out first.
+fn skip_run(chars: &[char], mut j: usize, want_sep: bool) -> usize {
+    while j < chars.len() && is_sep(chars[j]) == want_sep {
+        j += 1;
+    }
+    j
+}
+
+/// Shared UNC-root scanner for `dirname` and `normalize`. `chars[0]` must already be known to
+/// be a separator; returns `None` if `chars[1]` isn't a second one or there's no complete
+/// server/share pair (so the caller's single-separator-root handling applies instead). Matches
+/// Node's "server name, then share name" double-scan (`lib/path.js`'s nested loops in both
+/// functions). Returns `(server_end, share_start, share_end, root_only)` on a match —
+/// `chars[2..server_end]` is the server name, `chars[share_start..share_end]` the share name,
+/// and `root_only` is true when the path is exactly `\\server\share` with nothing after it.
+fn scan_unc_root(chars: &[char]) -> Option<(usize, usize, usize, bool)> {
+    let len = chars.len();
+    if len < 2 || !is_sep(chars[1]) {
+        return None;
+    }
+    let server_end = skip_run(chars, 2, false);
+    let share_start = skip_run(chars, server_end, true);
+    let share_end = skip_run(chars, share_start, false);
+    let matched = server_end < len && share_start < len;
+    matched.then_some((server_end, share_start, share_end, share_end == len))
 }
 
 /// Port of `win32.extname`.
@@ -31,7 +58,7 @@ pub fn extname(path: &str) -> String {
     let mut matched_slash = true;
     let mut pre_dot_state = 0i32;
 
-    if len >= 2 && chars[1] == ':' && is_device_root(chars[0]) {
+    if len >= 2 && chars[1] == ':' && chars[0].is_ascii_alphabetic() {
         start = 2;
         start_part = 2;
     }
@@ -93,40 +120,40 @@ pub fn dirname(path: &str) -> String {
     let mut root_end: isize = -1;
     let mut offset = 0usize;
 
-    // ponytail: UNC roots (`\\server\share\...`) aren't specially preserved here, unlike
-    // Node's `win32.dirname` — a save path typed as a literal UNC path could see its share
-    // root over-stripped. No recorded case (and no realistic native-dialog path, which is
-    // always drive-letter absolute) exercises this; upgrade path is Node's nested
-    // double-separator scan in `lib/path.js`'s `dirname` if UNC export targets are needed.
     if is_sep(code) {
+        // Possible UNC root.
         root_end = 1;
         offset = 1;
-    } else if is_device_root(code) && chars[1] == ':' {
+
+        if let Some((_, _, share_end, root_only)) = scan_unc_root(&chars) {
+            if root_only {
+                return path.to_string(); // Matched a UNC root only.
+            }
+            // We matched a UNC root with leftovers: offset by 1 to include the separator
+            // after the UNC root, treating it as a "normal root" on top of a (UNC) root.
+            root_end = (share_end + 1) as isize;
+            offset = share_end + 1;
+        }
+    } else if code.is_ascii_alphabetic() && chars[1] == ':' {
+        // Possible device root.
         root_end = if len > 2 && is_sep(chars[2]) { 3 } else { 2 };
         offset = root_end as usize;
     }
 
-    let mut end: isize = -1;
-    let mut matched_slash = true;
-    let mut i: isize = len as isize - 1;
-    while i >= offset as isize {
-        let idx = i as usize;
-        if is_sep(chars[idx]) {
-            if !matched_slash {
-                end = idx as isize;
-                break;
-            }
-        } else {
-            matched_slash = false;
-        }
-        i -= 1;
-    }
+    let trimmed_end = chars[offset..len]
+        .iter()
+        .rposition(|&c| !is_sep(c))
+        .map_or(offset, |p| offset + p + 1);
+    let end: isize = chars[offset..trimmed_end]
+        .iter()
+        .rposition(|&c| is_sep(c))
+        .map_or(-1, |p| (offset + p) as isize);
 
     if end == -1 {
         if root_end == -1 {
             return ".".to_string();
         }
-        end = root_end;
+        return chars[0..root_end as usize].iter().collect();
     }
     chars[0..end as usize].iter().collect()
 }
@@ -140,7 +167,7 @@ pub fn basename(path: &str, ext: Option<&str>) -> String {
     let mut end: isize = -1;
     let mut matched_slash = true;
 
-    if len >= 2 && is_device_root(chars[0]) && chars[1] == ':' {
+    if len >= 2 && chars[0].is_ascii_alphabetic() && chars[1] == ':' {
         start = 2;
     }
 
@@ -211,16 +238,16 @@ pub fn basename(path: &str, ext: Option<&str>) -> String {
     chars[start..end as usize].iter().collect()
 }
 
-/// A simplified `.`/`..` segment resolution for `normalize`'s tail.
-///
-/// ponytail: not Node's `normalizeString` bit-for-bit (e.g. a trailing bare `..` is dropped
-/// here rather than always kept when `allow_above_root`). `join` — this function's only
-/// caller — is reached solely from `get_export_file_path`'s recognized-extension branch
-/// (`.html`/`.htm`/`.csv`), which no recorded case or written test exercises (a native save
-/// dialog never returns a path with `.`/`..` segments), so a short, good-enough collapse is
-/// used instead of the full Node algorithm. Upgrade path: restore the byte-for-byte algorithm
-/// from `lib/path.js`'s `normalizeString` if dot-segment-bearing export paths need exact
-/// parity.
+/// `.`/`..` segment resolution for `normalize`'s tail (not byte-for-byte with Node's
+/// `normalizeString`: e.g. a trailing bare `..` is dropped here rather than always kept when
+/// `allow_above_root`). `normalize`'s only caller is `join`, reached solely from
+/// `get_export_file_path`'s recognized-extension branch (`.html`/`.htm`/`.csv`) with a
+/// destination that always comes from a native save dialog and so is always absolute
+/// (`allow_above_root` is always `false` here) — for an absolute path this collapse already
+/// matches Node exactly (confirmed against `node -e` for every recorded and listed case,
+/// including `C:\a\..\b\x.html`); the two algorithms can only disagree on a relative path with
+/// a leading `..`, which never reaches this function. Upgrade path: restore the byte-for-byte
+/// algorithm from `lib/path.js`'s `normalizeString` if that ever changes.
 fn normalize_string(path: &[char], allow_above_root: bool, separator: char) -> Vec<char> {
     let text: String = path.iter().collect();
     let mut segments: Vec<&str> = Vec::new();
@@ -241,6 +268,14 @@ fn normalize_string(path: &[char], allow_above_root: bool, separator: char) -> V
 }
 
 /// Port of `win32.normalize`.
+///
+/// ponytail: Node also special-cases a `\\.\`/`\\?\` device-path UNC root and a bare
+/// drive-relative/colon path (`C:foo`, including the CVE-2024-36139 re-escape guard) or a
+/// Windows reserved device name (`CON`, `COM1`, ...) elsewhere in `path`. None of those are
+/// reachable here: `selected_path` always comes from a native Windows save dialog, which only
+/// ever returns a drive-letter-absolute or `\\server\share\...` path — never a device path, a
+/// colon past position 1, or a reserved name (the dialog itself rejects one). Upgrade path:
+/// the matching `else`/device-path branches in `lib/path.js`'s `normalize`.
 fn normalize(path: &str) -> String {
     let chars: Vec<char> = path.chars().collect();
     let len = chars.len();
@@ -249,7 +284,7 @@ fn normalize(path: &str) -> String {
     }
     let code = chars[0];
     if len == 1 {
-        return if is_sep(code) {
+        return if code == '/' {
             "\\".to_string()
         } else {
             path.to_string()
@@ -260,12 +295,25 @@ fn normalize(path: &str) -> String {
     let mut device: Option<String> = None;
     let mut is_absolute = false;
 
-    // ponytail: see the matching note on `dirname` — UNC share roots aren't specially
-    // preserved here either, only a single leading separator or a drive letter.
     if is_sep(code) {
         is_absolute = true;
-        root_end = 1;
-    } else if is_device_root(code) && chars[1] == ':' {
+
+        if let Some((server_end, share_start, share_end, root_only)) = scan_unc_root(&chars) {
+            let first_part: String = chars[2..server_end].iter().collect();
+            if root_only {
+                // We matched a UNC root only: return its normalized form, nothing
+                // left to process.
+                let share: String = chars[share_start..].iter().collect();
+                return format!("\\\\{first_part}\\{share}\\");
+            }
+            // We matched a UNC root with leftovers.
+            let share: String = chars[share_start..share_end].iter().collect();
+            device = Some(format!("\\\\{first_part}\\{share}"));
+            root_end = share_end;
+        } else if !is_sep(chars[1]) {
+            root_end = 1;
+        }
+    } else if code.is_ascii_alphabetic() && chars[1] == ':' {
         device = Some(chars[0..2].iter().collect());
         root_end = 2;
         if len > 2 && is_sep(chars[2]) {
@@ -288,33 +336,11 @@ fn normalize(path: &str) -> String {
     }
 
     let tail: String = tail.into_iter().collect();
-    match device {
-        None => {
-            if is_absolute {
-                if !tail.is_empty() {
-                    format!("\\{tail}")
-                } else {
-                    "\\".to_string()
-                }
-            } else if !tail.is_empty() {
-                tail
-            } else {
-                String::new()
-            }
-        }
-        Some(device) => {
-            if is_absolute {
-                if !tail.is_empty() {
-                    format!("{device}\\{tail}")
-                } else {
-                    format!("{device}\\")
-                }
-            } else if !tail.is_empty() {
-                format!("{device}{tail}")
-            } else {
-                device
-            }
-        }
+    let device = device.unwrap_or_default();
+    if is_absolute {
+        format!("{device}\\{tail}")
+    } else {
+        format!("{device}{tail}")
     }
 }
 

@@ -211,24 +211,24 @@
 {"fn":"getExportFilePath","args":["कि ٣٤"],"ok":"कि ٣٤.html"}
 {"fn":"writeExportFile","args":["  padded  ","key_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["{name} has {count} items","emoji 👍🏽 mix"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["a:b:c",".leading"],"error":"ENOENT: no such file or directory, open 'a:\\b:c.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["a:b:c",".leading"],"error":"ENOENT: no such file or directory, open 'a:\\b:c.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["a.b.c","😀"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["key_name-1","tab\tseparated﻿bom"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path","a😀b😀c"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["ns:key.path","a😀b😀c"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
 {"fn":"writeExportFile","args":["a😀b😀c","a..bemoji 👍🏽 mix"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["line1\nline2","a"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\line1\nline2.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["line1\nline2","a"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\line1\nline2.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["name","key_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["nïcö","ünïcödé"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ame-","key_name-1"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["a:","a:b:c"],"error":"ENOENT: no such file or directory, open 'a:\\.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["src/a/b.ts","emoji 👍🏽 mixkey_name-1"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["","straße"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\.14120-1700000000000-a087eaf3.staged' -> ''"}
+{"fn":"writeExportFile","args":["a:","a:b:c"],"error":"ENOENT: no such file or directory, open 'a:\\.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.ts","emoji 👍🏽 mixkey_name-1"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["","straße"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\.28720-1700000000000-a087eaf3.staged' -> ''"}
 {"fn":"writeExportFile","args":["日本語のテキスト","HELLO"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["hello",":"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["hello world","hello"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["abcHello World","a:b:c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["L","İstanbul😀"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":[":straße","abc"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\:straße.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":[":straße","abc"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\:straße.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["😀","{name} has {count} items"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣHELLO","ΣH"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["straße","raße"],"ok":{"$undefined":true}}
@@ -245,18 +245,18 @@
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","ΣΥΦΟ"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["emoji 👍🏽 mixa.b.c","hello worldtrailing."],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["LO WORLD","Hello World"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["line1\nline2","hello"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\line1\nline2.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["a:b:c","{name} has {count} itemssrc/a/b.ts"],"error":"ENOENT: no such file or directory, open 'a:\\b:c.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["line1\nline2","hello"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\line1\nline2.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["a:b:c","{name} has {count} itemssrc/a/b.ts"],"error":"ENOENT: no such file or directory, open 'a:\\b:c.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["trailing.","i"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["語","日本語のテキスト"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["İstanbul","src/a/b.ts"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a","key_name-1"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["./x/**/*.json","key_name-1"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\x\\**\\*.json.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["./x/**/*.json","key_name-1"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\x\\**\\*.json.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["Σ","ΣΊΣΥΦΟΣ"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a",""],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","a:b:c"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["src/a/b.ts","ns:key.pathhello world"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["tab\tseparated","src/a/b.ts"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\tab\tseparated.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.ts","ns:key.pathhello world"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["tab\tseparated","src/a/b.ts"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\tab\tseparated.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["t","straße"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["hello worldabc","İstanbul"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ab","AB"],"ok":{"$undefined":true}}
@@ -264,9 +264,9 @@
 {"fn":"writeExportFile","args":["Hello World","./x/**/*.json日本語のテキスト"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["é","./x/**/*.json"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["HELLO","./x/**/*.json"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["src/a/b.tsé","abline1\nline2"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.tsé.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.tsé","abline1\nline2"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.tsé.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["hello world","hello world"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path","Hello World"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["ns:key.path","Hello World"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","tab\tseparateda..b"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["{name} has {count} items","Hello World"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["straße","src/a/b.ts"],"ok":{"$undefined":true}}
@@ -275,36 +275,36 @@
 {"fn":"writeExportFile","args":["{name} has {count} items","a.b.cHello World"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["abc","key_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a😀b😀c","😀"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["a./x/**/*.json","  padded  "],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\a.\\x\\**\\*.json.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["a./x/**/*.json","  padded  "],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\a.\\x\\**\\*.json.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["straße","straße  padded  "],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["tab\tseparated","a"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\tab\tseparated.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["tab\tseparated","a"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\tab\tseparated.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["a😀b😀c","İstanbul"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["Hello World","hello world"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["﻿","😀﻿bom"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a","ΣΊΣΥΦΟΣ"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["HELLO","a😀b😀cabc"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a.b.ca.b.c","src/a/b.ts"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":[":","a./x/**/*.json"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\:.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":[":","a./x/**/*.json"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\:.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["trailing.key_name-1","a:b:c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ab","a:b:c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a.b.c","ΣΊΣΥΦΟΣ"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["","😀"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\.14120-1700000000000-a087eaf3.staged' -> ''"}
+{"fn":"writeExportFile","args":["","😀"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\.28720-1700000000000-a087eaf3.staged' -> ''"}
 {"fn":"writeExportFile","args":["straße","abctrailing."],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["src/a/b.ts",""],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.ts",""],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["stanb","İstanbul"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path","src/a/b.tshello"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["ns:key.path","src/a/b.tshello"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
 {"fn":"writeExportFile","args":["hello","hellotab\tseparated"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["tab\tseparated","a.b.c"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\tab\tseparated.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["./x/**/*.json","abc"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\x\\**\\*.json.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["a:b:c",""],"error":"ENOENT: no such file or directory, open 'a:\\b:c.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["ns:key.path","T"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["tab\tseparated","a.b.c"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\tab\tseparated.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["./x/**/*.json","abc"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\x\\**\\*.json.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["a:b:c",""],"error":"ENOENT: no such file or directory, open 'a:\\b:c.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["ns:key.path","T"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","Σ"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["abcabc","  padded  "],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["c","a.b.c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["😀","ns:key.path"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["d","  padded  "],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","  padded  "],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["src/a/b.ts","straße"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.ts","straße"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["a..b日本語のテキスト","tab\tseparated"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["Hello World.leading","HELLOa.b.c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["{name} has {count} items","nt}"],"ok":{"$undefined":true}}
@@ -312,25 +312,25 @@
 {"fn":"writeExportFile","args":["{name} has {count} items﻿bom","trailing."],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["trailing.","a.b.c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a😀b😀c","emoji 👍🏽 mix"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["line1\nline2emoji 👍🏽 mix","  padded  "],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\line1\nline2emoji 👍🏽 mix.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["line1\nline2emoji 👍🏽 mix","  padded  "],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\line1\nline2emoji 👍🏽 mix.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["😀abc","a:b:c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["İstanbul","ab"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","emoji 👍🏽 mix"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["line1\nline2","{name} has {count} items"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\line1\nline2.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["line1\nline2","{name} has {count} items"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\line1\nline2.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","ünïcödé"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["src/a/b.ts","c/a/b"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":[":","line1\nline2"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\:.14120-1700000000000-a087eaf3.staged'"}
-{"fn":"writeExportFile","args":["./x/**/*.json","./x/**/*.jso"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\x\\**\\*.json.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.ts","c/a/b"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":[":","line1\nline2"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\:.28720-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["./x/**/*.json","./x/**/*.jso"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\x\\**\\*.json.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["éabc","HELLO"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["tab\tseparated","{name} has {count} items"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\tab\tseparated.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["tab\tseparated","{name} has {count} items"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\tab\tseparated.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["ms","{name} has {count} items"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path","﻿bom"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
-{"fn":"writeExportFile","args":["tab\tseparated","src/a/b.ts日本語のテキスト"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\tab\tseparated.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["ns:key.path","﻿bom"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["tab\tseparated","src/a/b.ts日本語のテキスト"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\tab\tseparated.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["日本語のテキスト","a.b.c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["Hello World","trailing."],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path",".leading"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
-{"fn":"writeExportFile","args":["ns:key.pathab","a..b"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.pathab.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.pathab'"}
-{"fn":"writeExportFile","args":["src/a/b.ts","::"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["ns:key.path",".leading"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["ns:key.pathab","a..b"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.pathab.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.pathab'"}
+{"fn":"writeExportFile","args":["src/a/b.ts","::"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["hello","a..b"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ΣΊΣΥΦΟΣ","abchello world"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["﻿bom","./x/**/*.jsonabc"],"ok":{"$undefined":true}}
@@ -339,20 +339,20 @@
 {"fn":"writeExportFile","args":["a.b.c",":"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ΟΣ","ΣΊΣΥΦΟΣ"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["eading",".leading"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["src/a/b.ts","a😀b😀c"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.ts","a😀b😀c"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["hello world","./x/**/*.json"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["﻿bom","日本語のテキスト"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["HELLOtrailing.","é"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["İstanbul","a.b.c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a","abc"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path","  padded  "],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["ns:key.path","  padded  "],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
 {"fn":"writeExportFile","args":["nïcö","ünïcödéé"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["emoji 👍🏽 mix","﻿bom"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["tab\tseparated","line1\nline2hello"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\tab\tseparated.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["tab\tseparated","line1\nline2hello"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\tab\tseparated.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["key_name-1","İstanbulsrc/a/b.ts"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["a:b:cHello World","😀"],"error":"ENOENT: no such file or directory, open 'a:\\b:cHello World.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["a:b:cHello World","😀"],"error":"ENOENT: no such file or directory, open 'a:\\b:cHello World.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["T} I","{name} has {count} items"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["a:b:cabc","B:C"],"error":"ENOENT: no such file or directory, open 'a:\\b:cabc.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["a:b:cabc","B:C"],"error":"ENOENT: no such file or directory, open 'a:\\b:cabc.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["l","İstanbul"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["ünïcödé","a.b.c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["İstanbul","ns:key.path"],"ok":{"$undefined":true}}
@@ -373,25 +373,25 @@
 {"fn":"writeExportFile","args":["emoji 👍🏽 mix","ns:key.path"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["abc","./x/**/*.json"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":[".leading","adi"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["line1\nline2key_name-1","LINE1\nLINE2KEY"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\line1\nline2key_name-1.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["line1\nline2key_name-1","LINE1\nLINE2KEY"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\line1\nline2key_name-1.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["İstanbulHELLO","日本語のテキスト"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["emoji 👍🏽 mix","a😀b😀cabc"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path","ns:key.path"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path.14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path'"}
-{"fn":"writeExportFile","args":["","a😀b😀c"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\.14120-1700000000000-a087eaf3.staged' -> ''"}
+{"fn":"writeExportFile","args":["ns:key.path","ns:key.path"],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path.28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path'"}
+{"fn":"writeExportFile","args":["","a😀b😀c"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\.28720-1700000000000-a087eaf3.staged' -> ''"}
 {"fn":"writeExportFile","args":["hello","Hello World"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["HELLO","HELLO"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["{name} has {count} items","akey_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["straße",":"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["﻿boma😀b😀c","😀c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":[".leadingHELLO","a..b"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["src/a/b.ts","a..b"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\src\\a\\b.ts.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["src/a/b.ts","a..b"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\src\\a\\b.ts.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["  padded  ","a.b.c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["HELLO","ELL"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":[".leadinghello world","h"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["tab\tseparated","é"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\tab\tseparated.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["tab\tseparated","é"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\tab\tseparated.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["ünïcödéa😀b😀c","abc"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["el","hello world"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["line1\nline2","﻿bom"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\line1\nline2.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["line1\nline2","﻿bom"],"error":"ENOENT: no such file or directory, open 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\line1\nline2.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["key_name-1","HELLO"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a","Hello World"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["﻿bom",""],"ok":{"$undefined":true}}
@@ -405,14 +405,14 @@
 {"fn":"writeExportFile","args":["E","HELLO"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["emoji 👍🏽 mix",".leading日本語のテキスト"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a😀b😀c","ab"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["ns:key.path  padded  ","trailing."],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path  padded  .14120-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\ns:key.path  padded  '"}
-{"fn":"writeExportFile","args":["a:b:c","C"],"error":"ENOENT: no such file or directory, open 'a:\\b:c.14120-1700000000000-a087eaf3.staged'"}
+{"fn":"writeExportFile","args":["ns:key.path  padded  ","trailing."],"error":"EINVAL: invalid argument, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path  padded  .28720-1700000000000-a087eaf3.staged' -> 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\ns:key.path  padded  '"}
+{"fn":"writeExportFile","args":["a:b:c","C"],"error":"ENOENT: no such file or directory, open 'a:\\b:c.28720-1700000000000-a087eaf3.staged'"}
 {"fn":"writeExportFile","args":["b😀c","a😀b😀c"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["a.b.c","trailing."],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["héllo wörld","key_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["👍🏽 thumbs","key_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["日本語","key_name-1"],"ok":{"$undefined":true}}
-{"fn":"writeExportFile","args":["","key_name-1"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-15856-0\\.14120-1700000000000-a087eaf3.staged' -> ''"}
+{"fn":"writeExportFile","args":["","key_name-1"],"error":"ENOENT: no such file or directory, rename 'C:\\Users\\JEANMA~1.PAR\\AppData\\Local\\Temp\\rust-anything-app-unit-19112-0\\.28720-1700000000000-a087eaf3.staged' -> ''"}
 {"fn":"writeExportFile","args":["é","key_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["İstanbul","key_name-1"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["straße","key_name-1"],"ok":{"$undefined":true}}
@@ -443,3 +443,9 @@
 {"fn":"writeExportFile","args":["  padded  ","aⅠb Ⅻ"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["  padded  ","a𐐀b 𝐀bc"],"ok":{"$undefined":true}}
 {"fn":"writeExportFile","args":["  padded  ","कि ٣٤"],"ok":{"$undefined":true}}
+{"fn":"getExportFilePath","args":["\\\\server\\share\\Reports\\usage.html"],"ok":"\\\\server\\share\\Reports\\usage.html"}
+{"fn":"getExportFilePath","args":["\\\\server\\share"],"ok":"\\\\server\\share.html"}
+{"fn":"getExportFilePath","args":["C:\\Users\\me\\usage.html"],"ok":"C:\\Users\\me\\usage.html"}
+{"fn":"getExportFilePath","args":["C:\\a\\..\\b\\x.html"],"ok":"C:\\b\\x.html"}
+{"fn":"getExportFilePath","args":["C:\\Users\\me\\Rapport café 🚀.html"],"ok":"C:\\Users\\me\\Rapport café 🚀.html"}
+{"fn":"getExportFilePath","args":["C:\\reports\\out.CSV"],"ok":"C:\\reports\\out.html"}
