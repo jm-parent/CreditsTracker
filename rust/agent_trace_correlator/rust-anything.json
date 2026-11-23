@@ -1,0 +1,48 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "C:\\Users\\jeanmarie.parent\\.copilot\\repos\\copilot-worktrees\\CreditsTrackerExtension\\jeanmarie-parent-exakisc-miniature-broccoli",
+  "unit": "reference/src/agent-trace-correlator.ts",
+  "language": "ts",
+  "kind": "napi",
+  "crate_name": "agent_trace_correlator",
+  "exports": [
+    {
+      "name": "toAgentTraceCorrelationFacts",
+      "file": "reference/src/agent-trace-correlator.ts",
+      "line": 85,
+      "params": [
+        {
+          "name": "decoded",
+          "ts_type": "DecodedAgentTraceSpan",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "AgentTraceCorrelationFacts",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "emptyCounts",
+      "file": "reference/src/agent-trace-correlator.ts",
+      "line": 348,
+      "params": [],
+      "returns": "AgentTraceRejectionCounts",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "createAgentTraceCorrelator",
+      "file": "reference/src/agent-trace-correlator.ts",
+      "line": 107,
+      "reason": "uses `AgentTraceCorrelator`, which has function members"
+    }
+  ]
+}

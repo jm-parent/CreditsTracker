@@ -3,6 +3,21 @@
 version = 4
 
 [[package]]
+name = "agent_trace_correlator"
+version = "0.1.0"
+dependencies = [
+ "agent_trace_protocol",
+ "agent_trace_sanitizer",
+ "indexmap",
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "serde",
+ "serde_json",
+ "shared",
+]
+
+[[package]]
 name = "agent_trace_protocol"
 version = "0.1.0"
 dependencies = [
