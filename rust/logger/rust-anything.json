@@ -1,0 +1,303 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "C:\\Users\\jeanmarie.parent\\.copilot\\repos\\copilot-worktrees\\CreditsTrackerExtension\\jeanmarie-parent-exakisc-miniature-broccoli\\reference",
+  "unit": "src/logger.ts",
+  "language": "ts",
+  "kind": "napi",
+  "crate_name": "logger",
+  "exports": [
+    {
+      "name": "configureLogFile",
+      "file": "src/logger.ts",
+      "line": 29,
+      "params": [
+        {
+          "name": "filePath",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "getLogFilePath",
+      "file": "src/logger.ts",
+      "line": 40,
+      "params": [],
+      "returns": "string | null",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "log",
+      "file": "src/logger.ts",
+      "line": 106,
+      "params": [
+        {
+          "name": "level",
+          "ts_type": "('debug' | 'info' | 'warn' | 'error')",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "scope",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "message",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "detail",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        },
+        {
+          "name": "source",
+          "ts_type": "('main' | 'renderer')",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "LogEntry",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "logDebug",
+      "file": "src/logger.ts",
+      "line": 135,
+      "params": [
+        {
+          "name": "scope",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "message",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "detail",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "LogEntry",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "logInfo",
+      "file": "src/logger.ts",
+      "line": 137,
+      "params": [
+        {
+          "name": "scope",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "message",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "detail",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "LogEntry",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "logWarn",
+      "file": "src/logger.ts",
+      "line": 139,
+      "params": [
+        {
+          "name": "scope",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "message",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "detail",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "LogEntry",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "logError",
+      "file": "src/logger.ts",
+      "line": 141,
+      "params": [
+        {
+          "name": "scope",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "message",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "detail",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "LogEntry",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "recordRendererLog",
+      "file": "src/logger.ts",
+      "line": 145,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "{\r\n  level?: ('debug' | 'info' | 'warn' | 'error');\r\n  scope?: string;\r\n  message?: string;\r\n  detail?: unknown;\r\n}",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "LogEntry",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "logOnce",
+      "file": "src/logger.ts",
+      "line": 166,
+      "params": [
+        {
+          "name": "key",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "level",
+          "ts_type": "('debug' | 'info' | 'warn' | 'error')",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "scope",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "message",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "detail",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "LogEntry | null",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "getLogEntries",
+      "file": "src/logger.ts",
+      "line": 184,
+      "params": [],
+      "returns": "LogEntry[]",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "clearLogs",
+      "file": "src/logger.ts",
+      "line": 189,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "resetLoggerForTests",
+      "file": "src/logger.ts",
+      "line": 201,
+      "params": [],
+      "returns": "void",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "formatDetail",
+      "file": "src/logger.ts",
+      "line": 45,
+      "reason": "checks `instanceof`: class identity does not survive the bridge"
+    }
+  ]
+}
