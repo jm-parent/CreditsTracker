@@ -1,0 +1,54 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "C:\\Users\\jeanmarie.parent\\.copilot\\repos\\copilot-worktrees\\CreditsTrackerExtension\\jeanmarie-parent-exakisc-miniature-broccoli\\reference",
+  "unit": "src/export-files.ts",
+  "language": "ts",
+  "kind": "napi",
+  "crate_name": "export",
+  "exports": [
+    {
+      "name": "getExportFilePath",
+      "file": "src/export-files.ts",
+      "line": 129,
+      "params": [
+        {
+          "name": "selectedPath",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "string",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "writeExportFile",
+      "file": "src/export-files.ts",
+      "line": 145,
+      "params": [
+        {
+          "name": "destinationPath",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "contents",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "Promise<void>",
+      "is_async": true,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}

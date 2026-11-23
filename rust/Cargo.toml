@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["shared", "logger"]
+members = ["shared", "logger", "export"]
 
 [workspace.package]
 edition = "2021"
