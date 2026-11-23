@@ -1,0 +1,3 @@
+{"kind":0,"v":{"sessionId":"session-002","creationDate":1794493800000}}
+{"kind":1,"k":["customTitle"],"v":"🎉 Café Catch-up 🚀"}
+{"kind":1,"k":["requests"],"v":[{"timestamp":1794494100000,"modelId":"copilot/claude-sonnet-5","copilotCredits":0.9,"promptTokens":300,"completionTokens":75}]}
