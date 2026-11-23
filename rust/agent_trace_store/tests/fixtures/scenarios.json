@@ -1,0 +1,2753 @@
+[
+  {
+    "name": "reopen-keeps-rows",
+    "steps": [
+      {
+        "call": "open",
+        "dbPath": "missing/parent/agent-trace-store.db",
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": []
+        }
+      },
+      {
+        "call": "insertSpans",
+        "spans": [
+          {
+            "source": "copilot-cli",
+            "parentSpanId": null,
+            "name": "invoke_agent",
+            "category": "agent",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1234.5,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": null,
+            "resultText": null,
+            "contentState": "stored",
+            "sessionId": "sess-1",
+            "traceId": "t1",
+            "spanId": "s1"
+          },
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "s1",
+            "name": "execute_tool",
+            "category": "tool",
+            "toolName": "grep",
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:02.000Z",
+            "endedAt": "2026-11-23T10:00:03.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": "call-1",
+            "argumentsJson": "{\"q\":\"x\"}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-1",
+            "traceId": "t1",
+            "spanId": "s2"
+          }
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "available",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "t1",
+                "spanId": "s1",
+                "parentSpanId": null,
+                "name": "invoke_agent",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1234.5,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "stored"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "t1",
+                "spanId": "s2",
+                "parentSpanId": "s1",
+                "name": "execute_tool",
+                "category": "tool",
+                "toolName": "grep",
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:02.000Z",
+                "endedAt": "2026-11-23T10:00:03.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": "call-1",
+                "argumentsJson": "{\"q\":\"x\"}",
+                "resultText": "ok",
+                "contentState": "stored"
+              }
+            ]
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "reopen",
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "available",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "t1",
+                "spanId": "s1",
+                "parentSpanId": null,
+                "name": "invoke_agent",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1234.5,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "stored"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "t1",
+                "spanId": "s2",
+                "parentSpanId": "s1",
+                "name": "execute_tool",
+                "category": "tool",
+                "toolName": "grep",
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:02.000Z",
+                "endedAt": "2026-11-23T10:00:03.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": "call-1",
+                "argumentsJson": "{\"q\":\"x\"}",
+                "resultText": "ok",
+                "contentState": "stored"
+              }
+            ]
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "setCollectionEnabled",
+        "enabled": true,
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "reopen",
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getCollectionEnabled",
+        "result": {
+          "ok": true
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "insertSpans",
+        "spans": [
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "s1",
+            "name": "execute_tool",
+            "category": "tool",
+            "toolName": "other",
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:02.000Z",
+            "endedAt": "2026-11-23T10:00:03.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": "call-2",
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-1",
+            "traceId": "t1",
+            "spanId": "s2"
+          }
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "close",
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "error": "Agent trace store is closed"
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s1",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s1\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1234.5,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-1",
+              "trace_id": "t1",
+              "span_id": "s2",
+              "parent_span_id": "s1",
+              "started_at": "2026-11-23T10:00:02.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-1\",\"traceId\":\"t1\",\"spanId\":\"s2\",\"parentSpanId\":\"s1\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":\"grep\",\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:02.000Z\",\"endedAt\":\"2026-11-23T10:00:03.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":\"call-1\",\"argumentsJson\":\"{\\\"q\\\":\\\"x\\\"}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "availability-and-order",
+    "steps": [
+      {
+        "call": "open",
+        "dbPath": "availability.db",
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": []
+        }
+      },
+      {
+        "call": "insertSpans",
+        "spans": [
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "a",
+            "name": "execute_tool",
+            "category": "tool",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:05.000Z",
+            "endedAt": "2026-11-23T10:00:06.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-2",
+            "traceId": "b",
+            "spanId": "z"
+          },
+          {
+            "source": "copilot-cli",
+            "parentSpanId": null,
+            "name": "invoke_agent",
+            "category": "agent",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-2",
+            "traceId": "a",
+            "spanId": "root"
+          },
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "root",
+            "name": "execute_tool",
+            "category": "tool",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-2",
+            "traceId": "a",
+            "spanId": "b1"
+          },
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "root",
+            "name": "execute_tool",
+            "category": "tool",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-2",
+            "traceId": "a",
+            "spanId": "a1"
+          },
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "root",
+            "name": "execute_tool",
+            "category": "tool",
+            "toolName": "duplicate",
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-2",
+            "traceId": "a",
+            "spanId": "b1"
+          }
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-2"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-2",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-2",
+                "traceId": "a",
+                "spanId": "a1",
+                "parentSpanId": "root",
+                "name": "execute_tool",
+                "category": "tool",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-2",
+                "traceId": "a",
+                "spanId": "b1",
+                "parentSpanId": "root",
+                "name": "execute_tool",
+                "category": "tool",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-2",
+                "traceId": "a",
+                "spanId": "root",
+                "parentSpanId": null,
+                "name": "invoke_agent",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-2",
+                "traceId": "b",
+                "spanId": "z",
+                "parentSpanId": "a",
+                "name": "execute_tool",
+                "category": "tool",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:05.000Z",
+                "endedAt": "2026-11-23T10:00:06.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              }
+            ]
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "insertSpans",
+        "spans": [
+          {
+            "source": "copilot-cli",
+            "parentSpanId": null,
+            "name": "chat",
+            "category": "llm",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-3",
+            "traceId": "c",
+            "spanId": "root"
+          },
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "missing",
+            "name": "execute_tool",
+            "category": "tool",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:01.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-3",
+            "traceId": "c",
+            "spanId": "orphan"
+          }
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-3"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-3",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-3",
+                "traceId": "c",
+                "spanId": "root",
+                "parentSpanId": null,
+                "name": "chat",
+                "category": "llm",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-3",
+                "traceId": "c",
+                "spanId": "orphan",
+                "parentSpanId": "missing",
+                "name": "execute_tool",
+                "category": "tool",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:01.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              }
+            ]
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "insertSpans",
+        "spans": [
+          {
+            "source": "copilot-cli",
+            "parentSpanId": null,
+            "name": "invoke_agent",
+            "category": "agent",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-4",
+            "traceId": "d",
+            "spanId": "shell"
+          },
+          {
+            "source": "copilot-cli",
+            "parentSpanId": "shell",
+            "name": "execute_tool",
+            "category": "shell",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": null,
+            "resultText": null,
+            "contentState": "stored",
+            "sessionId": "sess-4",
+            "traceId": "d",
+            "spanId": "pending"
+          }
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "pending",
+              "parent_span_id": "shell",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"pending\",\"parentSpanId\":\"shell\",\"name\":\"execute_tool\",\"category\":\"shell\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "shell",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"shell\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-4"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-4",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-4",
+                "traceId": "d",
+                "spanId": "pending",
+                "parentSpanId": "shell",
+                "name": "execute_tool",
+                "category": "shell",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "stored"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-4",
+                "traceId": "d",
+                "spanId": "shell",
+                "parentSpanId": null,
+                "name": "invoke_agent",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              }
+            ]
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "pending",
+              "parent_span_id": "shell",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"pending\",\"parentSpanId\":\"shell\",\"name\":\"execute_tool\",\"category\":\"shell\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "shell",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"shell\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "exec",
+        "sql": "INSERT INTO agent_trace_spans (\n  source, session_id, trace_id, span_id, parent_span_id, started_at, received_at, span_json\n) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "params": [
+          "vscode",
+          "sess-5",
+          "t5",
+          "bad",
+          null,
+          "2026-11-23T10:00:00.000Z",
+          "2026-11-23T10:00:00.000Z",
+          "{not json"
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "pending",
+              "parent_span_id": "shell",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"pending\",\"parentSpanId\":\"shell\",\"name\":\"execute_tool\",\"category\":\"shell\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "shell",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"shell\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "vscode",
+              "session_id": "sess-5",
+              "trace_id": "t5",
+              "span_id": "bad",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{not json"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "vscode",
+          "sessionId": "sess-5"
+        },
+        "result": {
+          "ok": {
+            "source": "vscode",
+            "sessionId": "sess-5",
+            "availability": "partial",
+            "spans": []
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "pending",
+              "parent_span_id": "shell",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"pending\",\"parentSpanId\":\"shell\",\"name\":\"execute_tool\",\"category\":\"shell\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "shell",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"shell\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "vscode",
+              "session_id": "sess-5",
+              "trace_id": "t5",
+              "span_id": "bad",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{not json"
+            }
+          ]
+        }
+      },
+      {
+        "call": "exec",
+        "sql": "INSERT INTO agent_trace_spans (\n  source, session_id, trace_id, span_id, parent_span_id, started_at, received_at, span_json\n) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "params": [
+          "copilot-cli",
+          "sess-7",
+          "g",
+          "h",
+          null,
+          "not-a-date",
+          "2026-11-23T10:00:00.000Z",
+          "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-7\",\"traceId\":\"g\",\"spanId\":\"h\",\"parentSpanId\":null,\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"not-a-date\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "pending",
+              "parent_span_id": "shell",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"pending\",\"parentSpanId\":\"shell\",\"name\":\"execute_tool\",\"category\":\"shell\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "shell",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"shell\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-7",
+              "trace_id": "g",
+              "span_id": "h",
+              "parent_span_id": null,
+              "started_at": "not-a-date",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-7\",\"traceId\":\"g\",\"spanId\":\"h\",\"parentSpanId\":null,\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"not-a-date\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "vscode",
+              "session_id": "sess-5",
+              "trace_id": "t5",
+              "span_id": "bad",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{not json"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-7"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-7",
+            "availability": "partial",
+            "spans": []
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "pending",
+              "parent_span_id": "shell",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"pending\",\"parentSpanId\":\"shell\",\"name\":\"execute_tool\",\"category\":\"shell\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "shell",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"shell\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-7",
+              "trace_id": "g",
+              "span_id": "h",
+              "parent_span_id": null,
+              "started_at": "not-a-date",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-7\",\"traceId\":\"g\",\"spanId\":\"h\",\"parentSpanId\":null,\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"not-a-date\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "vscode",
+              "session_id": "sess-5",
+              "trace_id": "t5",
+              "span_id": "bad",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{not json"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "nobody"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "nobody",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "a1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"a1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "b1",
+              "parent_span_id": "root",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"b1\",\"parentSpanId\":\"root\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "a",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"a\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-2",
+              "trace_id": "b",
+              "span_id": "z",
+              "parent_span_id": "a",
+              "started_at": "2026-11-23T10:00:05.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-2\",\"traceId\":\"b\",\"spanId\":\"z\",\"parentSpanId\":\"a\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:05.000Z\",\"endedAt\":\"2026-11-23T10:00:06.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "orphan",
+              "parent_span_id": "missing",
+              "started_at": "2026-11-23T10:00:01.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"orphan\",\"parentSpanId\":\"missing\",\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:01.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-3",
+              "trace_id": "c",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-3\",\"traceId\":\"c\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"chat\",\"category\":\"llm\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "pending",
+              "parent_span_id": "shell",
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"pending\",\"parentSpanId\":\"shell\",\"name\":\"execute_tool\",\"category\":\"shell\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":null,\"resultText\":null,\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-4",
+              "trace_id": "d",
+              "span_id": "shell",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-4\",\"traceId\":\"d\",\"spanId\":\"shell\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-7",
+              "trace_id": "g",
+              "span_id": "h",
+              "parent_span_id": null,
+              "started_at": "not-a-date",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-7\",\"traceId\":\"g\",\"spanId\":\"h\",\"parentSpanId\":null,\"name\":\"execute_tool\",\"category\":\"tool\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"not-a-date\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            },
+            {
+              "source": "vscode",
+              "session_id": "sess-5",
+              "trace_id": "t5",
+              "span_id": "bad",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{not json"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "retention-and-clear",
+    "steps": [
+      {
+        "call": "open",
+        "dbPath": "retention.db",
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": []
+        }
+      },
+      {
+        "call": "insertSpans",
+        "spans": [
+          {
+            "source": "copilot-cli",
+            "parentSpanId": null,
+            "name": "invoke_agent",
+            "category": "agent",
+            "toolName": null,
+            "skillName": null,
+            "model": null,
+            "startedAt": "2026-11-23T10:00:00.000Z",
+            "endedAt": "2026-11-23T10:00:01.000Z",
+            "durationMs": 1000,
+            "status": "ok",
+            "errorType": null,
+            "toolCallId": null,
+            "argumentsJson": "{}",
+            "resultText": "ok",
+            "contentState": "stored",
+            "sessionId": "sess-6",
+            "traceId": "e",
+            "spanId": "root"
+          }
+        ],
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-6",
+              "trace_id": "e",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-6\",\"traceId\":\"e\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pruneExpired",
+        "nowMs": 1795478400000,
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-6",
+              "trace_id": "e",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-6\",\"traceId\":\"e\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-6"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-6",
+            "availability": "available",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-6",
+                "traceId": "e",
+                "spanId": "root",
+                "parentSpanId": null,
+                "name": "invoke_agent",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:01.000Z",
+                "durationMs": 1000,
+                "status": "ok",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": "{}",
+                "resultText": "ok",
+                "contentState": "stored"
+              }
+            ]
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": [
+            {
+              "source": "copilot-cli",
+              "session_id": "sess-6",
+              "trace_id": "e",
+              "span_id": "root",
+              "parent_span_id": null,
+              "started_at": "2026-11-23T10:00:00.000Z",
+              "span_json": "{\"source\":\"copilot-cli\",\"sessionId\":\"sess-6\",\"traceId\":\"e\",\"spanId\":\"root\",\"parentSpanId\":null,\"name\":\"invoke_agent\",\"category\":\"agent\",\"toolName\":null,\"skillName\":null,\"model\":null,\"startedAt\":\"2026-11-23T10:00:00.000Z\",\"endedAt\":\"2026-11-23T10:00:01.000Z\",\"durationMs\":1000,\"status\":\"ok\",\"errorType\":null,\"toolCallId\":null,\"argumentsJson\":\"{}\",\"resultText\":\"ok\",\"contentState\":\"stored\"}"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pruneExpired",
+        "nowMs": 4102444800000,
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": []
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-6"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-6",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [],
+          "spans": []
+        }
+      },
+      {
+        "call": "setCollectionEnabled",
+        "enabled": true,
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": []
+        }
+      },
+      {
+        "call": "clear",
+        "result": {
+          "ok": null
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": []
+        }
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-6"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-6",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": []
+        }
+      },
+      {
+        "call": "getCollectionEnabled",
+        "result": {
+          "ok": true
+        },
+        "db": {
+          "schema": [
+            {
+              "type": "index",
+              "name": "idx_agent_trace_session",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE INDEX idx_agent_trace_session ON agent_trace_spans (source, session_id, started_at)"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_metadata",
+              "tbl_name": "agent_trace_metadata",
+              "sql": "CREATE TABLE agent_trace_metadata ( key TEXT PRIMARY KEY, value TEXT NOT NULL )"
+            },
+            {
+              "type": "table",
+              "name": "agent_trace_spans",
+              "tbl_name": "agent_trace_spans",
+              "sql": "CREATE TABLE agent_trace_spans ( source TEXT NOT NULL, session_id TEXT NOT NULL, trace_id TEXT NOT NULL, span_id TEXT NOT NULL, parent_span_id TEXT, started_at TEXT NOT NULL, received_at TEXT NOT NULL, span_json TEXT NOT NULL, PRIMARY KEY (source, trace_id, span_id) )"
+            }
+          ],
+          "metadata": [
+            {
+              "key": "collectionEnabled",
+              "value": "true"
+            }
+          ],
+          "spans": []
+        }
+      }
+    ]
+  },
+  {
+    "name": "refuses-copilot-cli-database",
+    "steps": [
+      {
+        "call": "open",
+        "dbPath": "<default>",
+        "result": {
+          "error": "Refusing to open the Copilot CLI usage database for writable agent traces: <default>"
+        },
+        "db": null
+      }
+    ]
+  }
+]

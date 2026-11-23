@@ -8,6 +8,11 @@ export type AgentTraceContentState =
   | 'redacted-truncated'
   | 'omitted';
 
+export interface AgentTraceSelection {
+  source: AgentTraceSource;
+  sessionId: string;
+}
+
 export interface AgentTraceSpan {
   source: AgentTraceSource;
   sessionId: string;
@@ -28,6 +33,13 @@ export interface AgentTraceSpan {
   argumentsJson: string | null;
   resultText: string | null;
   contentState: AgentTraceContentState;
+}
+
+export interface AgentTraceSession {
+  source: AgentTraceSource;
+  sessionId: string;
+  availability: 'available' | 'partial' | 'not-collected';
+  spans: AgentTraceSpan[];
 }
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
