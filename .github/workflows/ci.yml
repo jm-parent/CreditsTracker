@@ -24,5 +24,24 @@ jobs:
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
           npm ci --ignore-scripts
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            rust
+            src-tauri
+
+      # rust/ and src-tauri/ are separate cargo workspace roots, so each is tested from its own directory.
+      - name: Run Rust tests (rust workspace)
+        run: cargo test --workspace
+        working-directory: rust
+
+      - name: Run Rust tests (Tauri app)
+        run: cargo test
+        working-directory: src-tauri
+
       - name: Run tests
         run: npm test

@@ -51,7 +51,48 @@ jobs:
       # CHANGELOG.md, builds the Windows Setup.exe installer bundle
       # (electron-forge make), tags the commit, pushes it back to master,
       # and publishes a GitHub Release with the Squirrel artifacts attached.
+      # semantic-release analyzes commit messages since the last release tag
+      # (Conventional Commits: fix: -> patch, feat: -> minor, "BREAKING
+      # CHANGE"/"!" -> major). If nothing warrants a release, it exits
+      # without creating one. On release it bumps package.json, updates
+      # CHANGELOG.md, builds the Windows Setup.exe installer bundle
+      # (electron-forge make), tags the commit, pushes it back to master,
+      # and publishes a GitHub Release with the Squirrel artifacts attached.
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      # Tauri Windows bundle (NSIS installer), built alongside the Squirrel
+      # build above until cutover. It runs after semantic-release so that
+      # tauri.conf.json (version read from package.json) sees the bumped version.
+      # Updater signing: the private key is read only from the CI secret
+      # TAURI_SIGNING_PRIVATE_KEY (plus TAURI_SIGNING_PRIVATE_KEY_PASSWORD). It
+      # is never written to a file. Signing is used only once updater artifacts
+      # are enabled in tauri.conf.json (cutover item).
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.12" --locked
+
+      - name: Build Tauri Windows bundle
+        run: cargo tauri build
+        working-directory: src-tauri
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload Tauri bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: credits-tracker-tauri-nsis
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 7

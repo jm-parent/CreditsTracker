@@ -23,7 +23,16 @@
     }
   },
   "bundle": {
-    "active": false,
-    "icon": ["../assets/icon.ico"]
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["../assets/icon.ico"],
+    "publisher": "jm-parent",
+    "shortDescription": "Credits Dashboard for GitHub Copilot CLI",
+    "longDescription": "Local dashboard for GitHub Copilot CLI credit consumption.",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
   }
 }
