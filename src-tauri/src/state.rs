@@ -1,9 +1,9 @@
 //! Process state for the Tauri shell and the adapters that connect the unit crates to Tauri.
 //!
 //! The usage database is rebuilt at most every few seconds, as `registerIpcHandlers` does in
-//! `src/main/ipc-handlers.ts`. The updater backend talks to the release feed over HTTPS. Its
-//! download and install steps are not implemented yet (see `TauriUpdateBackend::download`).
+//! `src/main/ipc-handlers.ts`. The updater backend uses the Tauri updater plugin (`latest.json`).
 
+use std::future::Future;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
@@ -15,6 +15,7 @@ use rusqlite::Connection;
 use serde_json::{Value, json};
 use shortcut::{LogLevel as ShortcutLevel, ShortcutLog};
 use tauri::{AppHandle, Emitter};
+use tauri_plugin_updater::{Update, UpdaterExt};
 use updater::{DownloadOutcome, Release, UpdateBackend, UpdateService};
 use vscode_chat::port::load_vscode_usage;
 
@@ -25,12 +26,6 @@ const DB_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 
 /// Channel name of the state event the renderer subscribes to (`UPDATE_STATE_CHANNEL` in updater.ts).
 pub const UPDATE_STATE_EVENT: &str = "update-state-changed";
-
-const FEED_HOST: &str = "https://update.electronjs.org";
-const FEED_REPO: &str = "jm-parent/CreditsTracker";
-/// Upper bound for one feed request. Update commands wait on the update lock while a check runs,
-/// so this also bounds that wait.
-const FEED_TIMEOUT: Duration = Duration::from_secs(15);
 
 const EMPTY_CLI_SCHEMA: &str = "
     CREATE TABLE sessions (id TEXT PRIMARY KEY, cwd TEXT, repository TEXT, summary TEXT, created_at TEXT);
@@ -138,40 +133,40 @@ pub fn publish_update_state(app: &AppHandle, state: &UpdateState) {
     let _ = app.emit(UPDATE_STATE_EVENT, state);
 }
 
-/// Platform steps for the update flow, backed by the Tauri app.
+/// Platform steps for the update flow, backed by the Tauri updater plugin.
 ///
-/// Implemented so far: the release feed check (`fetch_latest`) and the restart. Downloading and
-/// staging an installer is deferred to a follow-up, so `download` reports a failure.
+/// The plugin reads `latest.json` from the endpoint in `tauri.conf.json`, verifies the signature
+/// against the public key there, and stages the installer. Checks never download; `download` runs
+/// only after the user accepts, and `restart` installs the staged installer.
 pub struct TauriUpdateBackend {
     app: AppHandle,
     current_version: String,
+    /// The update found by the last check, kept until the user accepts it.
+    found: Mutex<Option<Update>>,
+    /// The update and its downloaded installer, installed on restart.
+    staged: Mutex<Option<(Update, Vec<u8>)>>,
 }
 
 impl TauriUpdateBackend {
     pub fn new(app: AppHandle, current_version: String) -> Self {
-        Self { app, current_version }
+        Self {
+            app,
+            current_version,
+            found: Mutex::new(None),
+            staged: Mutex::new(None),
+        }
     }
 }
 
-/// Same feed as `feedUrl()` in updater.ts, keyed by Node's platform and arch names.
-fn feed_url(current_version: &str) -> String {
-    let platform = match std::env::consts::OS {
-        "windows" => "win32",
-        "macos" => "darwin",
-        other => other,
-    };
-    let arch = match std::env::consts::ARCH {
-        "x86_64" => "x64",
-        "aarch64" => "arm64",
-        other => other,
-    };
-    format!("{FEED_HOST}/{FEED_REPO}/{platform}-{arch}/{current_version}")
-}
-
-#[derive(serde::Deserialize)]
-struct FeedPayload {
-    name: Option<String>,
-    notes: Option<String>,
+/// Runs a plugin future to completion on its own thread, so the update steps never block the async
+/// runtime the commands run on.
+fn run_blocking<T: Send>(future: impl Future<Output = T> + Send) -> T {
+    std::thread::scope(|scope| {
+        scope
+            .spawn(|| tauri::async_runtime::block_on(future))
+            .join()
+            .expect("update worker panicked")
+    })
 }
 
 impl UpdateBackend for TauriUpdateBackend {
@@ -189,57 +184,90 @@ impl UpdateBackend for TauriUpdateBackend {
     }
 
     fn fetch_latest(&self) -> Result<Option<Release>, String> {
-        let agent = ureq::Agent::new_with_config(
-            ureq::Agent::config_builder()
-                .http_status_as_error(false)
-                .timeout_global(Some(FEED_TIMEOUT))
-                .build(),
-        );
-        let mut response = agent
-            .get(&feed_url(&self.current_version))
-            .header("accept", "application/json")
-            .call()
-            .map_err(|error| format!("Update feed request failed: {error}"))?;
-
-        let status = response.status();
-        if status.as_u16() == 204 {
-            let _ = logger::port::log_info(
-                "updater".into(),
-                format!("No update available, {} is the latest version", self.current_version),
-                None,
-            );
-            return Ok(None);
+        let updater = self
+            .app
+            .updater()
+            .map_err(|error| format!("Updater is not configured: {error}"))?;
+        let found = run_blocking(async move { updater.check().await })
+            .map_err(|error| format!("Update check failed: {error}"))?;
+        let mut slot = self
+            .found
+            .lock()
+            .map_err(|_| "update slot lock poisoned".to_string())?;
+        match found {
+            None => {
+                *slot = None;
+                let _ = logger::port::log_info(
+                    "updater".into(),
+                    format!("No update available, {} is the latest version", self.current_version),
+                    None,
+                );
+                Ok(None)
+            }
+            Some(update) => {
+                let release = Release {
+                    version: update.version.clone(),
+                    notes: update.body.clone(),
+                };
+                let _ = logger::port::log_info(
+                    "updater".into(),
+                    format!("Update {} is available", release.version),
+                    None,
+                );
+                *slot = Some(update);
+                Ok(Some(release))
+            }
         }
-        if !status.is_success() {
-            let reason = status.canonical_reason().unwrap_or_default();
-            return Err(format!("Update feed responded with {} {reason}", status.as_u16()));
-        }
-
-        let payload: FeedPayload = response
-            .body_mut()
-            .read_json()
-            .map_err(|error| format!("Update feed returned an unreadable payload: {error}"))?;
-        // A release without a name cannot be offered (the version is what the user accepts), so it is a
-        // feed error here rather than the unnamed "available" state that updater.ts shows.
-        let name = payload
-            .name
-            .filter(|name| !name.trim().is_empty())
-            .ok_or_else(|| "Update feed returned a release without a version".to_string())?;
-        let _ = logger::port::log_info(
-            "updater".into(),
-            format!("Update {name} is available"),
-            None,
-        );
-        Ok(Some(Release { version: name, notes: payload.notes }))
     }
 
-    fn download(&self, _release: &Release) -> DownloadOutcome {
-        DownloadOutcome::Failed(
-            "Installing updates is not available in the Tauri build yet".to_string(),
-        )
+    fn download(&self, release: &Release) -> DownloadOutcome {
+        let update = match self.found.lock().ok().and_then(|mut slot| slot.take()) {
+            Some(update) if update.version == release.version => update,
+            _ => {
+                return DownloadOutcome::Failed(
+                    "No update is waiting to be downloaded, check for updates again".to_string(),
+                );
+            }
+        };
+        let version = update.version.clone();
+        match run_blocking(async move {
+            let bytes = update.download(|_, _| {}, || {}).await?;
+            Ok::<_, tauri_plugin_updater::Error>((update, bytes))
+        }) {
+            Ok((update, bytes)) => {
+                let Ok(mut staged) = self.staged.lock() else {
+                    return DownloadOutcome::Failed("update slot lock poisoned".to_string());
+                };
+                *staged = Some((update, bytes));
+                let _ = logger::port::log_info(
+                    "updater".into(),
+                    format!("Update {version} downloaded, it will be installed on restart"),
+                    None,
+                );
+                DownloadOutcome::Installed
+            }
+            Err(error) => DownloadOutcome::Failed(format!("Update download failed: {error}")),
+        }
     }
 
     fn restart(&self) {
+        let staged = self.staged.lock().ok().and_then(|mut slot| slot.take());
+        let Some((update, bytes)) = staged else {
+            let _ = logger::port::log_error(
+                "updater".into(),
+                "Restart requested with no downloaded update to install".into(),
+                None,
+            );
+            return;
+        };
+        if let Err(error) = update.install(bytes) {
+            let _ = logger::port::log_error(
+                "updater".into(),
+                "Update install failed, staying on the current version".into(),
+                Some(json!(error.to_string())),
+            );
+            return;
+        }
         self.app.restart()
     }
 }

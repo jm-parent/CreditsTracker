@@ -9,8 +9,9 @@ publish = false
 description = "Tauri shell that hosts the Credits Dashboard renderer and exposes the Rust IPC commands"
 
 [[bin]]
-# Matches the Squirrel executable name, so the desktop shortcut keeps its name.
-name = "credits-tracker"
+# Distinct from the Electron build (`credits-tracker`): its desktop shortcut and executable do not
+# collide with the Squirrel install.
+name = "credits-tracker-rust"
 path = "src/main.rs"
 
 # Its own workspace root: cargo requires workspace members to sit below the
@@ -27,7 +28,6 @@ tauri-plugin-opener = "2.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
 rusqlite = { version = "0.43", features = ["bundled"] }
-ureq = { version = "3", features = ["json"] }
 url = "2"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
@@ -45,6 +45,7 @@ agent_trace_receiver = { path = "../rust/agent_trace_receiver" }
 vscode_chat = { path = "../rust/vscode_chat" }
 updater = { path = "../rust/updater" }
 shortcut = { path = "../rust/shortcut" }
+tauri-plugin-updater = "2.14.1"
 
 [lints.rust]
 unused_lifetimes = "warn"

@@ -10,9 +10,6 @@ use std::convert::Infallible;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Name an earlier build could have given the shortcut (`shortcut.ts` `LEGACY_SHORTCUT_NAME`).
-pub const LEGACY_SHORTCUT_NAME: &str = "Credits Tracker.lnk";
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogLevel {
     Info,
@@ -59,13 +56,13 @@ fn expected_shortcut_path(platform: &impl ShortcutPlatform, exe: &Path) -> PathB
 }
 
 /// Whether the launch-time Desktop prompt is due. Stateless: a dismissed prompt is simply offered again on the next launch.
+/// Only this app's own shortcut counts: the Electron build's `Credits Tracker.lnk` is not checked, so both apps can prompt.
 pub fn should_prompt_for_desktop_shortcut(platform: &impl ShortcutPlatform) -> bool {
     if !platform.is_supported() {
         return false;
     }
     let exe = platform.exe_path();
-    let legacy = platform.desktop_dir().join(LEGACY_SHORTCUT_NAME);
-    !platform.path_exists(&expected_shortcut_path(platform, &exe)) && !platform.path_exists(&legacy)
+    !platform.path_exists(&expected_shortcut_path(platform, &exe))
 }
 
 /// Creates the Desktop `.lnk` pointing at the running executable through a Windows shell link, and reports success only when the expected `.lnk` exists.
@@ -304,9 +301,9 @@ mod tests {
     }
 
     #[test]
-    fn prompt_is_suppressed_when_legacy_shortcut_exists() {
+    fn prompt_is_shown_when_only_the_electron_shortcut_exists() {
         let host = FakeHost::supported().with_file("desktop/Credits Tracker.lnk");
-        assert!(!should_prompt_for_desktop_shortcut(&host));
+        assert!(should_prompt_for_desktop_shortcut(&host));
     }
 
     #[test]

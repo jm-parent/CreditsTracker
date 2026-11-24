@@ -19,6 +19,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(setup)
         .invoke_handler(tauri::generate_handler![
             commands::get_agent_trace_collection_status,
@@ -57,11 +58,11 @@ fn main() {
         });
 }
 
-/// Startup sequence from `src/main.ts`. The data folder is `%APPDATA%\credits-tracker`, the same as Electron's `userData`.
+/// Startup sequence from `src/main.ts`. The data folder is `%APPDATA%\credits-tracker-rust`, kept apart from the Electron app's `%APPDATA%\credits-tracker`.
 fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let handle = app.handle().clone();
     let version = handle.package_info().version.to_string();
-    let user_data = app.path().data_dir()?.join("credits-tracker");
+    let user_data = app.path().data_dir()?.join("credits-tracker-rust");
 
     let log_file = user_data.join("logs").join("app.log");
     if let Err(error) = logger::port::configure_log_file(log_file.display().to_string()) {
