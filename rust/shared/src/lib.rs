@@ -30,7 +30,8 @@ pub struct UsageTotals {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeSeriesPoint {
-    pub date: String,
+    /// `None` when the usage event has no `created_at`; the TypeScript returns `null` there.
+    pub date: Option<String>,
     pub aiu_credits: f64,
     /// Credits for this date broken down by project key. Only populated for
     /// the main dashboard chart.
@@ -61,7 +62,8 @@ pub struct HourlyDetailParams {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BreakdownPoint {
-    pub key: String,
+    /// `None` when the session has neither a repository nor a cwd; the TypeScript returns `null`.
+    pub key: Option<String>,
     pub aiu_credits: f64,
 }
 
@@ -85,7 +87,8 @@ pub struct ExportModelPreviewRow {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportDailyPreviewRow {
-    pub date: String,
+    /// `None` for usage without a `created_at` (see `TimeSeriesPoint::date`).
+    pub date: Option<String>,
     pub aiu_credits: f64,
     pub tokens: f64,
     pub requests: f64,
@@ -104,7 +107,8 @@ pub struct ExportPreview {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportSummaryRow {
-    pub date: String,
+    /// `None` for usage without a `created_at` (see `TimeSeriesPoint::date`).
+    pub date: Option<String>,
     pub project: String,
     pub model: String,
     pub aiu_credits: f64,
@@ -123,8 +127,10 @@ pub struct ExportSummaryRow {
 #[serde(rename_all = "camelCase")]
 pub struct ExportSessionRow {
     pub session_id: String,
-    pub created_at: String,
-    pub date: String,
+    /// `None` when the session has no `created_at`.
+    pub created_at: Option<String>,
+    /// `None` when none of the session's usage has a `created_at`.
+    pub date: Option<String>,
     pub project: String,
     pub summary: String,
     pub models: String,
@@ -269,11 +275,13 @@ pub struct FilterOptions {
 pub struct ConversationSummary {
     pub source: AgentTraceSource,
     pub session_id: String,
-    pub created_at: String,
+    /// `None` when the session has no `created_at`.
+    pub created_at: Option<String>,
     pub summary: Option<String>,
     pub models: String,
     pub aiu_credits: f64,
-    pub tokens: f64,
+    /// `None` when every usage row of the session has NULL tokens (the SQL `SUM` is NULL).
+    pub tokens: Option<f64>,
     pub requests: f64,
 }
 

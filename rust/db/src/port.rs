@@ -136,12 +136,13 @@ impl Clause {
 }
 
 /// Port of the TypeScript `localeCompare` used to order models, hours and dates. ICU's root
-/// collation for printable ASCII, with punctuation non-ignorable, lowercase before uppercase and
-/// letters compared case-insensitively first. The order was read from Node's `Intl` and checked
-/// pairwise against it.
-/// ponytail: non-ASCII strings fall back to UTF-16 code-unit order. Model names are ASCII in practice.
+/// collation for printable ASCII (0x20 to 0x7E), with punctuation non-ignorable, lowercase before
+/// uppercase and letters compared case-insensitively first. The order was read from Node's `Intl`
+/// and checked pairwise against it.
+/// ponytail: non-ASCII strings and control characters fall back to UTF-16 code-unit order.
+/// Model names are ASCII in practice.
 fn locale_compare(left: &str, right: &str) -> Ordering {
-    const PUNCTUATION_AND_DIGITS: &str = "_-,;:!?.'\"()[]{}@*/\\&#%`^+<=>|~$0123456789";
+    const PUNCTUATION_AND_DIGITS: &str = " _-,;:!?.'\"()[]{}@*/\\&#%`^+<=>|~$0123456789";
     fn weights(text: &str) -> Option<Vec<(u32, u8)>> {
         text.chars()
             .map(|c| {
@@ -245,12 +246,12 @@ pub fn get_usage(db: &Connection, filters: &UsageFilters) -> Result<UsageResult>
         ))?;
         let rows = stmt.query_map(binding.as_slice(), |row| {
             Ok((
-                row.get::<_, String>(0)?,
+                row.get::<_, Option<String>>(0)?,
                 row.get::<_, Option<String>>(1)?,
                 row.get::<_, f64>(2)?,
             ))
         })?;
-        let mut per_date: HashMap<String, HashMap<String, f64>> = HashMap::new();
+        let mut per_date: HashMap<Option<String>, HashMap<String, f64>> = HashMap::new();
         for row in rows {
             let (date, project, credits) = row?;
             // The original skips a null or empty project (`if (!row.project)`).
@@ -512,9 +513,15 @@ fn code_unit_compare(left: &str, right: &str) -> Ordering {
     left.encode_utf16().cmp(right.encode_utf16())
 }
 
+/// The text a date sorts by. A NULL date sorts as "null", because `localeCompare` converts a `null`
+/// argument to that string.
+fn date_sort_key(date: &Option<String>) -> &str {
+    date.as_deref().unwrap_or("null")
+}
+
 /// A `getExportReport` row grouped by date, project and model.
 struct GroupedUsage {
-    date: String,
+    date: Option<String>,
     project: String,
     model: String,
     aiu_credits: f64,
@@ -567,19 +574,19 @@ pub fn get_export_report(db: &Connection, filters: &UsageFilters) -> Result<Expo
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
-    let mut day_totals: HashMap<&str, f64> = HashMap::new();
+    let mut day_totals: HashMap<Option<&str>, f64> = HashMap::new();
     let mut model_totals: HashMap<&str, f64> = HashMap::new();
     let mut project_totals: HashMap<&str, f64> = HashMap::new();
-    let mut daily: HashMap<&str, (f64, f64, f64)> = HashMap::new();
+    let mut daily: HashMap<Option<&str>, (f64, f64, f64)> = HashMap::new();
     let (mut period_aiu, mut period_tokens, mut period_requests) = (0.0, 0.0, 0.0);
     for row in &grouped {
         period_aiu += row.aiu_credits;
         period_tokens += row.tokens;
         period_requests += row.requests;
-        *day_totals.entry(&row.date).or_insert(0.0) += row.aiu_credits;
+        *day_totals.entry(row.date.as_deref()).or_insert(0.0) += row.aiu_credits;
         *model_totals.entry(&row.model).or_insert(0.0) += row.aiu_credits;
         *project_totals.entry(&row.project).or_insert(0.0) += row.aiu_credits;
-        let day = daily.entry(&row.date).or_insert((0.0, 0.0, 0.0));
+        let day = daily.entry(row.date.as_deref()).or_insert((0.0, 0.0, 0.0));
         day.0 += row.aiu_credits;
         day.1 += row.tokens;
         day.2 += row.requests;
@@ -599,7 +606,7 @@ pub fn get_export_report(db: &Connection, filters: &UsageFilters) -> Result<Expo
                 output_tokens: row.output_tokens,
                 tokens: row.tokens,
                 requests: row.requests,
-                day_total_aiu_credits: day_totals[row.date.as_str()],
+                day_total_aiu_credits: day_totals[&row.date.as_deref()],
                 model_total_aiu_credits: model_total,
                 model_share_percent: to_share_percent(model_total, period_aiu),
                 project_total_aiu_credits: project_total,
@@ -621,13 +628,13 @@ pub fn get_export_report(db: &Connection, filters: &UsageFilters) -> Result<Expo
     let mut daily_rows: Vec<ExportDailyPreviewRow> = daily
         .iter()
         .map(|(date, (aiu, tokens, requests))| ExportDailyPreviewRow {
-            date: date.to_string(),
+            date: (*date).map(str::to_string),
             aiu_credits: *aiu,
             tokens: *tokens,
             requests: *requests,
         })
         .collect();
-    daily_rows.sort_by(|a, b| locale_compare(&a.date, &b.date));
+    daily_rows.sort_by(|a, b| locale_compare(date_sort_key(&a.date), date_sort_key(&b.date)));
 
     let session_rows = query_session_rows(db, &from, &binding)?;
 
@@ -899,13 +906,13 @@ mod tests {
         let cafe = usage
             .by_project
             .iter()
-            .find(|point| point.key == "Projet café 🚀")
+            .find(|point| point.key.as_deref() == Some("Projet café 🚀"))
             .expect("by_project names the non-ASCII project");
         assert_eq!(cafe.aiu_credits, 4.1);
         let day = usage
             .time_series
             .iter()
-            .find(|p| p.date == "2026-09-10")
+            .find(|p| p.date.as_deref() == Some("2026-09-10"))
             .unwrap();
         assert_eq!(day.by_project.as_ref().unwrap()["Projet café 🚀"], 4.1);
     }
@@ -939,7 +946,7 @@ mod tests {
         let usage = get_usage(&conn, &filters).unwrap();
 
         assert_eq!(usage.totals.requests, 1.0);
-        assert_eq!(usage.by_project[0].key, "org/alpha");
+        assert_eq!(usage.by_project[0].key.as_deref(), Some("org/alpha"));
     }
 
     #[test]
@@ -953,6 +960,8 @@ mod tests {
             ("ab", "a-b", Ordering::Greater),
             ("a1", "a-1", Ordering::Greater),
             ("x y", "xy", Ordering::Less),
+            ("a b", "B", Ordering::Less),
+            ("a  b", "a b", Ordering::Less),
             ("10:00", "09:00", Ordering::Greater),
         ];
         for (left, right, expected) in cases {
@@ -1009,7 +1018,10 @@ mod tests {
         };
 
         let september = get_monthly_activity(&conn, &params(9)).unwrap();
-        let dates: Vec<&str> = september.iter().map(|p| p.date.as_str()).collect();
+        let dates: Vec<&str> = september
+            .iter()
+            .map(|p| p.date.as_deref().unwrap())
+            .collect();
         assert_eq!(dates, vec!["2026-09-01", "2026-09-10"]);
         assert!(get_monthly_activity(&conn, &params(10)).unwrap().is_empty());
     }
@@ -1057,7 +1069,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_export_range_gives_finite_zero_percentages() {
+    fn empty_export_range_has_zero_totals_and_no_rows() {
         let dir = TempDir::new().unwrap();
         let conn = open_database(&seeded_store(&dir)).unwrap();
         let filters = UsageFilters {

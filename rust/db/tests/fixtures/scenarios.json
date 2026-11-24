@@ -473,14 +473,14 @@
     "outcome": {
       "ok": [
         {
-          "hour": "10:00",
+          "hour": "09:00",
           "aiuCredits": 4.1,
           "byProject": {
             "Projet café 🚀": 4.1
           }
         },
         {
-          "hour": "11:00",
+          "hour": "10:00",
           "aiuCredits": 1,
           "byProject": {
             "Projet café 🚀": 1
@@ -500,7 +500,7 @@
     "outcome": {
       "ok": [
         {
-          "hour": "13:00",
+          "hour": "12:00",
           "aiuCredits": 1.5,
           "byProject": {
             "org/alpha": 1.5
@@ -1596,6 +1596,425 @@
         "total": 0,
         "page": 0,
         "pageSize": 10
+      }
+    }
+  },
+  {
+    "name": "filter-options-null-store",
+    "call": "getFilterOptions",
+    "dbPath": "{fixtures}/null-store.db",
+    "outcome": {
+      "ok": {
+        "projects": [
+          "C:/repos/nul",
+          "org/omega"
+        ],
+        "models": [
+          "claude-sonnet-5",
+          "gpt-5.4"
+        ],
+        "minDate": "2026-09-02",
+        "maxDate": "2026-09-04"
+      }
+    }
+  },
+  {
+    "name": "usage-null-store-keeps-null-project-and-date",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/null-store.db",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 6.5,
+          "tokens": 46,
+          "requests": 6
+        },
+        "timeSeries": [
+          {
+            "date": null,
+            "aiuCredits": 3,
+            "byProject": {
+              "C:/repos/nul": 3,
+              "org/omega": 0
+            }
+          },
+          {
+            "date": "2026-09-02",
+            "aiuCredits": 1,
+            "byProject": {}
+          },
+          {
+            "date": "2026-09-03",
+            "aiuCredits": 0.5,
+            "byProject": {
+              "org/omega": 0.5
+            }
+          },
+          {
+            "date": "2026-09-04",
+            "aiuCredits": 2,
+            "byProject": {
+              "C:/repos/nul": 2
+            }
+          }
+        ],
+        "byProject": [
+          {
+            "key": null,
+            "aiuCredits": 1
+          },
+          {
+            "key": "C:/repos/nul",
+            "aiuCredits": 5
+          },
+          {
+            "key": "org/omega",
+            "aiuCredits": 0.5
+          }
+        ],
+        "byModel": [
+          {
+            "key": "claude-sonnet-5",
+            "aiuCredits": 5
+          },
+          {
+            "key": "gpt-5.4",
+            "aiuCredits": 1.5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "usage-null-store-date-range-drops-null-dates",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/null-store.db",
+    "filters": {
+      "from": "2026-09-01",
+      "to": "2026-09-10"
+    },
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 3.5,
+          "tokens": 15,
+          "requests": 4
+        },
+        "timeSeries": [
+          {
+            "date": "2026-09-02",
+            "aiuCredits": 1,
+            "byProject": {}
+          },
+          {
+            "date": "2026-09-03",
+            "aiuCredits": 0.5,
+            "byProject": {
+              "org/omega": 0.5
+            }
+          },
+          {
+            "date": "2026-09-04",
+            "aiuCredits": 2,
+            "byProject": {
+              "C:/repos/nul": 2
+            }
+          }
+        ],
+        "byProject": [
+          {
+            "key": null,
+            "aiuCredits": 1
+          },
+          {
+            "key": "C:/repos/nul",
+            "aiuCredits": 2
+          },
+          {
+            "key": "org/omega",
+            "aiuCredits": 0.5
+          }
+        ],
+        "byModel": [
+          {
+            "key": "claude-sonnet-5",
+            "aiuCredits": 2
+          },
+          {
+            "key": "gpt-5.4",
+            "aiuCredits": 1.5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "hourly-null-store-day-with-null-project",
+    "call": "getHourlyDetail",
+    "dbPath": "{fixtures}/null-store.db",
+    "params": {
+      "date": "2026-09-02"
+    },
+    "outcome": {
+      "ok": [
+        {
+          "hour": "11:00",
+          "aiuCredits": 1,
+          "byProject": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "project-detail-null-store-null-tokens-and-created-at",
+    "call": "getProjectDetail",
+    "dbPath": "{fixtures}/null-store.db",
+    "project": "C:/repos/nul",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "project": "C:/repos/nul",
+        "totals": {
+          "aiuCredits": 5,
+          "tokens": 21,
+          "requests": 3
+        },
+        "timeSeries": [
+          {
+            "date": null,
+            "aiuCredits": 3
+          },
+          {
+            "date": "2026-09-04",
+            "aiuCredits": 2
+          }
+        ],
+        "conversations": [
+          {
+            "source": "copilot-cli",
+            "sessionId": "n4",
+            "createdAt": "2026-09-04 08:00:00",
+            "summary": null,
+            "models": "claude-sonnet-5",
+            "aiuCredits": 3,
+            "tokens": 21,
+            "requests": 1
+          },
+          {
+            "source": "copilot-cli",
+            "sessionId": "n2",
+            "createdAt": null,
+            "summary": "Null tokens and created_at",
+            "models": "claude-sonnet-5,gpt-5.4",
+            "aiuCredits": 2,
+            "tokens": null,
+            "requests": 2
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "export-null-store-null-project-date-and-created-at",
+    "call": "getExportReport",
+    "dbPath": "{fixtures}/null-store.db",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "preview": {
+          "totals": {
+            "aiuCredits": 6.5,
+            "tokens": 50,
+            "requests": 6
+          },
+          "sessionCount": 4,
+          "activeDays": 4,
+          "byModel": [
+            {
+              "model": "claude-sonnet-5",
+              "aiuCredits": 5,
+              "sharePercent": 76.92307692307693
+            },
+            {
+              "model": "gpt-5.4",
+              "aiuCredits": 1.5,
+              "sharePercent": 23.076923076923077
+            }
+          ],
+          "daily": [
+            {
+              "date": "2026-09-02",
+              "aiuCredits": 1,
+              "tokens": 15,
+              "requests": 1
+            },
+            {
+              "date": "2026-09-03",
+              "aiuCredits": 0.5,
+              "tokens": 0,
+              "requests": 1
+            },
+            {
+              "date": "2026-09-04",
+              "aiuCredits": 2,
+              "tokens": 4,
+              "requests": 2
+            },
+            {
+              "date": null,
+              "aiuCredits": 3,
+              "tokens": 31,
+              "requests": 2
+            }
+          ]
+        },
+        "summaryRows": [
+          {
+            "date": null,
+            "project": "C:/repos/nul",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 3,
+            "inputTokens": 20,
+            "outputTokens": 1,
+            "tokens": 21,
+            "requests": 1,
+            "dayTotalAiuCredits": 3,
+            "modelTotalAiuCredits": 5,
+            "modelSharePercent": 76.92307692307693,
+            "projectTotalAiuCredits": 5,
+            "projectSharePercent": 76.92307692307693
+          },
+          {
+            "date": null,
+            "project": "org/omega",
+            "model": "gpt-5.4",
+            "aiuCredits": 0,
+            "inputTokens": 7,
+            "outputTokens": 3,
+            "tokens": 10,
+            "requests": 1,
+            "dayTotalAiuCredits": 3,
+            "modelTotalAiuCredits": 1.5,
+            "modelSharePercent": 23.076923076923077,
+            "projectTotalAiuCredits": 0.5,
+            "projectSharePercent": 7.6923076923076925
+          },
+          {
+            "date": "2026-09-02",
+            "project": "Unassigned",
+            "model": "gpt-5.4",
+            "aiuCredits": 1,
+            "inputTokens": 10,
+            "outputTokens": 5,
+            "tokens": 15,
+            "requests": 1,
+            "dayTotalAiuCredits": 1,
+            "modelTotalAiuCredits": 1.5,
+            "modelSharePercent": 23.076923076923077,
+            "projectTotalAiuCredits": 1,
+            "projectSharePercent": 15.384615384615385
+          },
+          {
+            "date": "2026-09-03",
+            "project": "org/omega",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.5,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "tokens": 0,
+            "requests": 1,
+            "dayTotalAiuCredits": 0.5,
+            "modelTotalAiuCredits": 1.5,
+            "modelSharePercent": 23.076923076923077,
+            "projectTotalAiuCredits": 0.5,
+            "projectSharePercent": 7.6923076923076925
+          },
+          {
+            "date": "2026-09-04",
+            "project": "C:/repos/nul",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 2,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "tokens": 0,
+            "requests": 1,
+            "dayTotalAiuCredits": 2,
+            "modelTotalAiuCredits": 5,
+            "modelSharePercent": 76.92307692307693,
+            "projectTotalAiuCredits": 5,
+            "projectSharePercent": 76.92307692307693
+          },
+          {
+            "date": "2026-09-04",
+            "project": "C:/repos/nul",
+            "model": "gpt-5.4",
+            "aiuCredits": 0,
+            "inputTokens": 4,
+            "outputTokens": 0,
+            "tokens": 4,
+            "requests": 1,
+            "dayTotalAiuCredits": 2,
+            "modelTotalAiuCredits": 1.5,
+            "modelSharePercent": 23.076923076923077,
+            "projectTotalAiuCredits": 5,
+            "projectSharePercent": 76.92307692307693
+          }
+        ],
+        "sessionRows": [
+          {
+            "sessionId": "n4",
+            "createdAt": "2026-09-04 08:00:00",
+            "date": null,
+            "project": "C:/repos/nul",
+            "summary": "",
+            "models": "claude-sonnet-5",
+            "aiuCredits": 3,
+            "inputTokens": 20,
+            "outputTokens": 1,
+            "tokens": 21,
+            "requests": 1
+          },
+          {
+            "sessionId": "n3",
+            "createdAt": "2026-09-03 12:00:00",
+            "date": "2026-09-03",
+            "project": "org/omega",
+            "summary": "Mixed nulls",
+            "models": "gpt-5.4",
+            "aiuCredits": 0.5,
+            "inputTokens": 7,
+            "outputTokens": 3,
+            "tokens": 10,
+            "requests": 2
+          },
+          {
+            "sessionId": "n1",
+            "createdAt": "2026-09-02 10:00:00",
+            "date": "2026-09-02",
+            "project": "Unassigned",
+            "summary": "",
+            "models": "gpt-5.4",
+            "aiuCredits": 1,
+            "inputTokens": 10,
+            "outputTokens": 5,
+            "tokens": 15,
+            "requests": 1
+          },
+          {
+            "sessionId": "n2",
+            "createdAt": null,
+            "date": "2026-09-04",
+            "project": "C:/repos/nul",
+            "summary": "Null tokens and created_at",
+            "models": "claude-sonnet-5, gpt-5.4",
+            "aiuCredits": 2,
+            "inputTokens": 4,
+            "outputTokens": 0,
+            "tokens": 4,
+            "requests": 2
+          }
+        ]
       }
     }
   },

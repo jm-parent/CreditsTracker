@@ -1,7 +1,9 @@
 //! Replays the TypeScript recordings in `tests/fixtures/scenarios.json` against the port. The file is
 //! written by `reference/scenarios/db-scenarios.ts`, which runs `src/main/db.ts` over the synthetic
-//! stores committed next to it.
+//! stores committed next to it. Both sides run in the zone `FIXED_ZONE` names there, so the hour
+//! buckets (SQLite `localtime`) match on any machine.
 
+use std::ffi::{CString, c_char, c_int};
 use std::path::{Path, PathBuf};
 
 use db::port::{self, DatabaseError};
@@ -11,7 +13,54 @@ use serde_json::{Value, json};
 use shared::{HourlyDetailParams, MonthlyActivityParams, RawTableName, UsageFilters};
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
-const RECORDED_SCENARIOS: usize = 36;
+const RECORDED_SCENARIOS: usize = 42;
+
+/// Pins the C runtime's zone to the one the recording used (`FIXED_ZONE`, UTC+1 without DST). SQLite's
+/// `localtime` reads the C runtime's zone, and on Windows `std::env::set_var` does not update it, so
+/// the runtime's environment is set directly.
+#[cfg(windows)]
+fn pin_zone() {
+    unsafe extern "C" {
+        #[link_name = "_putenv"]
+        fn putenv(assignment: *const c_char) -> c_int;
+        fn _tzset();
+    }
+    let assignment = CString::new("TZ=CET-1").expect("no NUL byte");
+    // SAFETY: `assignment` is NUL-terminated, and the C runtime copies it.
+    unsafe {
+        putenv(assignment.as_ptr());
+        _tzset();
+    }
+}
+
+#[cfg(not(windows))]
+fn pin_zone() {
+    unsafe extern "C" {
+        fn setenv(name: *const c_char, value: *const c_char, overwrite: c_int) -> c_int;
+        fn tzset();
+    }
+    // SAFETY: both strings are NUL-terminated literals, and this runs before the test reads the zone.
+    unsafe {
+        setenv(c"TZ".as_ptr(), c"CET-1".as_ptr(), 1);
+        tzset();
+    }
+}
+
+/// Fails if SQLite does not see the pinned zone: 08:05Z is 09:05 at UTC+1.
+fn assert_zone_pinned() {
+    let conn = Connection::open_in_memory().expect("in-memory database");
+    let hour: String = conn
+        .query_row(
+            "SELECT strftime('%H', '2026-09-10 08:05:00', 'localtime')",
+            [],
+            |row| row.get(0),
+        )
+        .expect("localtime query");
+    assert_eq!(
+        hour, "09",
+        "SQLite localtime did not follow the pinned zone"
+    );
+}
 
 #[derive(Deserialize)]
 #[serde(
@@ -167,6 +216,8 @@ fn mismatch(path: &str, expected: &Value, actual: &Value) -> Option<String> {
 
 #[test]
 fn replays_every_recorded_scenario() {
+    pin_zone();
+    assert_zone_pinned();
     let text = std::fs::read_to_string(Path::new(FIXTURES).join("scenarios.json"))
         .expect("scenarios.json is committed");
     let recorded: Vec<Value> = serde_json::from_str(&text).expect("scenarios.json parses");

@@ -5,9 +5,10 @@
 // resolves them against the repository root.
 // Usage: node reference/dist/scenarios/scenarios/db-scenarios.js <output path> <repo root>
 
-import { writeFileSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import Database from 'better-sqlite3';
 import {
   getExportReport,
   getFilterOptions,
@@ -29,7 +30,13 @@ import type {
 const FIXTURE_TOKEN = '{fixtures}';
 const SESSION_STORE = `${FIXTURE_TOKEN}/session-store.db`;
 const EMPTY_STORE = `${FIXTURE_TOKEN}/empty.db`;
+const NULL_STORE = `${FIXTURE_TOKEN}/null-store.db`;
 const MISSING_STORE = 'missing/session-store.db';
+
+// UTC+1 with no daylight saving. A fixed offset keeps the hour buckets the same on every machine, and
+// the offset is not zero, so the recording shows that SQLite's `localtime` was applied. The Rust
+// replay pins the same zone (`rust/db/tests/scenarios.rs`).
+const FIXED_ZONE = 'CET-1';
 
 type Case =
   | { name: string; call: 'openDatabase'; dbPath: string }
@@ -223,8 +230,116 @@ const CASES: Case[] = [
     page: 0,
     pageSize: 10,
   },
+  {
+    name: 'filter-options-null-store',
+    call: 'getFilterOptions',
+    dbPath: NULL_STORE,
+  },
+  {
+    name: 'usage-null-store-keeps-null-project-and-date',
+    call: 'getUsage',
+    dbPath: NULL_STORE,
+    filters: NO_FILTERS,
+  },
+  {
+    name: 'usage-null-store-date-range-drops-null-dates',
+    call: 'getUsage',
+    dbPath: NULL_STORE,
+    filters: DATE_RANGE,
+  },
+  {
+    name: 'hourly-null-store-day-with-null-project',
+    call: 'getHourlyDetail',
+    dbPath: NULL_STORE,
+    params: { date: '2026-09-02' },
+  },
+  {
+    name: 'project-detail-null-store-null-tokens-and-created-at',
+    call: 'getProjectDetail',
+    dbPath: NULL_STORE,
+    project: 'C:/repos/nul',
+    filters: NO_FILTERS,
+  },
+  {
+    name: 'export-null-store-null-project-date-and-created-at',
+    call: 'getExportReport',
+    dbPath: NULL_STORE,
+    filters: NO_FILTERS,
+  },
   { name: 'default-db-path-under-home', call: 'resolveDefaultDbPath' },
 ];
+
+// Synthetic store with NULLs in every nullable column the usage queries read: a session with no
+// project, one with no created_at, one whose events have no tokens, and one whose event has no
+// created_at. Written from here so the fixture comes from this file.
+const NULL_STORE_SCHEMA = `
+  CREATE TABLE sessions (
+    id TEXT PRIMARY KEY,
+    cwd TEXT,
+    repository TEXT,
+    summary TEXT,
+    created_at TEXT
+  );
+  CREATE TABLE assistant_usage_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    total_nano_aiu INTEGER,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    created_at TEXT
+  );`;
+
+const NULL_STORE_SESSIONS: Array<[string, string | null, string | null, string | null, string | null]> = [
+  ['n1', null, null, null, '2026-09-02 10:00:00'],
+  ['n2', 'C:/repos/nul', null, 'Null tokens and created_at', null],
+  ['n3', 'C:/repos/omega', 'org/omega', 'Mixed nulls', '2026-09-03 12:00:00'],
+  ['n4', 'C:/repos/nul', null, null, '2026-09-04 08:00:00'],
+];
+
+const NULL_STORE_EVENTS: Array<
+  [string, string, number | null, number | null, number | null, string | null]
+> = [
+  ['n1', 'gpt-5.4', 1_000_000_000, 10, 5, '2026-09-02 10:05:00'],
+  ['n2', 'claude-sonnet-5', 2_000_000_000, null, null, '2026-09-04 09:00:00'],
+  ['n2', 'gpt-5.4', null, 4, null, '2026-09-04 09:30:00'],
+  ['n3', 'gpt-5.4', null, 7, 3, null],
+  ['n3', 'gpt-5.4', 500_000_000, null, null, '2026-09-03 12:30:00'],
+  ['n4', 'claude-sonnet-5', 3_000_000_000, 20, 1, null],
+];
+
+function writeNullStore(filePath: string): void {
+  rmSync(filePath, { force: true });
+  const db = new Database(filePath);
+  try {
+    db.exec(NULL_STORE_SCHEMA);
+    const insertSession = db.prepare('INSERT INTO sessions VALUES (?, ?, ?, ?, ?)');
+    for (const row of NULL_STORE_SESSIONS) insertSession.run(...row);
+    const insertEvent = db.prepare(
+      `INSERT INTO assistant_usage_events
+         (session_id, model, total_nano_aiu, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    for (const row of NULL_STORE_EVENTS) insertEvent.run(...row);
+  } finally {
+    db.close();
+  }
+}
+
+// Fails fast if the zone pin did not reach SQLite, since every hourly bucket depends on it.
+function assertZonePinned(): void {
+  const db = new Database(':memory:');
+  try {
+    const { hour } = db
+      .prepare(`SELECT strftime('%H', '2026-09-10 08:05:00', 'localtime') AS hour`)
+      .get() as { hour: string };
+    if (hour !== '09') {
+      throw new Error(`SQLite localtime gave ${hour} for 08:05Z, expected 09 under ${FIXED_ZONE}`);
+    }
+  } finally {
+    db.close();
+  }
+}
 
 function attempt(run: () => unknown): Outcome {
   try {
@@ -284,6 +399,9 @@ if (!outputPath || !repoRoot) {
 }
 
 const fixturesDir = path.join(repoRoot, 'rust', 'db', 'tests', 'fixtures');
+process.env.TZ = FIXED_ZONE;
+assertZonePinned();
+writeNullStore(path.join(fixturesDir, 'null-store.db'));
 writeFileSync(
   outputPath,
   `${JSON.stringify(
