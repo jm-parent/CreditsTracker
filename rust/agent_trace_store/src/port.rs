@@ -353,9 +353,13 @@ fn is_incomplete_tool_span(span: &AgentTraceSpan) -> bool {
     ) && (span.arguments_json.is_none() || span.result_text.is_none())
 }
 
-/// Orders by start, trace and span id with plain code-unit comparison, as the SQL query does.
-/// The TypeScript store uses `localeCompare`, which differs only for IDs that differ in case or
-/// punctuation alone.
+/// Orders by start, trace and span id with plain code-unit comparison, as the SQL query does. The
+/// TypeScript store re-sorts with `localeCompare` (reference/src/agent-trace-store.ts:343-353). The two
+/// agree on what the app stores: lowercase hex ids (reference/src/agent-trace-protocol.ts:340, 355) and
+/// `toISOString` start times (reference/src/agent-trace-sanitizer.ts:440). Ties are covered by the
+/// `hex-id-order-ties` scenario.
+/// ponytail: the store accepts any string id. `localeCompare` puts "a" before "B" and "_" before "0",
+/// code-unit order does not. The decoder never produces such ids, so that is not reproduced.
 fn compare_spans(left: &AgentTraceSpan, right: &AgentTraceSpan) -> std::cmp::Ordering {
     left.started_at
         .cmp(&right.started_at)
@@ -524,5 +528,21 @@ impl Cursor<'_> {
             self.at += 1;
         }
         self.at > start
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::iso_from_ms;
+
+    /// Expected values are `new Date(ms).toISOString()` from Node 24.
+    #[test]
+    fn iso_from_ms_matches_to_iso_string() {
+        assert_eq!(iso_from_ms(0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(iso_from_ms(-1), "1969-12-31T23:59:59.999Z");
+        assert_eq!(iso_from_ms(1_000_000_000_123), "2001-09-09T01:46:40.123Z");
+        assert_eq!(iso_from_ms(951_782_400_000), "2000-02-29T00:00:00.000Z");
+        assert_eq!(iso_from_ms(4_102_444_800_000), "2100-01-01T00:00:00.000Z");
+        assert_eq!(iso_from_ms(1_709_210_096_789), "2024-02-29T12:34:56.789Z");
     }
 }

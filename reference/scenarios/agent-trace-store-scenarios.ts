@@ -12,6 +12,10 @@ import type { AgentTraceSelection, AgentTraceSpan } from '../src/shared/types';
 
 // Stands for the Copilot CLI usage database path, which differs between machines.
 const DEFAULT_DB_TOKEN = '<default>';
+const RETENTION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+// The clock sets received_at, so snapshots check its shape and record this placeholder instead.
+const RECEIVED_AT_PLACEHOLDER = '<iso-utc-ms>';
+const RECEIVED_AT_SHAPE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 type Step =
   | { call: 'open'; dbPath: string }
@@ -63,6 +67,20 @@ function span(fields: Pick<AgentTraceSpan, 'sessionId' | 'traceId' | 'spanId'> &
 const INSERT_RAW_ROW = `INSERT INTO agent_trace_spans (
   source, session_id, trace_id, span_id, parent_span_id, started_at, received_at, span_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+const TIED_ROOT: Pick<AgentTraceSpan, 'sessionId'> & Partial<AgentTraceSpan> = {
+  sessionId: 'sess-10',
+  parentSpanId: null,
+  category: 'agent',
+  name: 'invoke_agent',
+  toolName: null,
+  argumentsJson: null,
+  resultText: null,
+};
+
+function hexId(prefix: string, width: number): string {
+  return prefix.padEnd(width, '0');
+}
 
 const SCENARIOS: Scenario[] = [
   {
@@ -158,6 +176,49 @@ const SCENARIOS: Scenario[] = [
     ],
   },
   {
+    // Spans that tie on startedAt are ordered by trace id, then span id. The decoder only produces
+    // lowercase hex ids (reference/src/agent-trace-protocol.ts:340), where localeCompare and code-unit
+    // order agree.
+    name: 'hex-id-order-ties',
+    steps: [
+      { call: 'open', dbPath: 'hex-ties.db' },
+      {
+        call: 'insertSpans',
+        spans: [
+          span({ ...TIED_ROOT, traceId: hexId('9f', 32), spanId: hexId('a0', 16) }),
+          span({ ...TIED_ROOT, traceId: hexId('0a', 32), spanId: hexId('f1', 16) }),
+          span({ ...TIED_ROOT, traceId: hexId('9f', 32), spanId: hexId('0b', 16) }),
+          span({ ...TIED_ROOT, traceId: hexId('a0', 32), spanId: hexId('01', 16) }),
+        ],
+      },
+      { call: 'getSession', selection: { source: 'copilot-cli', sessionId: 'sess-10' } },
+    ],
+  },
+  {
+    // A row received exactly one window before `now` is kept. Its received_at is far in the future so
+    // the real-clock prune in open and getSession never removes it.
+    name: 'retention-boundary',
+    steps: [
+      { call: 'open', dbPath: 'boundary.db' },
+      {
+        call: 'exec',
+        sql: INSERT_RAW_ROW,
+        params: [
+          'copilot-cli',
+          'sess-8',
+          't8',
+          's8',
+          null,
+          '2026-11-23T10:00:00.000Z',
+          '2100-01-01T00:00:00.000Z',
+          JSON.stringify(span({ ...TIED_ROOT, sessionId: 'sess-8', traceId: 't8', spanId: 's8' })),
+        ],
+      },
+      { call: 'pruneExpired', nowMs: Date.parse('2100-01-01T00:00:00.000Z') + RETENTION_WINDOW_MS },
+      { call: 'getSession', selection: { source: 'copilot-cli', sessionId: 'sess-8' } },
+    ],
+  },
+  {
     name: 'refuses-copilot-cli-database',
     steps: [{ call: 'open', dbPath: DEFAULT_DB_TOKEN }],
   },
@@ -240,9 +301,16 @@ function snapshot(dbPath: string | null): unknown {
       metadata: db.prepare('SELECT key, value FROM agent_trace_metadata ORDER BY key').all(),
       spans: db
         .prepare(
-          'SELECT source, session_id, trace_id, span_id, parent_span_id, started_at, span_json FROM agent_trace_spans ORDER BY source, trace_id, span_id',
+          'SELECT source, session_id, trace_id, span_id, parent_span_id, started_at, received_at, span_json FROM agent_trace_spans ORDER BY source, trace_id, span_id',
         )
-        .all(),
+        .all()
+        .map((row) => {
+          const entry = row as { received_at: string };
+          if (!RECEIVED_AT_SHAPE.test(entry.received_at)) {
+            throw new Error(`received_at ${entry.received_at} is not an ISO UTC timestamp with milliseconds`);
+          }
+          return { ...entry, received_at: RECEIVED_AT_PLACEHOLDER };
+        }),
     };
   } finally {
     db.close();

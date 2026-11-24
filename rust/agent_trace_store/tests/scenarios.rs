@@ -140,6 +140,9 @@ fn rows(conn: &Connection, sql: &str) -> Vec<Value> {
         .collect()
 }
 
+/// Stands for `received_at` in snapshots, which the clock sets. Each snapshot checks its shape instead.
+const RECEIVED_AT_PLACEHOLDER: &str = "<iso-utc-ms>";
+
 /// The database as the TypeScript side recorded it. `None` before the store has created a file.
 fn snapshot(db_path: Option<&Path>) -> Value {
     let Some(path) = db_path.filter(|path| path.exists()) else {
@@ -160,14 +163,36 @@ fn snapshot(db_path: Option<&Path>) -> Value {
             .join(" ");
         entry["sql"] = json!(sql);
     }
+    let mut spans = rows(
+        &conn,
+        "SELECT source, session_id, trace_id, span_id, parent_span_id, started_at, received_at, span_json FROM agent_trace_spans ORDER BY source, trace_id, span_id",
+    );
+    for span in &mut spans {
+        let received_at = span["received_at"].as_str().expect("received_at");
+        assert!(
+            is_received_at_shape(received_at),
+            "received_at {received_at} is not an ISO UTC timestamp with milliseconds"
+        );
+        span["received_at"] = json!(RECEIVED_AT_PLACEHOLDER);
+    }
     json!({
         "schema": schema,
         "metadata": rows(&conn, "SELECT key, value FROM agent_trace_metadata ORDER BY key"),
-        "spans": rows(
-            &conn,
-            "SELECT source, session_id, trace_id, span_id, parent_span_id, started_at, span_json FROM agent_trace_spans ORDER BY source, trace_id, span_id",
-        ),
+        "spans": spans,
     })
+}
+
+/// `YYYY-MM-DDTHH:MM:SS.sssZ`, the shape of `Date.prototype.toISOString`.
+fn is_received_at_shape(text: &str) -> bool {
+    text.len() == 24
+        && text.bytes().enumerate().all(|(index, byte)| match index {
+            4 | 7 => byte == b'-',
+            10 => byte == b'T',
+            13 | 16 => byte == b':',
+            19 => byte == b'.',
+            23 => byte == b'Z',
+            _ => byte.is_ascii_digit(),
+        })
 }
 
 /// JSON numbers compare by value: the fixture writes `1000` where Rust serializes `1000.0`.
