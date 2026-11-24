@@ -171,13 +171,19 @@ fn mismatch(path: &str, expected: &Json, actual: &Json, tolerance: f64) -> Optio
 
 /// `getExportReport` shares of the models must add up to 100 whenever the period has any credits.
 fn shares_total_100(preview: &Json) -> Option<String> {
+    let models = preview["byModel"]
+        .as_array()
+        .expect("preview.byModel must be an array");
     if preview["totals"]["aiuCredits"].as_f64() == Some(0.0) {
         return None;
     }
-    let total: f64 = preview["byModel"]
-        .as_array()?
+    let total: f64 = models
         .iter()
-        .filter_map(|model| model["sharePercent"].as_f64())
+        .map(|model| {
+            model["sharePercent"]
+                .as_f64()
+                .expect("each preview.byModel entry must have a numeric sharePercent")
+        })
         .sum();
     ((total - 100.0).abs() > 1e-9).then(|| format!("model shares sum to {total}, not 100"))
 }
