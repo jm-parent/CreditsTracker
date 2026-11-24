@@ -175,13 +175,19 @@ Whole-app parity is checked separately, once the units are in place:
 - The existing renderer tests (vitest) keep running throughout. The TypeScript
   core tests keep running until cutover.
 
-### Cutover
+### Parallel operation (supersedes cutover)
 
-- The shipped product is the Tauri app. `rust-anything app lift` is not used
-  for it, because it produces a CLI binary. It may be used on `rust/app` only
-  as end-to-end proof.
-- Electron code is removed in a separate commit, after the Tauri build
-  succeeds and the whole-app replay passes.
+Decided 2026-11-24: there is no cutover. The Electron app and the Tauri/Rust
+app both stay available and are released in parallel.
+
+- Electron code, `forge.config.ts` and the Squirrel pipeline are kept.
+- The Tauri app is built and released alongside them. `rust-anything app lift`
+  is not used, because it produces a CLI binary.
+- Both apps must not collide on the user's machine. Their identifier, data and
+  log locations, desktop shortcut name, and update feed must be decided before
+  the first common release (see Open questions).
+- The 1.20.0 "bridge" release is no longer required, because Electron users
+  are not forced to move.
 
 ## What is left to the builder
 
@@ -205,12 +211,13 @@ Whole-app parity is checked separately, once the units are in place:
 
 Ranked by how much the answer changes the plan.
 
-- Answered: installed 1.20.0 users receive one final Squirrel release that
-  guides them to the Tauri installer. The current updater uses Electron
-  `autoUpdater` and Squirrel `RELEASES` (`src/main/updater.ts`), which Tauri
-  cannot read.
+- Superseded (2026-11-24): the one-time Squirrel bridge release is no longer
+  needed. Electron stays available.
 - Answered: the first Tauri release includes updates, with a Tauri signing key
   stored as a CI secret. `specs/012` is preserved.
-- Answered: Electron code is deleted at cutover, in a separate commit.
+- Answered (2026-11-24): both apps are kept in parallel. Electron code is not
+  deleted.
+- Open: the Tauri app's identifier, data and log folder, shortcut name, and
+  update feed must be chosen so they do not collide with the Electron app.
 - Why does the user want the rewrite? The answer may change which units
   matter most.

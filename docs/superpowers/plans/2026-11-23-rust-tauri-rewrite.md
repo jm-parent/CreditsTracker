@@ -828,43 +828,38 @@ git commit -m "ci: build Tauri Windows bundle in release workflow"
 
 ---
 
-### Task 19: Cutover
+### Task 19: Parallel release (replaces Cutover)
+
+**Decision (2026-11-24):** no cutover. Electron and Tauri ship in parallel. Nothing is deleted.
 
 **Files:**
-- Delete: `src/main/`, `src/preload.ts`, `src/main.ts`, `forge.config.ts`, `vite.main.config.ts`, `vite.preload.config.ts`, `reference/` (only after the whole-app replay passes and the Tauri build is verified)
-- Modify: `README.md`, `docs/DEVELOPMENT.md`, `specs/` where they describe Electron behavior
+- Modify: `README.md`, `docs/DEVELOPMENT.md` (describe both apps and their build commands)
+- Modify: `.github/workflows/release.yml` only if the two apps need distinct release assets or names (decided in Step 1)
 
 **Interfaces:**
-- Produces: a repository with no Electron code. The renderer, the Rust crates, and the Tauri app remain.
+- Produces: one release containing the Squirrel artifacts (Electron) and the NSIS bundle plus `latest.json` (Tauri), with no name collision.
 
-- [ ] **Step 1: Confirm gates**
+- [ ] **Step 1: Resolve identity collisions (user decision required)**
 
-Run: `rust-anything gate rust/<each unit>` for every unit, then `rust-anything app replay rust --build "cargo build -p app"`.
-Expected: every gate passes and the replay is 100% with fallback rate 0.
+Choose the Tauri app's identifier, data and log folder, desktop shortcut name, and update feed so they do not overlap with Electron. Record the choice in the design doc Open questions.
 
-- [ ] **Step 2: Confirm the Tauri build**
+- [ ] **Step 2: Confirm both builds**
 
-Run: `cargo tauri build`
-Expected: a Windows bundle is produced without errors.
+Run: `npm run make` (Electron) and `cargo tauri build` from `src-tauri` (Tauri). Expected: both succeed.
 
-- [ ] **Step 3: Remove Electron code in its own commit**
+- [ ] **Step 3: Run the test suites**
 
-Delete the files listed above. Keep `reference/` out of the shipped tree if it is still needed for replay, and note it in `docs/DEVELOPMENT.md`.
+Run: `cargo test --workspace` in `rust/`, `cargo test` in `src-tauri/`, and `npm test`. Expected: all PASS.
 
-- [ ] **Step 4: Run the test suites**
+- [ ] **Step 4: Update docs**
 
-Run: `cargo test --workspace` and `npm test`
-Expected: both PASS.
+Update `README.md` and `docs/DEVELOPMENT.md` so both apps' build, run and test commands are documented.
 
-- [ ] **Step 5: Update docs**
-
-Update `README.md` and `docs/DEVELOPMENT.md` so the build, run, and test commands match the Tauri setup.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add -A
-git commit -m "chore: remove Electron code after Tauri cutover"
+git add README.md docs/DEVELOPMENT.md
+git commit -m "docs: document parallel Electron and Tauri apps"
 ```
 
 ---
