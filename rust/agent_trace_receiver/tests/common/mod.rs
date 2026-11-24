@@ -144,7 +144,7 @@ fn read_reply(reader: &mut BufReader<TcpStream>) -> Reply {
     }
 }
 
-fn parse_reply(raw: &[u8]) -> Reply {
+pub fn parse_reply(raw: &[u8]) -> Reply {
     let split = raw
         .windows(4)
         .position(|window| window == b"\r\n\r\n")

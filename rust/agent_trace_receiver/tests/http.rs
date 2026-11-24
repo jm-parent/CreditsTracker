@@ -1,6 +1,6 @@
 mod common;
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::Path;
 use std::sync::{Arc, Mutex, mpsc};
@@ -191,6 +191,78 @@ fn connections_beyond_the_concurrency_cap_get_503_and_the_receiver_keeps_serving
     thread::sleep(Duration::from_millis(300));
     let served = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&valid_export()));
     assert_eq!(served.status, 200);
+
+    receiver.close();
+}
+
+/// Sends a request with a `content-length` head on a new connection, after `delay`, and returns the reply.
+/// The body goes out in 64 KiB pieces with a pause between them, so a receiver that closes early is
+/// still being written to when it closes. Unlike `common::exchange`, a write that fails fails the test:
+/// the receiver closed the connection before the body was read, and a client that gets that error may
+/// never read the reply.
+fn send_in_full(port: u16, delay: Duration, head: &str, body: &[u8]) -> common::Reply {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .expect("read timeout");
+    thread::sleep(delay);
+    stream
+        .write_all(head.as_bytes())
+        .expect("the receiver must read the request, not reset the connection");
+    for piece in body.chunks(64 * 1024) {
+        stream
+            .write_all(piece)
+            .expect("the receiver must read the request, not reset the connection");
+        thread::sleep(Duration::from_millis(1));
+    }
+    let mut raw = Vec::new();
+    let _ = stream.read_to_end(&mut raw);
+    common::parse_reply(&raw)
+}
+
+#[test]
+fn a_request_refused_with_503_has_its_body_drained_so_the_503_is_not_reset() {
+    let folder = common::scratch("busy-with-body");
+    let receiver = start(&folder);
+    let port = common::port_of(receiver.endpoint());
+
+    let idle: Vec<TcpStream> = (0..16)
+        .map(|_| TcpStream::connect(("127.0.0.1", port)).expect("connect"))
+        .collect();
+    // The request is sent after the refusal, so the receiver has closed the connection by then.
+    let head = "POST /v1/traces HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/x-protobuf\r\ncontent-length: 4096\r\nconnection: close\r\n\r\n";
+    let refused = send_in_full(port, Duration::from_millis(50), head, &[b'x'; 4096]);
+    assert_eq!(refused.status, 503);
+
+    drop(idle);
+    receiver.close();
+}
+
+#[test]
+fn an_unsupported_expectation_with_a_body_gets_417_and_the_body_is_drained() {
+    let folder = common::scratch("expectation-failed");
+    let receiver = start(&folder);
+    let port = common::port_of(receiver.endpoint());
+
+    let length = 16 * 1024 * 1024;
+    let head = format!("POST /v1/traces HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/x-protobuf\r\nexpect: frobnicate\r\ncontent-length: {length}\r\nconnection: close\r\n\r\n");
+    let reply = send_in_full(port, Duration::ZERO, &head, &vec![0u8; length]);
+    assert_eq!(reply.status, 417);
+
+    receiver.close();
+}
+
+#[test]
+fn a_body_sent_past_the_limit_in_full_gets_413_and_is_not_reset() {
+    let folder = common::scratch("oversized-body-in-full");
+    let receiver = start(&folder);
+    let port = common::port_of(receiver.endpoint());
+
+    // Twice the limit: the client is still sending when a receiver that stops at the limit closes.
+    let length = 16 * 1024 * 1024;
+    let head = format!("POST /v1/traces HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/x-protobuf\r\ncontent-length: {length}\r\nconnection: close\r\n\r\n");
+    let reply = send_in_full(port, Duration::ZERO, &head, &vec![0u8; length]);
+    assert_eq!(reply.status, 413);
 
     receiver.close();
 }

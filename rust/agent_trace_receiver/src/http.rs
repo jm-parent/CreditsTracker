@@ -6,7 +6,7 @@
 //! ponytail: no pipelining beyond sequential keep-alive, and trailers are read but not kept.
 
 use std::io::{self, BufRead, BufReader, Read, Write};
-use std::net::TcpStream;
+use std::net::{Shutdown, TcpStream};
 use std::time::{Duration, Instant};
 
 /// How long an idle keep-alive connection stays open between requests (Node's default).
@@ -15,8 +15,15 @@ pub const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(5);
 /// ponytail: Node's default `requestTimeout` is 300 s. `close()` waits for in-flight requests under the
 /// service lock, so the receiver uses a shorter ceiling.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+/// How long a refused connection (503) is drained before it closes. It runs on its own thread.
+pub const REFUSAL_DRAIN_TIMEOUT: Duration = Duration::from_millis(200);
+/// Bytes of a refused request's body that are read and dropped before the connection closes: twice
+/// the 8 MiB export limit. A longer body is cut off, and the connection then closes with data unread.
+pub const MAX_DRAINED_BYTES: usize = 16 * 1024 * 1024;
 
 const MAX_HEAD_BYTES: usize = 64 * 1024;
+const BUSY_RESPONSE: &[u8] =
+    b"HTTP/1.1 503 Service Unavailable\r\ncontent-length: 0\r\nconnection: close\r\n\r\n";
 
 /// A request head. Its body is read with `Connection::read_body`.
 pub struct Request {
@@ -34,8 +41,8 @@ enum Framing {
     Chunked,
 }
 
-/// A body within the limit, or one larger than it. The rest of a larger body is not read, so the
-/// connection cannot carry another request.
+/// A body within the limit, or one larger than it. A larger body is drained up to `MAX_DRAINED_BYTES`
+/// before this is returned, and the connection is then closed.
 pub enum Body {
     Complete(Vec<u8>),
     TooLarge,
@@ -46,8 +53,9 @@ pub enum RequestError {
     Closed,
     /// The head or its framing is not one this server reads. Answered with 400.
     Malformed,
-    /// An `Expect` header other than `100-continue`. Answered with 417.
-    ExpectationFailed,
+    /// An `Expect` header other than `100-continue`. Answered with 417; the request's body is drained
+    /// with `Connection::drain_body` first.
+    ExpectationFailed(Request),
 }
 
 pub struct Connection {
@@ -104,32 +112,44 @@ impl Connection {
                     .write_all(b"HTTP/1.1 100 Continue\r\n\r\n")
                     .map_err(|_| RequestError::Closed)?;
             }
-            Some(_) => return Err(RequestError::ExpectationFailed),
+            Some(_) => return Err(RequestError::ExpectationFailed(request)),
         }
         Ok(Some(request))
     }
 
-    /// Reads the body of `request` up to `limit` bytes. A larger body is reported after `limit + 1`
-    /// bytes, and its unread rest is left on the socket.
+    /// Reads the body of `request` up to `limit` bytes. A larger body is drained up to
+    /// `MAX_DRAINED_BYTES` and reported as `TooLarge`; the caller then answers and closes.
     pub fn read_body(&mut self, request: &Request, limit: usize) -> io::Result<Body> {
         match request.framing {
             Framing::Empty => Ok(Body::Complete(Vec::new())),
+            Framing::Length(length) if length > limit => {
+                drain_length(&mut self.reader, length);
+                Ok(Body::TooLarge)
+            }
             Framing::Length(length) => {
-                let wanted = length.min(limit + 1);
                 let mut body = Vec::new();
                 (&mut self.reader)
-                    .take(wanted as u64)
+                    .take(length as u64)
                     .read_to_end(&mut body)?;
-                if body.len() < wanted {
+                if body.len() < length {
                     return Err(io::ErrorKind::UnexpectedEof.into());
                 }
-                Ok(if length > limit {
-                    Body::TooLarge
-                } else {
-                    Body::Complete(body)
-                })
+                Ok(Body::Complete(body))
             }
             Framing::Chunked => read_chunked(&mut self.reader, limit),
+        }
+    }
+
+    /// Reads and drops the body of a request that is refused, up to `MAX_DRAINED_BYTES`, so the client
+    /// can finish sending before the connection closes. Returns whether the body was read to its end.
+    pub fn drain_body(&mut self, request: &Request) -> bool {
+        match request.framing {
+            Framing::Empty => true,
+            Framing::Length(length) => drain_length(&mut self.reader, length),
+            Framing::Chunked => match read_chunk_size(&mut self.reader) {
+                Ok(size) => drain_chunks(&mut self.reader, size),
+                Err(_) => false,
+            },
         }
     }
 
@@ -172,11 +192,55 @@ impl Request {
     }
 }
 
-/// Answers a connection that arrives while the receiver is full, then closes it.
+/// Answers a connection that arrives while the receiver is full, then drains what the client sends
+/// for up to `REFUSAL_DRAIN_TIMEOUT` before closing. The request is not parsed, so it can be any
+/// request. Run it on its own thread: the drain waits for the client.
 pub fn refuse_busy(mut stream: TcpStream) {
-    let _ = stream.write_all(
-        b"HTTP/1.1 503 Service Unavailable\r\ncontent-length: 0\r\nconnection: close\r\n\r\n",
+    if stream.write_all(BUSY_RESPONSE).is_err() {
+        return;
+    }
+    let _ = stream.shutdown(Shutdown::Write);
+    let mut drained = Deadline {
+        stream,
+        at: Instant::now() + REFUSAL_DRAIN_TIMEOUT,
+    };
+    let _ = io::copy(
+        &mut (&mut drained).take(MAX_DRAINED_BYTES as u64),
+        &mut io::sink(),
     );
+}
+
+/// Reads and drops `length` bytes, or as many as `MAX_DRAINED_BYTES` allows. Returns whether all of them
+/// were read.
+fn drain_length(reader: &mut BufReader<Deadline>, length: usize) -> bool {
+    let copied = io::copy(
+        &mut reader.by_ref().take(length.min(MAX_DRAINED_BYTES) as u64),
+        &mut io::sink(),
+    );
+    copied.is_ok_and(|copied| copied == length as u64)
+}
+
+/// Reads and drops the rest of a chunked body, from `size`, the size of its next chunk, up to
+/// `MAX_DRAINED_BYTES` of data. Returns whether the body ended within that bound.
+fn drain_chunks(reader: &mut BufReader<Deadline>, mut size: usize) -> bool {
+    let mut drained = 0;
+    loop {
+        if size == 0 {
+            return read_trailers(reader).is_ok();
+        }
+        if size > MAX_DRAINED_BYTES - drained || !drain_length(reader, size) {
+            return false;
+        }
+        drained += size;
+        let mut budget = MAX_HEAD_BYTES;
+        if !read_line(reader, &mut budget).is_ok_and(|line| line.is_empty()) {
+            return false;
+        }
+        size = match read_chunk_size(reader) {
+            Ok(size) => size,
+            Err(_) => return false,
+        };
+    }
 }
 
 fn read_head(reader: &mut BufReader<Deadline>) -> Result<Request, RequestError> {
@@ -241,27 +305,37 @@ fn read_line(reader: &mut BufReader<Deadline>, budget: &mut usize) -> io::Result
 fn read_chunked(reader: &mut BufReader<Deadline>, limit: usize) -> io::Result<Body> {
     let mut body = Vec::new();
     loop {
-        let mut budget = MAX_HEAD_BYTES;
-        let size_line = read_line(reader, &mut budget)?;
-        let size = size_line.split(';').next().unwrap_or("").trim();
-        let size = usize::from_str_radix(size, 16)
-            .map_err(|_| invalid("chunk size is not hexadecimal"))?;
+        let size = read_chunk_size(reader)?;
         if size == 0 {
-            let mut budget = MAX_HEAD_BYTES;
-            while !read_line(reader, &mut budget)?.is_empty() {}
+            read_trailers(reader)?;
             return Ok(Body::Complete(body));
         }
         if size > limit - body.len() {
+            drain_chunks(reader, size);
             return Ok(Body::TooLarge);
         }
         let read = (&mut *reader).take(size as u64).read_to_end(&mut body)?;
         if read < size {
             return Err(io::ErrorKind::UnexpectedEof.into());
         }
+        let mut budget = MAX_HEAD_BYTES;
         if !read_line(reader, &mut budget)?.is_empty() {
             return Err(invalid("chunk data is not followed by a line break"));
         }
     }
+}
+
+fn read_chunk_size(reader: &mut BufReader<Deadline>) -> io::Result<usize> {
+    let mut budget = MAX_HEAD_BYTES;
+    let size_line = read_line(reader, &mut budget)?;
+    let size = size_line.split(';').next().unwrap_or("").trim();
+    usize::from_str_radix(size, 16).map_err(|_| invalid("chunk size is not hexadecimal"))
+}
+
+fn read_trailers(reader: &mut BufReader<Deadline>) -> io::Result<()> {
+    let mut budget = MAX_HEAD_BYTES;
+    while !read_line(reader, &mut budget)?.is_empty() {}
+    Ok(())
 }
 
 fn framing_of(headers: &[(String, String)]) -> Result<Framing, RequestError> {

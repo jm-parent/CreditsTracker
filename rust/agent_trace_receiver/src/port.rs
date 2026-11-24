@@ -218,7 +218,8 @@ fn accept_connections(listener: &TcpListener, shared: &Arc<Shared>, port: u16) {
                 "Refused an OTLP connection: too many connections are open",
                 json!({ "status": 503, "limit": MAX_CONCURRENT_CONNECTIONS }),
             );
-            refuse_busy(stream);
+            // On its own thread, so the acceptor is not held while the client's request is drained.
+            let _ = thread::Builder::new().spawn(move || refuse_busy(stream));
             continue;
         };
         handlers.retain(|handle| !handle.is_finished());
@@ -283,7 +284,8 @@ fn serve_connection(stream: TcpStream, shared: &Shared, port: u16) {
                 let _ = connection.respond(400, None, &[], false);
                 return;
             }
-            Err(RequestError::ExpectationFailed) => {
+            Err(RequestError::ExpectationFailed(request)) => {
+                connection.drain_body(&request);
                 let _ = connection.respond(417, None, &[], false);
                 return;
             }
@@ -320,9 +322,10 @@ fn send_reply(connection: &mut Connection, reply: Reply, keep_alive: bool) -> io
 fn handle_request(connection: &mut Connection, request: &Request, shared: &Shared, port: u16) -> (Reply, bool) {
     let route = route_of(&request.target);
     if let Some(reply) = early_rejection(request, &route, shared, port) {
-        // Drain the body up to the limit before answering, so the next request is not read from it.
-        let drained = connection.read_body(request, MAX_BODY_BYTES);
-        return (reply, matches!(drained, Ok(Body::Complete(_))));
+        // Drain the body before answering, so the client can finish sending and the next request on
+        // the connection is not read from it.
+        let drained = connection.drain_body(request);
+        return (reply, drained);
     }
 
     match connection.read_body(request, MAX_BODY_BYTES) {
