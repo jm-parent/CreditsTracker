@@ -1,0 +1,53 @@
+[package]
+name = "credits-tracker-app"
+version = "1.20.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+description = "Tauri shell that hosts the Credits Dashboard renderer and exposes the Rust IPC commands"
+
+[[bin]]
+# Matches the Squirrel executable name, so the desktop shortcut keeps its name.
+name = "credits-tracker"
+path = "src/main.rs"
+
+# Its own workspace root: cargo requires workspace members to sit below the
+# workspace root, so this crate cannot join the `rust/` workspace.
+[workspace]
+
+[build-dependencies]
+tauri-build = "2.7"
+
+[dependencies]
+tauri = "2.12"
+tauri-plugin-dialog = "2.8"
+tauri-plugin-opener = "2.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+rusqlite = { version = "0.43", features = ["bundled"] }
+ureq = { version = "3", features = ["json"] }
+url = "2"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+
+shared = { path = "../rust/shared" }
+logger = { path = "../rust/logger" }
+db = { path = "../rust/db" }
+aggregate = { path = "../rust/aggregate" }
+html_report = { path = "../rust/html_report" }
+export = { path = "../rust/export" }
+agent_trace_protocol = { path = "../rust/agent_trace_protocol" }
+agent_trace_sanitizer = { path = "../rust/agent_trace_sanitizer" }
+agent_trace_correlator = { path = "../rust/agent_trace_correlator" }
+agent_trace_store = { path = "../rust/agent_trace_store" }
+agent_trace_receiver = { path = "../rust/agent_trace_receiver" }
+vscode_chat = { path = "../rust/vscode_chat" }
+updater = { path = "../rust/updater" }
+shortcut = { path = "../rust/shortcut" }
+
+[lints.rust]
+unused_lifetimes = "warn"
+
+# The usage queries and the bundled SQLite run on every dashboard refresh. Optimizing dependencies
+# (including the path crates under rust/) keeps `cargo tauri dev` responsive; the app crate stays debuggable.
+[profile.dev.package."*"]
+opt-level = 2

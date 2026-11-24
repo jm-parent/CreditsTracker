@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Credits Tracker",
+  "identifier": "dev.jm-parent.credits-tracker",
+  "build": {
+    "beforeDevCommand": "npx vite --config vite.renderer.config.ts --port 5173 --strictPort",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npx vite build --config vite.renderer.config.ts",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Credits Dashboard",
+        "width": 1200,
+        "height": 800
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["../assets/icon.ico"]
+  }
+}

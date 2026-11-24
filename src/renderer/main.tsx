@@ -2,7 +2,9 @@ import './index.css';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { installGlobalErrorLogging, logError, logInfo } from './lib/logger';
+import { installTransport } from './lib/transport';
 
+installTransport();
 installGlobalErrorLogging();
 
 const container = document.getElementById('root');
