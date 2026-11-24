@@ -81,7 +81,8 @@ pub fn parse_chat_session_file(
         if trimmed.is_empty() {
             continue;
         }
-        let Ok(obj) = serde_json::from_str::<Value>(trimmed) else {
+        let Ok(obj) = serde_json::from_str::<Value>(&lone_surrogates_to_replacement(trimmed))
+        else {
             continue;
         };
         if obj.is_null() {
@@ -190,19 +191,19 @@ pub fn parse_chat_session_file(
 /// Port of `loadVscodeUsage` (`reference/src/vscode-chat-store.ts:201`).
 pub fn load_vscode_usage(workspace_storage_dir: &Path) -> VscodeUsageData {
     let mut usage = VscodeUsageData::default();
-    let Ok(entries) = std::fs::read_dir(workspace_storage_dir) else {
+    let Ok(entries) = list_dir(workspace_storage_dir) else {
         return usage;
     };
-    for entry in entries.flatten() {
+    for entry in entries {
         if !entry.file_type().is_ok_and(|t| t.is_dir()) {
             continue;
         }
         let workspace_dir = entry.path();
         let project = resolve_workspace_project(&workspace_dir.join("workspace.json"));
-        let Ok(files) = std::fs::read_dir(workspace_dir.join("chatSessions")) else {
+        let Ok(files) = list_dir(&workspace_dir.join("chatSessions")) else {
             continue;
         };
-        for file in files.flatten() {
+        for file in files {
             if !file.file_name().to_string_lossy().ends_with(".jsonl") {
                 continue;
             }
@@ -213,6 +214,41 @@ pub fn load_vscode_usage(workspace_storage_dir: &Path) -> VscodeUsageData {
         }
     }
     usage
+}
+
+/// Directory entries in the order Node's `readdirSync` returns them. libuv sorts them by name on
+/// POSIX; on Windows it keeps the NTFS order, which `read_dir` also returns, so only POSIX sorts.
+fn list_dir(dir: &Path) -> std::io::Result<Vec<std::fs::DirEntry>> {
+    let mut entries: Vec<_> = std::fs::read_dir(dir)?.flatten().collect();
+    entries.sort_by_key(|entry| (!cfg!(windows)).then(|| entry.file_name()));
+    Ok(entries)
+}
+
+/// serde_json rejects unpaired `\uD800`-`\uDFFF` escapes, which `JSON.stringify` writes for a lone
+/// surrogate (a prompt truncated mid-emoji). Each becomes `\uFFFD`: a Rust string cannot hold a
+/// lone surrogate, the one loss against `JSON.parse`. Valid pairs and escaped backslashes stay.
+fn lone_surrogates_to_replacement(text: &str) -> String {
+    let (bytes, mut out, mut copied, mut i) = (text.as_bytes(), String::new(), 0, 0);
+    while i < bytes.len() {
+        match (bytes[i], unit_at(bytes, i), unit_at(bytes, i + 6)) {
+            (b'\\', Some(0xD800..=0xDBFF), Some(0xDC00..=0xDFFF)) => i += 12,
+            (b'\\', Some(0xD800..=0xDFFF), _) => {
+                out += &format!("{}\\uFFFD", &text[copied..i]);
+                (copied, i) = (i + 6, i + 6);
+            }
+            (b'\\', unit, _) => i += if unit.is_some() { 6 } else { 2 },
+            _ => i += 1,
+        }
+    }
+    out + &text[copied..]
+}
+
+/// The code unit of the `\uXXXX` escape starting at `at`, if there is one.
+fn unit_at(bytes: &[u8], at: usize) -> Option<u32> {
+    let digits = bytes.get(at..at + 6)?.strip_prefix(br"\u")?;
+    digits
+        .iter()
+        .try_fold(0, |u, &b| Some(u * 16 + (b as char).to_digit(16)?))
 }
 
 const NULL_LINE: &str = "TypeError: Cannot read properties of null";
@@ -514,6 +550,8 @@ mod tests {
         fixture("fixtures/vscode/workspaceStorage")
     }
 
+    // Workspace folder URIs are Windows drive-letter paths; only Windows resolves them to this path.
+    #[cfg(windows)]
     #[test]
     fn cafe_folder_and_emoji_title_survive_a_storage_scan() {
         let usage = load_vscode_usage(&storage());
@@ -547,6 +585,14 @@ mod tests {
     }
 
     #[test]
+    fn lone_surrogate_line_keeps_its_credits() {
+        let path = storage().join("truncated-prompt-workspace/chatSessions/session-008.jsonl");
+        let usage = parse_chat_session_file(&path, None).unwrap();
+        let credits: Vec<f64> = usage.events.iter().map(|e| e.aiu_credits).collect();
+        assert_eq!(credits, [0.3, 0.4]);
+    }
+
+    #[test]
     fn null_line_fails_the_parse_like_the_typescript_throw() {
         let result = parse_chat_session_file(
             &fixture(
@@ -576,6 +622,7 @@ mod tests {
         assert_eq!(usage.sessions[0].summary, None);
     }
 
+    #[cfg(windows)]
     #[test]
     fn file_uri_decodes_percent_encoding_and_drive_letter() {
         assert_eq!(

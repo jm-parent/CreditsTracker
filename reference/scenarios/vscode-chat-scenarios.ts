@@ -50,6 +50,12 @@ const CASES: Case[] = [
     project: 'app',
   },
   {
+    name: 'lone-surrogate-escapes-keep-credits',
+    call: 'parseChatSessionFile',
+    file: `${FIXTURE_ROOT}/truncated-prompt-workspace/chatSessions/session-008.jsonl`,
+    project: 'app',
+  },
+  {
     name: 'missing-session-file-is-empty',
     call: 'parseChatSessionFile',
     file: `${FIXTURE_ROOT}/does-not-exist/chatSessions/session-404.jsonl`,

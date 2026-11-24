@@ -1,0 +1,4 @@
+{"kind":0,"v":{"sessionId":"session-008","creationDate":1794800000000}}
+{"kind":1,"k":["customTitle"],"v":"Pair \ud83d\ude80 and C:\\ud83d"}
+{"kind":1,"k":["requests"],"v":[{"timestamp":1794800060000,"modelId":"copilot/gpt-5.4","copilotCredits":0.3,"promptTokens":120,"completionTokens":40,"message":{"text":"Explain the emoji \ud83d"}}]}
+{"kind":1,"k":["requests"],"v":[{"timestamp":1794800120000,"modelId":"copilot/claude-sonnet-5","copilotCredits":0.4,"promptTokens":80,"completionTokens":20,"message":{"text":"Pair \ud83d\ude80, path C:\\ud83d, lone low \ude00"}}]}

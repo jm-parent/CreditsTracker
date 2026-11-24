@@ -67,13 +67,23 @@ fn replays_every_recorded_scenario() {
                     ),
                 }
             }
-            Scenario::Load { name, dir, outcome } => match outcome {
-                Outcome::Ok(expected) => {
-                    assert_eq!(load_vscode_usage(&root.join(&dir)), expected, "{name}")
+            // The recording machine's workspace folders and default storage dir are Windows paths;
+            // other platforms resolve them differently, so these replay on Windows only.
+            Scenario::Load { name, dir, outcome } => {
+                if !cfg!(windows) {
+                    continue;
                 }
-                Outcome::Threw(error) => panic!("{name}: load never throws, recorded {error}"),
-            },
+                match outcome {
+                    Outcome::Ok(expected) => {
+                        assert_eq!(load_vscode_usage(&root.join(&dir)), expected, "{name}")
+                    }
+                    Outcome::Threw(error) => panic!("{name}: load never throws, recorded {error}"),
+                }
+            }
             Scenario::Resolve { name, outcome } => {
+                if !cfg!(windows) {
+                    continue;
+                }
                 let actual: PathBuf = resolve_default_workspace_storage_dir();
                 let relative = actual.strip_prefix(&home).expect("under the home folder");
                 match outcome {

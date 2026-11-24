@@ -152,6 +152,44 @@
     }
   },
   {
+    "name": "lone-surrogate-escapes-keep-credits",
+    "call": "parseChatSessionFile",
+    "file": "fixtures/vscode/workspaceStorage/truncated-prompt-workspace/chatSessions/session-008.jsonl",
+    "project": "app",
+    "outcome": {
+      "ok": {
+        "events": [
+          {
+            "sessionId": "session-008",
+            "project": "app",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.3,
+            "inputTokens": 120,
+            "outputTokens": 40,
+            "createdAt": "2026-11-16 03:34:20.000"
+          },
+          {
+            "sessionId": "session-008",
+            "project": "app",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.4,
+            "inputTokens": 80,
+            "outputTokens": 20,
+            "createdAt": "2026-11-16 03:35:20.000"
+          }
+        ],
+        "sessions": [
+          {
+            "sessionId": "session-008",
+            "project": "app",
+            "summary": "Pair 🚀 and C:\\ud83d",
+            "createdAt": "2026-11-16 03:33:20.000"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "missing-session-file-is-empty",
     "call": "parseChatSessionFile",
     "file": "fixtures/vscode/workspaceStorage/does-not-exist/chatSessions/session-404.jsonl",
@@ -241,6 +279,24 @@
             "inputTokens": 0,
             "outputTokens": 0,
             "createdAt": "2026-11-13 20:10:00.000"
+          },
+          {
+            "sessionId": "session-008",
+            "project": null,
+            "model": "gpt-5.4",
+            "aiuCredits": 0.3,
+            "inputTokens": 120,
+            "outputTokens": 40,
+            "createdAt": "2026-11-16 03:34:20.000"
+          },
+          {
+            "sessionId": "session-008",
+            "project": null,
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.4,
+            "inputTokens": 80,
+            "outputTokens": 20,
+            "createdAt": "2026-11-16 03:35:20.000"
           }
         ],
         "sessions": [
@@ -273,6 +329,12 @@
             "project": null,
             "summary": null,
             "createdAt": "2026-11-13 20:10:00.000"
+          },
+          {
+            "sessionId": "session-008",
+            "project": null,
+            "summary": "Pair 🚀 and C:\\ud83d",
+            "createdAt": "2026-11-16 03:33:20.000"
           }
         ]
       }
