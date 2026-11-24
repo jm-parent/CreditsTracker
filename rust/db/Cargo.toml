@@ -1,0 +1,24 @@
+[package]
+name = "db"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+description = "Rust port of `reference/src/db.ts`: read-only usage queries over the Copilot CLI session store"
+
+[dependencies]
+rusqlite = { version = "0.43", features = ["bundled"] }
+serde = "1"
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+shared = { path = "../shared" }
+logger = { path = "../logger" }
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lints.rust]
+unused_lifetimes = "warn"
+trivial_numeric_casts = "warn"
