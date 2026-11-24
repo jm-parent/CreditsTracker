@@ -16,7 +16,6 @@ prost = "0.13"
 serde = "1"
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
 shared = { path = "../shared" }
-tiny_http = "0.12"
 
 [dev-dependencies]
 base64 = "0.22"

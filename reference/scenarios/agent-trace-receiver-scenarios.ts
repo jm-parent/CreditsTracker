@@ -30,6 +30,9 @@ const TRACE_ONE = '0af7651916cd43dd8448eb211c80319c';
 const ROOT_ONE = 'b7ad6b7169203331';
 const CHILD_ONE = '00f067aa0ba902b7';
 const ORPHAN_PARENT = 'f0f0f0f0f0f0f0f0';
+const TRACE_THREE = '1212121212121212121212121212abcd';
+const CHILD_THREE = '1212121212121212';
+const ROOT_THREE = 'abcdabcdabcdabcd';
 
 interface SpanSpec {
   traceId: string;
@@ -394,6 +397,24 @@ const SCENARIOS: Scenario[] = [
       },
       { call: 'closeReceiver' },
       { call: 'getSession', selection: { source: 'copilot-cli', sessionId: 'sess-10' } },
+    ],
+  },
+  {
+    // The root's unsupported source drops the child span held from the first export, so the ingest
+    // coverage counts both: 1 rejected root and 1 dropped child, while the response reports only the rejected root.
+    name: 'receiver-ingest-drops-held',
+    steps: [
+      { call: 'startReceiver', dbPath: 'ingest-drop.db' },
+      {
+        call: 'request',
+        body: { kind: 'otlp', resource: 'github-copilot', spans: [tool(TRACE_THREE, CHILD_THREE, ORPHAN_PARENT, 'sess-11')] },
+      },
+      {
+        call: 'request',
+        body: { kind: 'otlp', resource: 'unknown-app', spans: [root(TRACE_THREE, ROOT_THREE, 'sess-11')] },
+      },
+      { call: 'getSession', selection: { source: 'copilot-cli', sessionId: 'sess-11' } },
+      { call: 'closeReceiver' },
     ],
   },
   {

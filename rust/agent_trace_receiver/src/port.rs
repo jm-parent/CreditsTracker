@@ -5,12 +5,14 @@
 //! ponytail: the expiry timer is a thread that polls every 25 ms instead of sleeping until the next
 //! expiry. A held trace is therefore resolved up to 25 ms late; the stored result is the same.
 
-use std::io::Read;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::io;
+use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::http::{Body, Connection, Request, RequestError, refuse_busy};
 use agent_trace_correlator::port::{
     AgentTraceCorrelationInput, AgentTraceCorrelationResult, AgentTraceCorrelator,
     AgentTraceCorrelatorOptions, AgentTraceRejectionCounts, PENDING_TRACE_TTL_MS,
@@ -30,6 +32,11 @@ pub const DEFAULT_PORT: u16 = 4318;
 
 const LOOPBACK_HOST: &str = "127.0.0.1";
 const MAX_BODY_BYTES: usize = 8 * 1024 * 1024;
+/// Connections open at once. Each holds a thread, and a thread reading a body holds up to
+/// `MAX_BODY_BYTES`. Node has no cap, but this receiver serves a few local exporters.
+/// ponytail: a fixed cap of 16 with a 503 refusal; a worker pool with a queue would smooth bursts.
+pub const MAX_CONCURRENT_CONNECTIONS: usize = 16;
+const ACCEPT_RETRY: Duration = Duration::from_millis(10);
 const OTLP_PATH: &str = "/v1/traces";
 const OTLP_CONTENT_TYPE: &str = "application/x-protobuf";
 const EXPIRY_POLL: Duration = Duration::from_millis(25);
@@ -65,7 +72,7 @@ pub struct ReceiverOptions {
     pub correlation: AgentTraceCorrelatorOptions,
 }
 
-/// State shared by the acceptor, the request threads and the expiry timer.
+/// State shared by the acceptor, the connection threads and the expiry timer.
 struct Shared {
     store: Arc<Mutex<AgentTraceStore>>,
     /// Locked before the store, never the other way round, so an export is stored in one step.
@@ -74,12 +81,13 @@ struct Shared {
     on_partial_success: Option<PartialSuccessCallback>,
     on_export_rejected: Option<ExportRejectedCallback>,
     closing: AtomicBool,
+    connections: Arc<AtomicUsize>,
 }
 
 pub struct AgentTraceReceiver {
     endpoint: String,
+    port: u16,
     shared: Arc<Shared>,
-    server: Arc<tiny_http::Server>,
     acceptor: Mutex<Option<JoinHandle<()>>>,
     expiry: Mutex<Option<JoinHandle<()>>>,
     closed: AtomicBool,
@@ -87,14 +95,11 @@ pub struct AgentTraceReceiver {
 
 pub fn start_agent_trace_receiver(options: ReceiverOptions) -> Result<AgentTraceReceiver, String> {
     let port = options.port.unwrap_or(DEFAULT_PORT);
-    let server = Arc::new(
-        tiny_http::Server::http((LOOPBACK_HOST, port)).map_err(|error| error.to_string())?,
-    );
-    let listening_port = server
-        .server_addr()
-        .to_ip()
-        .map(|address| address.port())
-        .ok_or("Agent trace receiver did not bind to a TCP address")?;
+    let listener = TcpListener::bind((LOOPBACK_HOST, port)).map_err(|error| error.to_string())?;
+    let listening_port = listener
+        .local_addr()
+        .map_err(|error| error.to_string())?
+        .port();
 
     let shared = Arc::new(Shared {
         store: options.store,
@@ -106,21 +111,29 @@ pub fn start_agent_trace_receiver(options: ReceiverOptions) -> Result<AgentTrace
         on_partial_success: options.on_partial_success,
         on_export_rejected: options.on_export_rejected,
         closing: AtomicBool::new(false),
+        connections: Arc::new(AtomicUsize::new(0)),
     });
 
-    let acceptor = {
-        let (server, shared) = (server.clone(), shared.clone());
-        thread::spawn(move || accept_requests(&server, &shared, listening_port))
-    };
     let expiry = {
         let shared = shared.clone();
-        thread::spawn(move || expire_held_traces(&shared))
+        thread::Builder::new()
+            .spawn(move || expire_held_traces(&shared))
+            .map_err(|error| error.to_string())?
+    };
+    let acceptor = {
+        let for_acceptor = shared.clone();
+        thread::Builder::new()
+            .spawn(move || accept_connections(&listener, &for_acceptor, listening_port))
+            .map_err(|error| {
+                shared.closing.store(true, Ordering::SeqCst);
+                error.to_string()
+            })?
     };
 
     Ok(AgentTraceReceiver {
         endpoint: format!("http://{LOOPBACK_HOST}:{listening_port}"),
+        port: listening_port,
         shared,
-        server,
         acceptor: Mutex::new(Some(acceptor)),
         expiry: Mutex::new(Some(expiry)),
         closed: AtomicBool::new(false),
@@ -139,7 +152,8 @@ impl AgentTraceReceiver {
             return;
         }
         self.shared.closing.store(true, Ordering::SeqCst);
-        self.server.unblock();
+        // The acceptor blocks in accept(). This connection wakes it so it sees `closing`.
+        let _ = TcpStream::connect((LOOPBACK_HOST, self.port));
         if let Some(handle) = self.acceptor.lock().unwrap().take() {
             let _ = handle.join();
         }
@@ -160,15 +174,64 @@ impl AgentTraceReceiver {
     }
 }
 
-fn accept_requests(server: &tiny_http::Server, shared: &Arc<Shared>, port: u16) {
+/// Counts one open connection for as long as it is alive.
+struct ConnectionSlot(Arc<AtomicUsize>);
+
+impl ConnectionSlot {
+    fn take(count: &Arc<AtomicUsize>) -> Option<Self> {
+        if count.fetch_add(1, Ordering::SeqCst) < MAX_CONCURRENT_CONNECTIONS {
+            Some(Self(count.clone()))
+        } else {
+            count.fetch_sub(1, Ordering::SeqCst);
+            None
+        }
+    }
+}
+
+impl Drop for ConnectionSlot {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+fn accept_connections(listener: &TcpListener, shared: &Arc<Shared>, port: u16) {
     let mut handlers: Vec<JoinHandle<()>> = Vec::new();
-    while let Ok(request) = server.recv() {
+    loop {
+        let stream = match listener.accept() {
+            Ok((stream, _)) => stream,
+            Err(error) => {
+                if shared.closing.load(Ordering::SeqCst) {
+                    break;
+                }
+                log_error_detail("Failed to accept an OTLP connection", json!({ "error": error.to_string() }));
+                thread::sleep(ACCEPT_RETRY);
+                continue;
+            }
+        };
         if shared.closing.load(Ordering::SeqCst) {
             break;
         }
+
+        let Some(slot) = ConnectionSlot::take(&shared.connections) else {
+            log_once_detail(
+                "agent-trace-receiver:busy",
+                "Refused an OTLP connection: too many connections are open",
+                json!({ "status": 503, "limit": MAX_CONCURRENT_CONNECTIONS }),
+            );
+            refuse_busy(stream);
+            continue;
+        };
         handlers.retain(|handle| !handle.is_finished());
         let shared = shared.clone();
-        handlers.push(thread::spawn(move || handle_request(request, &shared, port)));
+        match thread::Builder::new().spawn(move || {
+            let _slot = slot;
+            serve_connection(stream, &shared, port);
+        }) {
+            Ok(handle) => handlers.push(handle),
+            Err(error) => {
+                log_error_detail("Failed to start an OTLP connection thread", json!({ "error": error.to_string() }))
+            }
+        }
     }
     for handle in handlers {
         let _ = handle.join();
@@ -208,6 +271,31 @@ fn store_held(shared: &Shared, result: AgentTraceCorrelationResult) {
     }
 }
 
+fn serve_connection(stream: TcpStream, shared: &Shared, port: u16) {
+    let Ok(mut connection) = Connection::new(stream) else {
+        return;
+    };
+    loop {
+        let request = match connection.next_request() {
+            Ok(Some(request)) => request,
+            Ok(None) | Err(RequestError::Closed) => return,
+            Err(RequestError::Malformed) => {
+                let _ = connection.respond(400, None, &[], false);
+                return;
+            }
+            Err(RequestError::ExpectationFailed) => {
+                let _ = connection.respond(417, None, &[], false);
+                return;
+            }
+        };
+        let (reply, body_read) = handle_request(&mut connection, &request, shared, port);
+        let keep_alive = body_read && request.keeps_alive();
+        if send_reply(&mut connection, reply, keep_alive).is_err() || !keep_alive {
+            return;
+        }
+    }
+}
+
 /// What the request is answered with: an empty response, or an OTLP export response.
 enum Reply {
     Empty(u16),
@@ -220,37 +308,70 @@ enum IngestError {
     Internal(String),
 }
 
-fn handle_request(mut request: tiny_http::Request, shared: &Shared, port: u16) {
-    let route = route_of(request.url());
-    let reply = reply_for(&mut request, &route, shared, port);
-    let response = match reply {
-        Reply::Empty(status) => request.respond(tiny_http::Response::empty(status)),
-        Reply::Otlp(payload) => request.respond(
-            tiny_http::Response::from_data(payload).with_header(content_type_header()),
-        ),
-    };
-    let _ = response;
+fn send_reply(connection: &mut Connection, reply: Reply, keep_alive: bool) -> io::Result<()> {
+    match reply {
+        Reply::Empty(status) => connection.respond(status, None, &[], keep_alive),
+        Reply::Otlp(payload) => connection.respond(200, Some(OTLP_CONTENT_TYPE), &payload, keep_alive),
+    }
 }
 
-fn reply_for(request: &mut tiny_http::Request, route: &str, shared: &Shared, port: u16) -> Reply {
+/// Answers one request. Also returns whether its body was read to the end, which lets the connection
+/// carry the next request.
+fn handle_request(connection: &mut Connection, request: &Request, shared: &Shared, port: u16) -> (Reply, bool) {
+    let route = route_of(&request.target);
+    if let Some(reply) = early_rejection(request, &route, shared, port) {
+        // Drain the body up to the limit before answering, so the next request is not read from it.
+        let drained = connection.read_body(request, MAX_BODY_BYTES);
+        return (reply, matches!(drained, Ok(Body::Complete(_))));
+    }
+
+    match connection.read_body(request, MAX_BODY_BYTES) {
+        Ok(Body::Complete(body)) => (ingest_reply(&body, &route, shared), true),
+        Ok(Body::TooLarge) => {
+            report_export_rejection(
+                shared,
+                &route,
+                AgentTraceExportRejection {
+                    status: 413,
+                    error_message:
+                        "OTLP export rejected (HTTP 413): the request body exceeded the 8 MiB limit."
+                            .into(),
+                },
+                None,
+            );
+            (Reply::Empty(413), false)
+        }
+        Err(error) if error.kind() == io::ErrorKind::InvalidData => {
+            log_handler_failure(&route, 400, &error.to_string());
+            (Reply::Empty(400), false)
+        }
+        Err(error) => {
+            log_handler_failure(&route, 500, &error.to_string());
+            (Reply::Empty(500), false)
+        }
+    }
+}
+
+/// The answer to a request that is refused before its body is read: a 403, 404, 405 or 415.
+fn early_rejection(request: &Request, route: &str, shared: &Shared, port: u16) -> Option<Reply> {
     if let Some(reason) = forbidden_reason(request, port) {
         log_once_detail(
             &format!("agent-trace-receiver:forbidden:{reason}"),
             "Rejected an OTLP request that did not come from a local exporter",
             json!({ "route": route, "status": 403, "reason": reason }),
         );
-        return Reply::Empty(403);
+        return Some(Reply::Empty(403));
     }
 
     if route != OTLP_PATH {
-        return Reply::Empty(404);
+        return Some(Reply::Empty(404));
     }
 
-    if request.method() != &tiny_http::Method::Post {
-        return Reply::Empty(405);
+    if request.method != "POST" {
+        return Some(Reply::Empty(405));
     }
 
-    let content_type = header(request, "content-type");
+    let content_type = request.header("content-type");
     if !has_otlp_content_type(content_type) {
         let media_type = describe_media_type(content_type);
         report_export_rejection(
@@ -265,32 +386,14 @@ fn reply_for(request: &mut tiny_http::Request, route: &str, shared: &Shared, por
             },
             Some(&media_type),
         );
-        return Reply::Empty(415);
+        return Some(Reply::Empty(415));
     }
 
-    let body = match read_body(request) {
-        Ok(Some(body)) => body,
-        Ok(None) => {
-            report_export_rejection(
-                shared,
-                route,
-                AgentTraceExportRejection {
-                    status: 413,
-                    error_message:
-                        "OTLP export rejected (HTTP 413): the request body exceeded the 8 MiB limit."
-                            .into(),
-                },
-                None,
-            );
-            return Reply::Empty(413);
-        }
-        Err(error) => {
-            log_handler_failure(route, 500, &error.to_string());
-            return Reply::Empty(500);
-        }
-    };
+    None
+}
 
-    match ingest(&body, shared) {
+fn ingest_reply(body: &[u8], route: &str, shared: &Shared) -> Reply {
+    match ingest(body, shared) {
         Ok(payload) => Reply::Otlp(payload),
         Err(IngestError::Decode(error)) => {
             log_handler_failure(route, 400, &error);
@@ -331,7 +434,7 @@ fn ingest(body: &[u8], shared: &Shared) -> Result<Vec<u8>, IngestError> {
         result
     };
 
-    let partial = build_partial_coverage(result.rejected, AgentTraceRejectionCounts::default(), shared.pending_ttl_ms);
+    let partial = build_partial_coverage(result.rejected, result.dropped, shared.pending_ttl_ms);
     if let Some(callback) = &shared.on_partial_success {
         if partial.is_some() {
             callback(partial.clone());
@@ -340,7 +443,13 @@ fn ingest(body: &[u8], shared: &Shared) -> Result<Vec<u8>, IngestError> {
         }
     }
 
-    Ok(encode_response(partial.as_ref()))
+    // The response reports only the spans this export rejected, as the TypeScript receiver does.
+    let response_partial = build_partial_coverage(
+        result.rejected,
+        AgentTraceRejectionCounts::default(),
+        shared.pending_ttl_ms,
+    );
+    Ok(encode_response(response_partial.as_ref()))
 }
 
 fn encode_response(partial: Option<&AgentTracePartialSuccess>) -> Vec<u8> {
@@ -373,23 +482,13 @@ fn report_export_rejection(
     }
 }
 
-/// Reads the body up to the limit. `None` means it is larger than the limit.
-fn read_body(request: &mut tiny_http::Request) -> std::io::Result<Option<Vec<u8>>> {
-    let mut body = Vec::new();
-    request
-        .as_reader()
-        .take(MAX_BODY_BYTES as u64 + 1)
-        .read_to_end(&mut body)?;
-    Ok((body.len() <= MAX_BODY_BYTES).then_some(body))
-}
-
 /// Refuses requests with an `Origin` header (a browser) or a `Host` other than this loopback
 /// listener. Exporters send neither a browser origin nor a foreign host.
-fn forbidden_reason(request: &tiny_http::Request, port: u16) -> Option<&'static str> {
-    if header(request, "origin").is_some() {
+fn forbidden_reason(request: &Request, port: u16) -> Option<&'static str> {
+    if request.header("origin").is_some() {
         return Some("origin");
     }
-    let host = header(request, "host").unwrap_or("").trim();
+    let host = request.header("host").unwrap_or("").trim();
     if is_local_host(host, port) { None } else { Some("host") }
 }
 
@@ -410,14 +509,6 @@ fn is_local_host(host: &str, port: u16) -> bool {
                 && digits.parse::<u32>().ok() == Some(u32::from(port))
         }
     }
-}
-
-fn header<'a>(request: &'a tiny_http::Request, name: &'static str) -> Option<&'a str> {
-    request
-        .headers()
-        .iter()
-        .find(|header| header.field.equiv(name))
-        .map(|header| header.value.as_str())
 }
 
 fn has_otlp_content_type(content_type: Option<&str>) -> bool {
@@ -512,11 +603,6 @@ fn format_hold_duration(milliseconds: f64) -> String {
 /// `/v1/traces` for `/v1/traces?x=1`, as the TypeScript receiver reads the pathname.
 fn route_of(url: &str) -> String {
     url.split(['?', '#']).next().unwrap_or("/").to_owned()
-}
-
-fn content_type_header() -> tiny_http::Header {
-    tiny_http::Header::from_bytes(&b"Content-Type"[..], OTLP_CONTENT_TYPE.as_bytes())
-        .expect("valid header")
 }
 
 fn now_ms() -> f64 {

@@ -1,13 +1,18 @@
 mod common;
 
-use std::sync::{Arc, Mutex};
+use std::io::Write;
+use std::net::TcpStream;
+use std::path::Path;
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread;
+use std::time::Duration;
 
 use agent_trace_correlator::port::AgentTraceCorrelatorOptions;
 use agent_trace_protocol::otlp::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest;
 use agent_trace_protocol::otlp::opentelemetry::proto::common::v1::{AnyValue, KeyValue, any_value::Value};
 use agent_trace_protocol::otlp::opentelemetry::proto::resource::v1::Resource;
 use agent_trace_protocol::otlp::opentelemetry::proto::trace::v1::{ResourceSpans, ScopeSpans, Span};
-use agent_trace_receiver::port::{ReceiverOptions, start_agent_trace_receiver};
+use agent_trace_receiver::port::{AgentTraceReceiver, ReceiverOptions, start_agent_trace_receiver};
 use agent_trace_store::port::open_agent_trace_store;
 use prost::Message;
 
@@ -109,6 +114,83 @@ fn body_over_the_limit_is_refused_with_413() {
     let oversized = vec![0u8; 8 * 1024 * 1024 + 1];
     let reply = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&oversized));
     assert_eq!(reply.status, 413);
+
+    receiver.close();
+}
+
+fn start(folder: &Path) -> AgentTraceReceiver {
+    let store = open_agent_trace_store(&folder.join("agent-trace-store.db")).expect("store");
+    start_agent_trace_receiver(ReceiverOptions {
+        store: Arc::new(Mutex::new(store)),
+        port: Some(0),
+        on_partial_success: None,
+        on_export_rejected: None,
+        correlation: AgentTraceCorrelatorOptions::default(),
+    })
+    .expect("receiver")
+}
+
+#[test]
+fn early_rejected_body_is_drained_so_the_next_request_on_the_connection_succeeds() {
+    let folder = common::scratch("drain-early-reject");
+    let receiver = start(&folder);
+    let port = common::port_of(receiver.endpoint());
+
+    let mut connection = common::KeepAlive::connect(port);
+    let json_headers = vec![
+        ("host".to_owned(), "127.0.0.1".to_owned()),
+        ("content-type".to_owned(), "application/json".to_owned()),
+    ];
+    let rejected = connection.request_chunked("POST", "/v1/traces", &json_headers, &[b'x'; 4096]);
+    assert_eq!(rejected.status, 415, "the early rejection keeps its own status");
+
+    let valid = connection.request("POST", "/v1/traces", &otlp_headers(), &valid_export());
+    assert_eq!(valid.status, 200, "the next request on the same connection must not read the unread body");
+
+    receiver.close();
+}
+
+#[test]
+fn a_stalled_body_is_cut_off_so_close_returns() {
+    let folder = common::scratch("stalled-body");
+    let receiver = start(&folder);
+    let port = common::port_of(receiver.endpoint());
+
+    let mut stalled = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+    let mut head = b"POST /v1/traces HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/x-protobuf\r\ncontent-length: 4096\r\n\r\n".to_vec();
+    head.extend_from_slice(&[0u8; 100]);
+    stalled.write_all(&head).expect("write the partial body");
+    thread::sleep(Duration::from_millis(200));
+
+    let (done, closed) = mpsc::channel();
+    thread::spawn(move || {
+        receiver.close();
+        let _ = done.send(());
+    });
+    closed
+        .recv_timeout(Duration::from_secs(30))
+        .expect("close() must return once the stalled body is cut off");
+    drop(stalled);
+}
+
+#[test]
+fn connections_beyond_the_concurrency_cap_get_503_and_the_receiver_keeps_serving() {
+    let folder = common::scratch("concurrency-cap");
+    let receiver = start(&folder);
+    let port = common::port_of(receiver.endpoint());
+
+    // Idle connections each hold a handler until the cap is reached. They are accepted in order, so
+    // the export below is refused once the cap is full.
+    let idle: Vec<TcpStream> = (0..64)
+        .map(|_| TcpStream::connect(("127.0.0.1", port)).expect("connect"))
+        .collect();
+    let refused = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&valid_export()));
+    assert_eq!(refused.status, 503);
+
+    drop(idle);
+    thread::sleep(Duration::from_millis(300));
+    let served = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&valid_export()));
+    assert_eq!(served.status, 200);
 
     receiver.close();
 }

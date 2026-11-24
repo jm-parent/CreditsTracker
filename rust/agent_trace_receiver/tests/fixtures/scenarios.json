@@ -1173,6 +1173,134 @@
     ]
   },
   {
+    "name": "receiver-ingest-drops-held",
+    "steps": [
+      {
+        "call": "startReceiver",
+        "dbPath": "ingest-drop.db",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-11",
+                "gen_ai.tool.name": "grep",
+                "gen_ai.tool.call.id": "call-1"
+              },
+              "traceId": "1212121212121212121212121212abcd",
+              "spanId": "1212121212121212",
+              "parentSpanId": "f0f0f0f0f0f0f0f0",
+              "name": "execute_tool grep"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "218"
+              },
+              "bodyBase64": "CtcBCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90ErABEq0BChASEhISEhISEhISEhISEqvNEggSEhISEhISEiII8PDw8PDw8PAqEWV4ZWN1dGVfdG9vbCBncmVwOQAKZRtBpOoYQQDU/1ZBpOoYSiMKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCQoHc2Vzcy0xMUoaChBnZW5fYWkudG9vbC5uYW1lEgYKBGdyZXBKHwoTZ2VuX2FpLnRvb2wuY2FsbC5pZBIICgZjYWxsLTE="
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "unknown-app",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-11"
+              },
+              "traceId": "1212121212121212121212121212abcd",
+              "spanId": "abcdabcdabcdabcd",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "145"
+              },
+              "bodyBase64": "Co4BCh8KHQoMc2VydmljZS5uYW1lEg0KC3Vua25vd24tYXBwEmsSaQoQEhISEhISEhISEhISEhKrzRIIq82rzavNq80qFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiMKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCQoHc2Vzcy0xMQ=="
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": "CkkIARJFcGFydGlhbCB0cmFjZSBjb3ZlcmFnZTogcmVqZWN0ZWQgMSBzcGFuKHMpOiAxIGZyb20gdW5zdXBwb3J0ZWQgc291cmNl"
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": {
+              "totalRejectedSpans": 2,
+              "unsupportedSourceSpans": 2,
+              "missingSourceSessionSpans": 0,
+              "unresolvedTraceRootSpans": 0,
+              "errorMessage": "partial trace coverage: rejected 2 span(s): 2 from unsupported source"
+            }
+          }
+        ]
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-11"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-11",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "closeReceiver",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      }
+    ]
+  },
+  {
     "name": "service-lifecycle",
     "steps": [
       {
