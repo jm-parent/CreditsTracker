@@ -22,8 +22,17 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhCNkQ3NkRBODgyMjI1MzUKUldRMUpTS0kyblp0aXl1c1NFQ1pESGU4ZnpSYnJOMHhjUWdwVDM4T1JCSVNjYTZKczNJWFVta3cK",
+      "endpoints": [
+        "https://github.com/jm-parent/CreditsTracker/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["nsis"],
     "icon": ["../assets/icon.ico"],
     "publisher": "jm-parent",
