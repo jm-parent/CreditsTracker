@@ -1,0 +1,3 @@
+{"fn":"parseChatSessionFile","args":["no-such-folder/chatSessions/session-404.jsonl","Projet café 🚀"],"ok":{"events":[],"sessions":[]}}
+{"fn":"parseChatSessionFile","args":["no-such-folder/chatSessions/session-404.jsonl",null],"ok":{"events":[],"sessions":[]}}
+{"fn":"loadVscodeUsage","args":["no-such-storage-dir"],"ok":{"events":[],"sessions":[]}}

@@ -1,0 +1,2 @@
+{"kind":0,"v":{"sessionId":"session-004","creationDate":1794600000000}}
+{"kind":1,"k":["requests"],"v":[{"timestamp":1794600300000,"modelId":"copilot/claude-sonnet-5","copilotCredits":1.25,"promptTokens":210,"completionTokens":44}]}

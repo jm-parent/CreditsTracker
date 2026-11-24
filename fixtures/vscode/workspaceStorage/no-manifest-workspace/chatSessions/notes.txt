@@ -1,0 +1,1 @@
+Not a chat session, so it must be ignored.

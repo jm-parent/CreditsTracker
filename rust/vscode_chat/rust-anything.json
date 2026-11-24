@@ -1,0 +1,65 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "C:\\Users\\jeanmarie.parent\\.copilot\\repos\\copilot-worktrees\\CreditsTrackerExtension\\jeanmarie-parent-exakisc-miniature-broccoli",
+  "unit": "reference/src/vscode-chat-store.ts",
+  "language": "ts",
+  "kind": "napi",
+  "crate_name": "vscode_chat",
+  "exports": [
+    {
+      "name": "resolveDefaultWorkspaceStorageDir",
+      "file": "reference/src/vscode-chat-store.ts",
+      "line": 43,
+      "params": [],
+      "returns": "string",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "parseChatSessionFile",
+      "file": "reference/src/vscode-chat-store.ts",
+      "line": 104,
+      "params": [
+        {
+          "name": "filePath",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "project",
+          "ts_type": "string | null",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "VscodeUsageData",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "loadVscodeUsage",
+      "file": "reference/src/vscode-chat-store.ts",
+      "line": 201,
+      "params": [
+        {
+          "name": "workspaceStorageDir",
+          "ts_type": "string",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "VscodeUsageData",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}

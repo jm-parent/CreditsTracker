@@ -1,0 +1,10 @@
+{"kind":0,"v":{"sessionId":"session-003","creationDate":1794500000000}}
+{"kind":1,"k":["customTitle"],"v":"🧪 Équipe 🌍 review"}
+{"kind":1,"k":["requests"],"v":[{"timestamp":1794500060000,"modelId":"copilot/gpt-5.4","copilotCredits":0.25,"promptTokens":70,"completionTokens":14},{"modelId":"copilot/claude-sonnet-5"}]}
+{"kind":2,"k":["requests",1,"timestamp"],"v":1794500120000}
+{"kind":2,"k":["requests",1,"copilotCredits"],"v":0.5}
+{"kind":2,"k":["requests",1,"promptTokens"],"v":"not-a-number"}
+this line is not JSON and must be skipped
+{"kind":1,"k":["requests",2,"modelId"],"v":"copilot/gemini-4-neon"}
+{"kind":2,"k":["requests",2],"v":{"copilotCredits":0.1,"timestamp":1794500180000,"completionTokens":3}}
+{"kind":1,"k":["requests"],"v":[{"modelId":"copilot/gpt-5.4","timestamp":1794500200000}]}

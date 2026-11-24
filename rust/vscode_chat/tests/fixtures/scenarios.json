@@ -1,0 +1,310 @@
+[
+  {
+    "name": "session-with-lowercase-drive-folder",
+    "call": "parseChatSessionFile",
+    "file": "fixtures/vscode/workspaceStorage/alpha-workspace/chatSessions/session-001.jsonl",
+    "project": "C:\\repos\\alpha",
+    "outcome": {
+      "ok": {
+        "events": [
+          {
+            "sessionId": "session-001",
+            "project": "C:\\repos\\alpha",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.42,
+            "inputTokens": 120,
+            "outputTokens": 30,
+            "createdAt": "2026-09-01 09:05:00.000"
+          },
+          {
+            "sessionId": "session-001",
+            "project": "C:\\repos\\alpha",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.15,
+            "inputTokens": 60,
+            "outputTokens": 12,
+            "createdAt": "2026-09-01 11:00:00.000"
+          }
+        ],
+        "sessions": [
+          {
+            "sessionId": "session-001",
+            "project": "C:\\repos\\alpha",
+            "summary": "Refactor alpha module",
+            "createdAt": "2026-09-01 09:00:00.000"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "non-ascii-project-and-emoji-title",
+    "call": "parseChatSessionFile",
+    "file": "fixtures/vscode/workspaceStorage/cafe-workspace/chatSessions/session-002.jsonl",
+    "project": "Projet café 🚀",
+    "outcome": {
+      "ok": {
+        "events": [
+          {
+            "sessionId": "session-002",
+            "project": "Projet café 🚀",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.9,
+            "inputTokens": 300,
+            "outputTokens": 75,
+            "createdAt": "2026-11-12 14:35:00.000"
+          }
+        ],
+        "sessions": [
+          {
+            "sessionId": "session-002",
+            "project": "Projet café 🚀",
+            "summary": "🎉 Café Catch-up 🚀",
+            "createdAt": "2026-11-12 14:30:00.000"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "multi-root-patches-and-malformed-lines",
+    "call": "parseChatSessionFile",
+    "file": "fixtures/vscode/workspaceStorage/multi-root-workspace/chatSessions/session-003.jsonl",
+    "project": "café-team",
+    "outcome": {
+      "ok": {
+        "events": [
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.25,
+            "inputTokens": 70,
+            "outputTokens": 14,
+            "createdAt": "2026-11-12 16:14:20.000"
+          },
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.5,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "createdAt": "2026-11-12 16:15:20.000"
+          },
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "model": "gemini-4-neon",
+            "aiuCredits": 0.1,
+            "inputTokens": 0,
+            "outputTokens": 3,
+            "createdAt": "2026-11-12 16:16:20.000"
+          }
+        ],
+        "sessions": [
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "summary": "🧪 Équipe 🌍 review",
+            "createdAt": "2026-11-12 16:13:20.000"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "no-creation-date-fallback-and-in-progress-request",
+    "call": "parseChatSessionFile",
+    "file": "fixtures/vscode/workspaceStorage/no-manifest-workspace/chatSessions/session-005.jsonl",
+    "project": null,
+    "outcome": {
+      "ok": {
+        "events": [
+          {
+            "sessionId": "session-005",
+            "project": null,
+            "model": "unknown",
+            "aiuCredits": 0.05,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "createdAt": "2026-11-13 20:10:00.000"
+          }
+        ],
+        "sessions": [
+          {
+            "sessionId": "session-005",
+            "project": null,
+            "summary": null,
+            "createdAt": "2026-11-13 20:10:00.000"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "null-line-throws",
+    "call": "parseChatSessionFile",
+    "file": "fixtures/vscode/workspaceStorage/broken-workspace/chatSessions/session-007.jsonl",
+    "project": "app",
+    "outcome": {
+      "threw": "TypeError"
+    }
+  },
+  {
+    "name": "missing-session-file-is-empty",
+    "call": "parseChatSessionFile",
+    "file": "fixtures/vscode/workspaceStorage/does-not-exist/chatSessions/session-404.jsonl",
+    "project": null,
+    "outcome": {
+      "ok": {
+        "events": [],
+        "sessions": []
+      }
+    }
+  },
+  {
+    "name": "whole-storage-tree",
+    "call": "loadVscodeUsage",
+    "dir": "fixtures/vscode/workspaceStorage",
+    "outcome": {
+      "ok": {
+        "events": [
+          {
+            "sessionId": "session-001",
+            "project": "C:\\repos\\alpha",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.42,
+            "inputTokens": 120,
+            "outputTokens": 30,
+            "createdAt": "2026-09-01 09:05:00.000"
+          },
+          {
+            "sessionId": "session-001",
+            "project": "C:\\repos\\alpha",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.15,
+            "inputTokens": 60,
+            "outputTokens": 12,
+            "createdAt": "2026-09-01 11:00:00.000"
+          },
+          {
+            "sessionId": "session-002",
+            "project": "C:\\Users\\dev\\Projet café 🚀",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.9,
+            "inputTokens": 300,
+            "outputTokens": 75,
+            "createdAt": "2026-11-12 14:35:00.000"
+          },
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.25,
+            "inputTokens": 70,
+            "outputTokens": 14,
+            "createdAt": "2026-11-12 16:14:20.000"
+          },
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 0.5,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "createdAt": "2026-11-12 16:15:20.000"
+          },
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "model": "gemini-4-neon",
+            "aiuCredits": 0.1,
+            "inputTokens": 0,
+            "outputTokens": 3,
+            "createdAt": "2026-11-12 16:16:20.000"
+          },
+          {
+            "sessionId": "session-004",
+            "project": null,
+            "model": "claude-sonnet-5",
+            "aiuCredits": 1.25,
+            "inputTokens": 210,
+            "outputTokens": 44,
+            "createdAt": "2026-11-13 20:05:00.000"
+          },
+          {
+            "sessionId": "session-005",
+            "project": null,
+            "model": "unknown",
+            "aiuCredits": 0.05,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "createdAt": "2026-11-13 20:10:00.000"
+          }
+        ],
+        "sessions": [
+          {
+            "sessionId": "session-001",
+            "project": "C:\\repos\\alpha",
+            "summary": "Refactor alpha module",
+            "createdAt": "2026-09-01 09:00:00.000"
+          },
+          {
+            "sessionId": "session-002",
+            "project": "C:\\Users\\dev\\Projet café 🚀",
+            "summary": "🎉 Café Catch-up 🚀",
+            "createdAt": "2026-11-12 14:30:00.000"
+          },
+          {
+            "sessionId": "session-003",
+            "project": "café-team",
+            "summary": "🧪 Équipe 🌍 review",
+            "createdAt": "2026-11-12 16:13:20.000"
+          },
+          {
+            "sessionId": "session-004",
+            "project": null,
+            "summary": null,
+            "createdAt": "2026-11-13 20:00:00.000"
+          },
+          {
+            "sessionId": "session-005",
+            "project": null,
+            "summary": null,
+            "createdAt": "2026-11-13 20:10:00.000"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "broken-workspace-alone-is-skipped",
+    "call": "loadVscodeUsage",
+    "dir": "fixtures/vscode/workspaceStorage/broken-workspace",
+    "outcome": {
+      "ok": {
+        "events": [],
+        "sessions": []
+      }
+    }
+  },
+  {
+    "name": "missing-storage-dir-is-empty",
+    "call": "loadVscodeUsage",
+    "dir": "fixtures/vscode/workspaceStorage/no-such-storage",
+    "outcome": {
+      "ok": {
+        "events": [],
+        "sessions": []
+      }
+    }
+  },
+  {
+    "name": "default-storage-dir",
+    "call": "resolveDefaultWorkspaceStorageDir",
+    "outcome": {
+      "ok": "AppData\\Roaming\\Code\\User\\workspaceStorage"
+    }
+  }
+]
