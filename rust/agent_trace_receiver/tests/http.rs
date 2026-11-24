@@ -12,7 +12,10 @@ use agent_trace_protocol::otlp::opentelemetry::proto::collector::trace::v1::Expo
 use agent_trace_protocol::otlp::opentelemetry::proto::common::v1::{AnyValue, KeyValue, any_value::Value};
 use agent_trace_protocol::otlp::opentelemetry::proto::resource::v1::Resource;
 use agent_trace_protocol::otlp::opentelemetry::proto::trace::v1::{ResourceSpans, ScopeSpans, Span};
-use agent_trace_receiver::port::{AgentTraceReceiver, ReceiverOptions, start_agent_trace_receiver};
+use agent_trace_receiver::port::{
+    AgentTraceReceiver, MAX_CONCURRENT_CONNECTIONS, MAX_REFUSAL_DRAINS, ReceiverOptions,
+    start_agent_trace_receiver,
+};
 use agent_trace_store::port::open_agent_trace_store;
 use prost::Message;
 
@@ -187,6 +190,48 @@ fn connections_beyond_the_concurrency_cap_get_503_and_the_receiver_keeps_serving
     let refused = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&valid_export()));
     assert_eq!(refused.status, 503);
 
+    drop(idle);
+    thread::sleep(Duration::from_millis(300));
+    let served = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&valid_export()));
+    assert_eq!(served.status, 200);
+
+    receiver.close();
+}
+
+/// Fills every served slot, then refuses more than `MAX_REFUSAL_DRAINS` connections while their clients
+/// stay open, so their drains run for their full timeout. Each refusal must still get its 503, and the
+/// receiver must serve again once the slots and drains are freed.
+#[test]
+fn refusals_past_the_drain_cap_still_get_503_and_the_receiver_keeps_serving() {
+    let folder = common::scratch("refusal-flood");
+    let receiver = start(&folder);
+    let port = common::port_of(receiver.endpoint());
+
+    let idle: Vec<TcpStream> = (0..MAX_CONCURRENT_CONNECTIONS)
+        .map(|_| TcpStream::connect(("127.0.0.1", port)).expect("connect"))
+        .collect();
+
+    let export = valid_export();
+    let mut held = Vec::new();
+    for _ in 0..MAX_REFUSAL_DRAINS * 2 {
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        stream
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .expect("read timeout");
+        let mut request = format!(
+            "POST /v1/traces HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/x-protobuf\r\ncontent-length: {}\r\n\r\n",
+            export.len()
+        )
+        .into_bytes();
+        request.extend_from_slice(&export);
+        let _ = stream.write_all(&request);
+        let mut raw = Vec::new();
+        let _ = stream.read_to_end(&mut raw);
+        assert_eq!(common::parse_reply(&raw).status, 503);
+        held.push(stream);
+    }
+
+    drop(held);
     drop(idle);
     thread::sleep(Duration::from_millis(300));
     let served = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&valid_export()));

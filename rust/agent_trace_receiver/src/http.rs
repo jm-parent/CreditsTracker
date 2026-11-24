@@ -192,14 +192,20 @@ impl Request {
     }
 }
 
-/// Answers a connection that arrives while the receiver is full, then drains what the client sends
-/// for up to `REFUSAL_DRAIN_TIMEOUT` before closing. The request is not parsed, so it can be any
-/// request. Run it on its own thread: the drain waits for the client.
-pub fn refuse_busy(mut stream: TcpStream) {
+/// Answers a connection that arrives while the receiver is full with 503, then half-closes it. The
+/// request is not parsed, so it can be any request. Returns false when the reply could not be written.
+pub fn answer_busy(stream: &mut TcpStream) -> bool {
+    let _ = stream.set_write_timeout(Some(REFUSAL_DRAIN_TIMEOUT));
     if stream.write_all(BUSY_RESPONSE).is_err() {
-        return;
+        return false;
     }
     let _ = stream.shutdown(Shutdown::Write);
+    true
+}
+
+/// Drains what the client sends on a refused connection, for up to `REFUSAL_DRAIN_TIMEOUT`, before it
+/// closes. Run it on its own thread: the drain waits for the client.
+pub fn drain_refused(stream: TcpStream) {
     let mut drained = Deadline {
         stream,
         at: Instant::now() + REFUSAL_DRAIN_TIMEOUT,

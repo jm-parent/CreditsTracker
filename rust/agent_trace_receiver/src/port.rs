@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::http::{Body, Connection, Request, RequestError, refuse_busy};
+use crate::http::{Body, Connection, Request, RequestError, answer_busy, drain_refused};
 use agent_trace_correlator::port::{
     AgentTraceCorrelationInput, AgentTraceCorrelationResult, AgentTraceCorrelator,
     AgentTraceCorrelatorOptions, AgentTraceRejectionCounts, PENDING_TRACE_TTL_MS,
@@ -36,6 +36,8 @@ const MAX_BODY_BYTES: usize = 8 * 1024 * 1024;
 /// `MAX_BODY_BYTES`. Node has no cap, but this receiver serves a few local exporters.
 /// ponytail: a fixed cap of 16 with a 503 refusal; a worker pool with a queue would smooth bursts.
 pub const MAX_CONCURRENT_CONNECTIONS: usize = 16;
+/// Most refused connections whose request is drained at once. Past it, a refusal closes right after its 503.
+pub const MAX_REFUSAL_DRAINS: usize = 32;
 const ACCEPT_RETRY: Duration = Duration::from_millis(10);
 const OTLP_PATH: &str = "/v1/traces";
 const OTLP_CONTENT_TYPE: &str = "application/x-protobuf";
@@ -194,8 +196,45 @@ impl Drop for ConnectionSlot {
     }
 }
 
+/// Counts one refusal drain thread for as long as it is alive.
+struct RefusalDrain(Arc<AtomicUsize>);
+
+impl RefusalDrain {
+    fn take(count: &Arc<AtomicUsize>) -> Option<Self> {
+        if count.fetch_add(1, Ordering::SeqCst) < MAX_REFUSAL_DRAINS {
+            Some(Self(count.clone()))
+        } else {
+            count.fetch_sub(1, Ordering::SeqCst);
+            None
+        }
+    }
+}
+
+impl Drop for RefusalDrain {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// Answers a refused connection with 503. It is then drained on its own thread while fewer than
+/// `MAX_REFUSAL_DRAINS` drains run; past that, the connection closes right after the 503.
+fn refuse(mut stream: TcpStream, drains: &Arc<AtomicUsize>) {
+    if !answer_busy(&mut stream) {
+        return;
+    }
+    let Some(drain) = RefusalDrain::take(drains) else {
+        return;
+    };
+    // The guard moves into the thread, so the count is released when the drain ends or the spawn fails.
+    let _ = thread::Builder::new().spawn(move || {
+        let _drain = drain;
+        drain_refused(stream);
+    });
+}
+
 fn accept_connections(listener: &TcpListener, shared: &Arc<Shared>, port: u16) {
     let mut handlers: Vec<JoinHandle<()>> = Vec::new();
+    let drains = Arc::new(AtomicUsize::new(0));
     loop {
         let stream = match listener.accept() {
             Ok((stream, _)) => stream,
@@ -218,8 +257,7 @@ fn accept_connections(listener: &TcpListener, shared: &Arc<Shared>, port: u16) {
                 "Refused an OTLP connection: too many connections are open",
                 json!({ "status": 503, "limit": MAX_CONCURRENT_CONNECTIONS }),
             );
-            // On its own thread, so the acceptor is not held while the client's request is drained.
-            let _ = thread::Builder::new().spawn(move || refuse_busy(stream));
+            refuse(stream, &drains);
             continue;
         };
         handlers.retain(|handle| !handle.is_finished());
