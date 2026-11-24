@@ -424,12 +424,13 @@ git commit -m "feat(rust): port agent trace store"
 ### Task 9: Localhost receiver
 
 **Files:**
-- Create: `reference/src/agent-trace-receiver.ts`, `rust/agent_trace_receiver/`
+- Create: `reference/src/agent-trace-receiver.ts`, `reference/src/agent-trace-service.ts`, `rust/agent_trace_receiver/`
 - Test: `rust/agent_trace_receiver/src/port.rs`
 
 **Interfaces:**
 - Consumes: `agent_trace_protocol` (Task 5), `agent_trace_correlator` (Task 7), `agent_trace_store` (Task 8).
 - Produces: `start_agent_trace_receiver(options) -> ReceiverHandle`, from `src/main/agent-trace-receiver.ts` line 49. Serves OTLP over HTTP on localhost.
+- Ruling (controller, Task 8 review): this task also owns `src/main/agent-trace-service.ts` (`AgentTraceService`, `createAgentTraceService`). It was deferred from Task 8 because its only dependency is `startAgentTraceReceiver`. Port it here, with its own scenario or app-level replay.
 
 - [ ] **Step 1: Record in server mode**
 
