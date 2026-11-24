@@ -6,3 +6,6 @@ publish = false
 description = "Desktop shortcut onboarding: Rust-native replacement for `src/main/shortcut.ts`"
 
 [dependencies]
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.62.2", features = ["Win32_UI_Shell", "Win32_System_Com"] }
