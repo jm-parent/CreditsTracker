@@ -149,6 +149,15 @@ pub struct ExportReport {
     pub session_rows: Vec<ExportSessionRow>,
 }
 
+/// Options for `renderHtmlReport` (`src/main/html-report.ts`). `generated_at` is the TypeScript
+/// `generatedAt` Date as epoch milliseconds; `None` stands for "now".
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HtmlReportOptions {
+    pub filters: UsageFilters,
+    pub generated_at: Option<f64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportRequest {

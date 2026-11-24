@@ -1,0 +1,21 @@
+[package]
+name = "html_report"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+description = "Rust port of `src/main/html-report.ts`: the standalone HTML usage report"
+
+[dependencies]
+icu_collator = "2.4"
+shared = { path = "../shared" }
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lints.rust]
+unused_lifetimes = "warn"
+trivial_numeric_casts = "warn"

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["shared", "logger", "export", "agent_trace_protocol", "agent_trace_sanitizer", "agent_trace_correlator", "agent_trace_store", "agent_trace_receiver", "vscode_chat", "db", "aggregate"]
+members = ["shared", "logger", "export", "agent_trace_protocol", "agent_trace_sanitizer", "agent_trace_correlator", "agent_trace_store", "agent_trace_receiver", "vscode_chat", "db", "aggregate", "html_report"]
 
 [workspace.package]
 edition = "2021"
