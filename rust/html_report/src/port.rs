@@ -1,15 +1,13 @@
 //! The Rust port of `renderHtmlReport` in `src/main/html-report.ts`.
 //!
-//! Parity is checked by replaying the TypeScript output recorded in `tests/fixtures/scenarios.json`.
-
-//! The Rust port of `renderHtmlReport` in `src/main/html-report.ts`.
-//!
 //! The TypeScript template is reproduced byte for byte, whitespace included. Its `Intl.NumberFormat('fr-FR')`,
 //! `toFixed`, `Math.round` and `localeCompare` calls are ported in the helpers below.
+//! Parity is checked by replaying the TypeScript output recorded in `tests/fixtures/scenarios.json`.
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::f64::consts::PI;
+use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use icu_collator::options::CollatorOptions;
@@ -45,8 +43,29 @@ struct ModelRow {
     share_percent: f64,
 }
 
+/// A render the original throws on. `escapeHtml(null)` raises a TypeError in `src/main/html-report.ts`, so the
+/// export fails rather than printing an empty cell.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HtmlReportError {
+    /// A row's `field` (`date` or `createdAt`) is null. The TS types it as a string, but `db.ts` reads
+    /// `created_at` as nullable.
+    NullDate { field: &'static str },
+}
+
+impl fmt::Display for HtmlReportError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NullDate { field } => write!(f, "HTML report row has a null {field}"),
+        }
+    }
+}
+
+impl std::error::Error for HtmlReportError {}
+
+pub type Result<T> = std::result::Result<T, HtmlReportError>;
+
 /// Renders the standalone HTML report (`renderHtmlReport`, `src/main/html-report.ts:28`).
-pub fn render_html_report(report: &ExportReport, options: &HtmlReportOptions) -> String {
+pub fn render_html_report(report: &ExportReport, options: &HtmlReportOptions) -> Result<String> {
     let generated_at = options.generated_at.unwrap_or_else(now_ms);
     // A JS template literal normalises CRLF to LF, whatever line endings the stylesheet file has on disk.
     let styles = STYLES.replace("\r\n", "\n");
@@ -64,7 +83,7 @@ pub fn render_html_report(report: &ExportReport, options: &HtmlReportOptions) ->
         String::new()
     };
 
-    format!(
+    Ok(format!(
         r#"<!doctype html>
 <html lang="fr">
   <head>
@@ -164,12 +183,12 @@ pub fn render_html_report(report: &ExportReport, options: &HtmlReportOptions) ->
         kpi_requests = kpi_card("Requests", &format_tokens(totals.requests)),
         kpi_sessions = kpi_card("Sessions", &format_tokens(report.preview.session_count)),
         kpi_days = kpi_card("Active days", &format_tokens(report.preview.active_days)),
-        daily = render_daily_consumption(&report.preview.daily),
+        daily = render_daily_consumption(&report.preview.daily)?,
         model_breakdown = render_model_breakdown(&model_rows),
         project_consumption = render_project_consumption(&project_rows),
         token_ratio = render_token_ratio(&model_rows),
-        execution_details = render_execution_details(report),
-    )
+        execution_details = render_execution_details(report)?,
+    ))
 }
 
 fn build_project_rows(
@@ -292,15 +311,20 @@ fn kpi_card(label: &str, value: &str) -> String {
     )
 }
 
-fn render_daily_consumption(daily: &[ExportDailyPreviewRow]) -> String {
-    let rows: Vec<(&str, f64)> = daily
+fn render_daily_consumption(daily: &[ExportDailyPreviewRow]) -> Result<String> {
+    let rows: Vec<(Option<&str>, f64)> = daily
         .iter()
-        .map(|row| (date_text(&row.date), safe(row.aiu_credits)))
+        .map(|row| (row.date.as_deref(), safe(row.aiu_credits)))
         .collect();
     let max_value = rows.iter().fold(0.0_f64, |max, (_, value)| max.max(*value));
     if rows.is_empty() || max_value <= 0.0 {
-        return section_empty_state(EMPTY_SECTION_MESSAGE);
+        return Ok(section_empty_state(EMPTY_SECTION_MESSAGE));
     }
+    // The TS escapes each date only once the chart is drawn, so a null date fails only here.
+    let rows: Vec<(&str, f64)> = rows
+        .into_iter()
+        .map(|(date, value)| required(date, "date").map(|date| (date, value)))
+        .collect::<Result<_>>()?;
 
     let (left, top, chart_width, chart_height) = (56.0_f64, 20.0_f64, 620.0_f64, 180.0_f64);
     let bottom = top + chart_height;
@@ -384,7 +408,7 @@ fn render_daily_consumption(daily: &[ExportDailyPreviewRow]) -> String {
         })
         .collect();
 
-    format!(
+    Ok(format!(
         r#"<div class="chart-block">
     <svg viewBox="0 0 720 260" role="img" aria-labelledby="daily-consumption-title daily-consumption-desc">
       <title id="daily-consumption-title">Daily AIU credits</title>
@@ -396,7 +420,7 @@ fn render_daily_consumption(daily: &[ExportDailyPreviewRow]) -> String {
       {labels}
     </svg>
   </div>"#
-    )
+    ))
 }
 
 fn render_model_breakdown(model_rows: &[ModelRow]) -> String {
@@ -571,13 +595,19 @@ fn render_token_ratio(model_rows: &[ModelRow]) -> String {
     )
 }
 
-fn render_execution_details(report: &ExportReport) -> String {
+fn render_execution_details(report: &ExportReport) -> Result<String> {
     if report.session_rows.is_empty() {
-        return format!(r#"<p class="empty-state">{EMPTY_SELECTION_MESSAGE}</p>"#);
+        return Ok(format!(
+            r#"<p class="empty-state">{EMPTY_SELECTION_MESSAGE}</p>"#
+        ));
     }
 
-    let rows: String = report.session_rows.iter().map(render_session_row).collect();
-    format!(
+    let rows: String = report
+        .session_rows
+        .iter()
+        .map(render_session_row)
+        .collect::<Result<_>>()?;
+    Ok(format!(
         r#"<div class="table-scroll">
     <table>
       <thead>
@@ -599,11 +629,13 @@ fn render_execution_details(report: &ExportReport) -> String {
       </tbody>
     </table>
   </div>"#
-    )
+    ))
 }
 
-fn render_session_row(row: &ExportSessionRow) -> String {
-    format!(
+fn render_session_row(row: &ExportSessionRow) -> Result<String> {
+    let date = required(row.date.as_deref(), "date")?;
+    let created_at = required(row.created_at.as_deref(), "createdAt")?;
+    Ok(format!(
         r#"<tr>
               <td>{}</td>
               <td>{}</td>
@@ -616,8 +648,8 @@ fn render_session_row(row: &ExportSessionRow) -> String {
               <td>{}</td>
               <td class="summary-cell">{}</td>
             </tr>"#,
-        escape(date_text(&row.date)),
-        escape(date_text(&row.created_at)),
+        escape(date),
+        escape(created_at),
         escape(&row.project),
         escape(&row.models),
         escape(&format_credits(row.aiu_credits)),
@@ -626,7 +658,7 @@ fn render_session_row(row: &ExportSessionRow) -> String {
         escape(&format_tokens(row.tokens)),
         escape(&format_tokens(row.requests)),
         escape(&row.summary)
-    )
+    ))
 }
 
 fn section_empty_state(message: &str) -> String {
@@ -647,9 +679,9 @@ fn non_empty(value: &Option<String>) -> Option<&str> {
     value.as_deref().filter(|s| !s.is_empty())
 }
 
-/// The TypeScript types dates as strings; a missing date renders as empty text.
-fn date_text(value: &Option<String>) -> &str {
-    value.as_deref().unwrap_or("")
+/// `escapeHtml(null)` throws in the original, so a null date fails the render.
+fn required<'a>(value: Option<&'a str>, field: &'static str) -> Result<&'a str> {
+    value.ok_or(HtmlReportError::NullDate { field })
 }
 
 fn escape(value: &str) -> String {
@@ -858,14 +890,15 @@ mod tests {
     #[test]
     fn escapes_markup_and_quotes_in_project_name() {
         let name = "<Alpha> & \"Café\" 'x' 😀";
-        let html = render_html_report(&report(name, "plain"), &options(Some(name)));
+        let html = render_html_report(&report(name, "plain"), &options(Some(name))).unwrap();
         assert!(html.contains("&lt;Alpha&gt; &amp; &quot;Café&quot; &#39;x&#39; 😀"));
         assert!(!html.contains("<Alpha>"));
     }
 
     #[test]
     fn keeps_session_summary_newlines_and_escapes_it() {
-        let html = render_html_report(&report("p", "line one\n<b>line two</b>"), &options(None));
+        let html =
+            render_html_report(&report("p", "line one\n<b>line two</b>"), &options(None)).unwrap();
         assert!(
             html.contains("<td class=\"summary-cell\">line one\n&lt;b&gt;line two&lt;/b&gt;</td>")
         );
@@ -888,7 +921,7 @@ mod tests {
         value["sessionRows"][0]["prompt"] = json!("PROMPT-SECRET");
         value["sessionRows"][0]["response"] = json!("RESPONSE-SECRET");
         let report: ExportReport = serde_json::from_value(value).unwrap();
-        let html = render_html_report(&report, &options(None));
+        let html = render_html_report(&report, &options(None)).unwrap();
         assert!(html.contains("visible summary"));
         assert!(!html.contains("PROMPT-SECRET"));
         assert!(!html.contains("RESPONSE-SECRET"));
@@ -896,9 +929,19 @@ mod tests {
 
     #[test]
     fn formats_numbers_like_intl_fr_fr() {
-        let html = render_html_report(&report("p", "s"), &options(None));
+        let html = render_html_report(&report("p", "s"), &options(None)).unwrap();
         // Intl.NumberFormat('fr-FR') groups thousands with U+202F and uses a decimal comma.
         assert!(html.contains("<p class=\"kpi-value\">1\u{202f}234,5</p>"));
         assert!(html.contains("<p class=\"kpi-value\">3\u{202f}000</p>"));
+    }
+
+    #[test]
+    fn null_created_at_is_an_error_not_an_empty_cell() {
+        let mut input = report("p", "s");
+        input.session_rows[0].created_at = None;
+        assert_eq!(
+            render_html_report(&input, &options(None)),
+            Err(HtmlReportError::NullDate { field: "createdAt" })
+        );
     }
 }

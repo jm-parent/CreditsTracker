@@ -14,6 +14,8 @@ import type {
 } from '../src/shared/types';
 
 const NO_PERIOD: UsageFilters = {};
+// The TS types dates as strings, but `db.ts` reads `created_at` as nullable: a null reaches `escapeHtml` and throws.
+const NULL_DATE = null as unknown as string;
 const GENERATED_AT_MS = 1700000000000;
 const MODELS = ['gpt-5.4', 'claude-sonnet-5', 'gpt-5.3-codex', 'claude-haiku-5.5', 'gemini-3.8-flash', 'grok-4.6', 'kimi-k3'];
 const PROJECTS = ['C:/repos/alpha', 'C:/repos/beta & co'];
@@ -217,6 +219,26 @@ const CASES: Array<{ name: string; options: { filters: UsageFilters; generatedAt
     })(),
   },
   {
+    name: 'null-created-at-throws',
+    options: { filters: NO_PERIOD, generatedAt: GENERATED_AT_MS },
+    report: reportFrom(
+      [summaryRow('2026-06-01', PROJECTS[0], 'gpt-5.4', 1, 10, 10, 1)],
+      [sessionRow('s-null', NULL_DATE, '2026-06-01', PROJECTS[0], 'no created date', 'gpt-5.4', 1, 10, 10, 1)],
+    ),
+  },
+  {
+    // The null summary date becomes a null daily date, which the chart escapes as its axis label.
+    name: 'null-daily-date-throws',
+    options: { filters: NO_PERIOD, generatedAt: GENERATED_AT_MS },
+    report: reportFrom([summaryRow(NULL_DATE, PROJECTS[0], 'gpt-5.4', 1, 10, 10, 1)], []),
+  },
+  {
+    // With no credits the chart is replaced by the empty state, so the null date is never escaped.
+    name: 'null-daily-date-zero-chart-renders',
+    options: { filters: NO_PERIOD, generatedAt: GENERATED_AT_MS },
+    report: reportFrom([summaryRow(NULL_DATE, PROJECTS[0], 'gpt-5.4', 0, 0, 0, 0)], []),
+  },
+  {
     name: 'locale-ties-sort-by-label',
     options: { filters: NO_PERIOD, generatedAt: GENERATED_AT_MS },
     report: reportFrom(
@@ -228,12 +250,16 @@ const CASES: Array<{ name: string; options: { filters: UsageFilters; generatedAt
   },
 ];
 
-const scenarios = CASES.map(({ name, options, report }) => ({
-  name,
-  options,
-  report,
-  html: renderHtmlReport(report, { filters: options.filters, generatedAt: new Date(options.generatedAt) }),
-}));
+// A render that throws records the throw in place of `html`; the Rust port must fail on the same inputs.
+const scenarios = CASES.map(({ name, options, report }) => {
+  try {
+    const html = renderHtmlReport(report, { filters: options.filters, generatedAt: new Date(options.generatedAt) });
+    return { name, options, report, html };
+  } catch (error) {
+    const { name: errorName, message } = error as Error;
+    return { name, options, report, throws: { name: errorName, message } };
+  }
+});
 
 const [outputPath] = process.argv.slice(2);
 if (!outputPath) {
