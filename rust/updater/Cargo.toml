@@ -1,0 +1,9 @@
+[package]
+name = "updater"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+description = "Opt-in update checks: Rust-native replacement for `src/main/updater.ts`"
+
+[dependencies]
+shared = { path = "../shared" }
