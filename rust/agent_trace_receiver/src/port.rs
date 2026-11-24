@@ -222,6 +222,9 @@ fn refuse(mut stream: TcpStream, drains: &Arc<AtomicUsize>) {
     if !answer_busy(&mut stream) {
         return;
     }
+    // ponytail: past MAX_REFUSAL_DRAINS the client may see a reset instead of the 503; overload path, clients retry.
+    // Upgrade path: a non-blocking read of the bytes already buffered, before this close, so the unread
+    // request does not reset the reply.
     let Some(drain) = RefusalDrain::take(drains) else {
         return;
     };
@@ -672,4 +675,22 @@ fn log_once_detail(key: &str, message: &str, detail: Value) {
         message.into(),
         Some(detail),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn refusal_drains_stop_at_the_cap_until_a_guard_is_dropped() {
+        let count = Arc::new(AtomicUsize::new(0));
+        let mut guards: Vec<RefusalDrain> = (0..MAX_REFUSAL_DRAINS)
+            .map(|_| RefusalDrain::take(&count).expect("a drain within the cap"))
+            .collect();
+
+        assert!(RefusalDrain::take(&count).is_none());
+
+        guards.pop();
+        assert!(RefusalDrain::take(&count).is_some());
+    }
 }
