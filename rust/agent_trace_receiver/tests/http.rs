@@ -176,6 +176,33 @@ fn a_stalled_body_is_cut_off_so_close_returns() {
     drop(stalled);
 }
 
+/// Connects and sends one export request, leaving the reply unread so the caller decides how to read it.
+fn send_export(port: u16, export: &[u8]) -> TcpStream {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .expect("read timeout");
+    let mut request = format!(
+        "POST /v1/traces HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/x-protobuf\r\ncontent-length: {}\r\n\r\n",
+        export.len()
+    )
+    .into_bytes();
+    request.extend_from_slice(export);
+    let _ = stream.write_all(&request);
+    stream
+}
+
+/// Reads the outcome of a connection refused past the cap: a 503 reply, or a read error that is a reset
+/// or abort. Any other read error, and a clean close with no reply, fail the test.
+fn expect_refusal_past_cap(stream: &mut TcpStream, label: &str) {
+    let mut raw = Vec::new();
+    match stream.read_to_end(&mut raw) {
+        Err(error) if matches!(error.kind(), ErrorKind::ConnectionReset | ErrorKind::ConnectionAborted) => {}
+        Err(error) => panic!("{label}: read failed with {:?} instead of a reset: {error}", error.kind()),
+        Ok(_) => assert_eq!(common::parse_reply(&raw).status, 503, "{label}"),
+    }
+}
+
 #[test]
 fn connections_beyond_the_concurrency_cap_get_503_and_the_receiver_keeps_serving() {
     let folder = common::scratch("concurrency-cap");
@@ -187,8 +214,8 @@ fn connections_beyond_the_concurrency_cap_get_503_and_the_receiver_keeps_serving
     let idle: Vec<TcpStream> = (0..64)
         .map(|_| TcpStream::connect(("127.0.0.1", port)).expect("connect"))
         .collect();
-    let refused = common::exchange(port, "POST", "/v1/traces", &otlp_headers(), Some(&valid_export()));
-    assert_eq!(refused.status, 503);
+    let mut refused = send_export(port, &valid_export());
+    expect_refusal_past_cap(&mut refused, "connection past the cap");
 
     drop(idle);
     thread::sleep(Duration::from_millis(300));
@@ -216,26 +243,13 @@ fn refusals_past_the_drain_cap_still_get_503_and_the_receiver_keeps_serving() {
     let export = valid_export();
     let mut held = Vec::new();
     for index in 0..MAX_REFUSAL_DRAINS * 2 {
-        let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect");
-        stream
-            .set_read_timeout(Some(Duration::from_secs(10)))
-            .expect("read timeout");
-        let mut request = format!(
-            "POST /v1/traces HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/x-protobuf\r\ncontent-length: {}\r\n\r\n",
-            export.len()
-        )
-        .into_bytes();
-        request.extend_from_slice(&export);
-        let _ = stream.write_all(&request);
-        let mut raw = Vec::new();
-        match stream.read_to_end(&mut raw) {
-            Err(error)
-                if index >= MAX_REFUSAL_DRAINS
-                    && matches!(error.kind(), ErrorKind::ConnectionReset | ErrorKind::ConnectionAborted) => {}
-            Err(error) if index >= MAX_REFUSAL_DRAINS => {
-                panic!("refusal {index}: read failed with {:?} instead of a reset: {error}", error.kind())
-            }
-            _ => assert_eq!(common::parse_reply(&raw).status, 503, "refusal {index}"),
+        let mut stream = send_export(port, &export);
+        if index < MAX_REFUSAL_DRAINS {
+            let mut raw = Vec::new();
+            let _ = stream.read_to_end(&mut raw);
+            assert_eq!(common::parse_reply(&raw).status, 503, "refusal {index}");
+        } else {
+            expect_refusal_past_cap(&mut stream, &format!("refusal {index}"));
         }
         held.push(stream);
     }
