@@ -1,0 +1,1609 @@
+[
+  {
+    "name": "open-session-store-is-read-only",
+    "call": "openDatabase",
+    "dbPath": "{fixtures}/session-store.db",
+    "outcome": {
+      "ok": {
+        "readonly": true
+      }
+    }
+  },
+  {
+    "name": "open-missing-store-throws",
+    "call": "openDatabase",
+    "dbPath": "missing/session-store.db",
+    "outcome": {
+      "threw": "DatabaseNotFoundError",
+      "message": "Copilot CLI session database not found at missing/session-store.db"
+    }
+  },
+  {
+    "name": "open-empty-store",
+    "call": "openDatabase",
+    "dbPath": "{fixtures}/empty.db",
+    "outcome": {
+      "ok": {
+        "readonly": true
+      }
+    }
+  },
+  {
+    "name": "filter-options-session-store",
+    "call": "getFilterOptions",
+    "dbPath": "{fixtures}/session-store.db",
+    "outcome": {
+      "ok": {
+        "projects": [
+          "C:/repos/beta",
+          "Projet café 🚀",
+          "org/alpha",
+          "org/delta",
+          "org/gamma"
+        ],
+        "models": [
+          "claude-sonnet-5",
+          "gemini-4-neon",
+          "gpt-5.4"
+        ],
+        "minDate": "2026-09-01",
+        "maxDate": "2026-11-20"
+      }
+    }
+  },
+  {
+    "name": "filter-options-empty-store",
+    "call": "getFilterOptions",
+    "dbPath": "{fixtures}/empty.db",
+    "outcome": {
+      "ok": {
+        "projects": [],
+        "models": [],
+        "minDate": null,
+        "maxDate": null
+      }
+    }
+  },
+  {
+    "name": "usage-all",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 15.5,
+          "tokens": 869,
+          "requests": 8
+        },
+        "timeSeries": [
+          {
+            "date": "2026-09-01",
+            "aiuCredits": 4.5,
+            "byProject": {
+              "org/alpha": 4.5
+            }
+          },
+          {
+            "date": "2026-09-02",
+            "aiuCredits": 2.2,
+            "byProject": {
+              "org/alpha": 2.2
+            }
+          },
+          {
+            "date": "2026-09-05",
+            "aiuCredits": 0.9,
+            "byProject": {
+              "C:/repos/beta": 0.9
+            }
+          },
+          {
+            "date": "2026-09-10",
+            "aiuCredits": 5.1,
+            "byProject": {
+              "Projet café 🚀": 5.1
+            }
+          },
+          {
+            "date": "2026-11-15",
+            "aiuCredits": 2.8,
+            "byProject": {
+              "org/gamma": 2.8
+            }
+          },
+          {
+            "date": "2026-11-20",
+            "aiuCredits": 0,
+            "byProject": {
+              "org/delta": 0
+            }
+          }
+        ],
+        "byProject": [
+          {
+            "key": "C:/repos/beta",
+            "aiuCredits": 0.9
+          },
+          {
+            "key": "Projet café 🚀",
+            "aiuCredits": 5.1
+          },
+          {
+            "key": "org/alpha",
+            "aiuCredits": 6.7
+          },
+          {
+            "key": "org/delta",
+            "aiuCredits": 0
+          },
+          {
+            "key": "org/gamma",
+            "aiuCredits": 2.8
+          }
+        ],
+        "byModel": [
+          {
+            "key": "claude-sonnet-5",
+            "aiuCredits": 12.1
+          },
+          {
+            "key": "gemini-4-neon",
+            "aiuCredits": 1
+          },
+          {
+            "key": "gpt-5.4",
+            "aiuCredits": 2.4
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "usage-date-range",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "from": "2026-09-01",
+      "to": "2026-09-10"
+    },
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 12.7,
+          "tokens": 732,
+          "requests": 6
+        },
+        "timeSeries": [
+          {
+            "date": "2026-09-01",
+            "aiuCredits": 4.5,
+            "byProject": {
+              "org/alpha": 4.5
+            }
+          },
+          {
+            "date": "2026-09-02",
+            "aiuCredits": 2.2,
+            "byProject": {
+              "org/alpha": 2.2
+            }
+          },
+          {
+            "date": "2026-09-05",
+            "aiuCredits": 0.9,
+            "byProject": {
+              "C:/repos/beta": 0.9
+            }
+          },
+          {
+            "date": "2026-09-10",
+            "aiuCredits": 5.1,
+            "byProject": {
+              "Projet café 🚀": 5.1
+            }
+          }
+        ],
+        "byProject": [
+          {
+            "key": "C:/repos/beta",
+            "aiuCredits": 0.9
+          },
+          {
+            "key": "Projet café 🚀",
+            "aiuCredits": 5.1
+          },
+          {
+            "key": "org/alpha",
+            "aiuCredits": 6.7
+          }
+        ],
+        "byModel": [
+          {
+            "key": "claude-sonnet-5",
+            "aiuCredits": 9.3
+          },
+          {
+            "key": "gemini-4-neon",
+            "aiuCredits": 1
+          },
+          {
+            "key": "gpt-5.4",
+            "aiuCredits": 2.4
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "usage-non-ascii-project-and-model",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "project": "Projet café 🚀",
+      "model": "claude-sonnet-5"
+    },
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 4.1,
+          "tokens": 250,
+          "requests": 1
+        },
+        "timeSeries": [
+          {
+            "date": "2026-09-10",
+            "aiuCredits": 4.1,
+            "byProject": {
+              "Projet café 🚀": 4.1
+            }
+          }
+        ],
+        "byProject": [
+          {
+            "key": "Projet café 🚀",
+            "aiuCredits": 4.1
+          }
+        ],
+        "byModel": [
+          {
+            "key": "claude-sonnet-5",
+            "aiuCredits": 4.1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "usage-project-search-trimmed-case-insensitive",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "projectSearch": "  ALPHA "
+    },
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 6.7,
+          "tokens": 362,
+          "requests": 3
+        },
+        "timeSeries": [
+          {
+            "date": "2026-09-01",
+            "aiuCredits": 4.5,
+            "byProject": {
+              "org/alpha": 4.5
+            }
+          },
+          {
+            "date": "2026-09-02",
+            "aiuCredits": 2.2,
+            "byProject": {
+              "org/alpha": 2.2
+            }
+          }
+        ],
+        "byProject": [
+          {
+            "key": "org/alpha",
+            "aiuCredits": 6.7
+          }
+        ],
+        "byModel": [
+          {
+            "key": "claude-sonnet-5",
+            "aiuCredits": 5.2
+          },
+          {
+            "key": "gpt-5.4",
+            "aiuCredits": 1.5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "usage-empty-filter-strings-are-no-filter",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "project": "",
+      "projectSearch": "   ",
+      "model": "",
+      "from": "",
+      "to": ""
+    },
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 15.5,
+          "tokens": 869,
+          "requests": 8
+        },
+        "timeSeries": [
+          {
+            "date": "2026-09-01",
+            "aiuCredits": 4.5,
+            "byProject": {
+              "org/alpha": 4.5
+            }
+          },
+          {
+            "date": "2026-09-02",
+            "aiuCredits": 2.2,
+            "byProject": {
+              "org/alpha": 2.2
+            }
+          },
+          {
+            "date": "2026-09-05",
+            "aiuCredits": 0.9,
+            "byProject": {
+              "C:/repos/beta": 0.9
+            }
+          },
+          {
+            "date": "2026-09-10",
+            "aiuCredits": 5.1,
+            "byProject": {
+              "Projet café 🚀": 5.1
+            }
+          },
+          {
+            "date": "2026-11-15",
+            "aiuCredits": 2.8,
+            "byProject": {
+              "org/gamma": 2.8
+            }
+          },
+          {
+            "date": "2026-11-20",
+            "aiuCredits": 0,
+            "byProject": {
+              "org/delta": 0
+            }
+          }
+        ],
+        "byProject": [
+          {
+            "key": "C:/repos/beta",
+            "aiuCredits": 0.9
+          },
+          {
+            "key": "Projet café 🚀",
+            "aiuCredits": 5.1
+          },
+          {
+            "key": "org/alpha",
+            "aiuCredits": 6.7
+          },
+          {
+            "key": "org/delta",
+            "aiuCredits": 0
+          },
+          {
+            "key": "org/gamma",
+            "aiuCredits": 2.8
+          }
+        ],
+        "byModel": [
+          {
+            "key": "claude-sonnet-5",
+            "aiuCredits": 12.1
+          },
+          {
+            "key": "gemini-4-neon",
+            "aiuCredits": 1
+          },
+          {
+            "key": "gpt-5.4",
+            "aiuCredits": 2.4
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "usage-empty-range",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "from": "2000-01-01",
+      "to": "2000-01-02"
+    },
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 0,
+          "tokens": 0,
+          "requests": 0
+        },
+        "timeSeries": [],
+        "byProject": [],
+        "byModel": []
+      }
+    }
+  },
+  {
+    "name": "usage-empty-store",
+    "call": "getUsage",
+    "dbPath": "{fixtures}/empty.db",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "totals": {
+          "aiuCredits": 0,
+          "tokens": 0,
+          "requests": 0
+        },
+        "timeSeries": [],
+        "byProject": [],
+        "byModel": []
+      }
+    }
+  },
+  {
+    "name": "hourly-busy-day-non-ascii-project",
+    "call": "getHourlyDetail",
+    "dbPath": "{fixtures}/session-store.db",
+    "params": {
+      "date": "2026-09-10"
+    },
+    "outcome": {
+      "ok": [
+        {
+          "hour": "10:00",
+          "aiuCredits": 4.1,
+          "byProject": {
+            "Projet café 🚀": 4.1
+          }
+        },
+        {
+          "hour": "11:00",
+          "aiuCredits": 1,
+          "byProject": {
+            "Projet café 🚀": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "hourly-busy-day-filtered-by-model",
+    "call": "getHourlyDetail",
+    "dbPath": "{fixtures}/session-store.db",
+    "params": {
+      "date": "2026-09-01",
+      "model": "gpt-5.4"
+    },
+    "outcome": {
+      "ok": [
+        {
+          "hour": "13:00",
+          "aiuCredits": 1.5,
+          "byProject": {
+            "org/alpha": 1.5
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "hourly-day-without-usage",
+    "call": "getHourlyDetail",
+    "dbPath": "{fixtures}/session-store.db",
+    "params": {
+      "date": "2000-01-01"
+    },
+    "outcome": {
+      "ok": []
+    }
+  },
+  {
+    "name": "monthly-september",
+    "call": "getMonthlyActivity",
+    "dbPath": "{fixtures}/session-store.db",
+    "params": {
+      "year": 2026,
+      "month": 9
+    },
+    "outcome": {
+      "ok": [
+        {
+          "date": "2026-09-01",
+          "aiuCredits": 4.5
+        },
+        {
+          "date": "2026-09-02",
+          "aiuCredits": 2.2
+        },
+        {
+          "date": "2026-09-05",
+          "aiuCredits": 0.9
+        },
+        {
+          "date": "2026-09-10",
+          "aiuCredits": 5.1
+        }
+      ]
+    }
+  },
+  {
+    "name": "monthly-empty-month",
+    "call": "getMonthlyActivity",
+    "dbPath": "{fixtures}/session-store.db",
+    "params": {
+      "year": 2026,
+      "month": 10
+    },
+    "outcome": {
+      "ok": []
+    }
+  },
+  {
+    "name": "monthly-november-filtered-by-project-search",
+    "call": "getMonthlyActivity",
+    "dbPath": "{fixtures}/session-store.db",
+    "params": {
+      "year": 2026,
+      "month": 11,
+      "projectSearch": "GAMMA"
+    },
+    "outcome": {
+      "ok": [
+        {
+          "date": "2026-11-15",
+          "aiuCredits": 2.8
+        }
+      ]
+    }
+  },
+  {
+    "name": "project-detail-non-ascii",
+    "call": "getProjectDetail",
+    "dbPath": "{fixtures}/session-store.db",
+    "project": "Projet café 🚀",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "project": "Projet café 🚀",
+        "totals": {
+          "aiuCredits": 5.1,
+          "tokens": 322,
+          "requests": 2
+        },
+        "timeSeries": [
+          {
+            "date": "2026-09-10",
+            "aiuCredits": 5.1
+          }
+        ],
+        "conversations": [
+          {
+            "source": "copilot-cli",
+            "sessionId": "s4",
+            "createdAt": "2026-09-10 08:00:00",
+            "summary": "Session with a non-ASCII project name",
+            "models": "claude-sonnet-5,gemini-4-neon",
+            "aiuCredits": 5.1,
+            "tokens": 322,
+            "requests": 2
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "project-detail-zero-token-project",
+    "call": "getProjectDetail",
+    "dbPath": "{fixtures}/session-store.db",
+    "project": "org/delta",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "project": "org/delta",
+        "totals": {
+          "aiuCredits": 0,
+          "tokens": 0,
+          "requests": 1
+        },
+        "timeSeries": [
+          {
+            "date": "2026-11-20",
+            "aiuCredits": 0
+          }
+        ],
+        "conversations": [
+          {
+            "source": "copilot-cli",
+            "sessionId": "s6",
+            "createdAt": "2026-11-20 09:00:00",
+            "summary": "Zero-token edge case",
+            "models": "gpt-5.4",
+            "aiuCredits": 0,
+            "tokens": 0,
+            "requests": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "project-detail-orphan-project-without-events",
+    "call": "getProjectDetail",
+    "dbPath": "{fixtures}/session-store.db",
+    "project": "org/epsilon",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "project": "org/epsilon",
+        "totals": {
+          "aiuCredits": 0,
+          "tokens": 0,
+          "requests": 0
+        },
+        "timeSeries": [],
+        "conversations": []
+      }
+    }
+  },
+  {
+    "name": "project-detail-unknown-project",
+    "call": "getProjectDetail",
+    "dbPath": "{fixtures}/session-store.db",
+    "project": "no-such-project",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "project": "no-such-project",
+        "totals": {
+          "aiuCredits": 0,
+          "tokens": 0,
+          "requests": 0
+        },
+        "timeSeries": [],
+        "conversations": []
+      }
+    }
+  },
+  {
+    "name": "project-detail-empty-store",
+    "call": "getProjectDetail",
+    "dbPath": "{fixtures}/empty.db",
+    "project": "org/alpha",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "project": "org/alpha",
+        "totals": {
+          "aiuCredits": 0,
+          "tokens": 0,
+          "requests": 0
+        },
+        "timeSeries": [],
+        "conversations": []
+      }
+    }
+  },
+  {
+    "name": "export-all",
+    "call": "getExportReport",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "preview": {
+          "totals": {
+            "aiuCredits": 15.5,
+            "tokens": 869,
+            "requests": 8
+          },
+          "sessionCount": 6,
+          "activeDays": 6,
+          "byModel": [
+            {
+              "model": "claude-sonnet-5",
+              "aiuCredits": 12.100000000000001,
+              "sharePercent": 78.06451612903227
+            },
+            {
+              "model": "gemini-4-neon",
+              "aiuCredits": 1,
+              "sharePercent": 6.451612903225806
+            },
+            {
+              "model": "gpt-5.4",
+              "aiuCredits": 2.4,
+              "sharePercent": 15.483870967741936
+            }
+          ],
+          "daily": [
+            {
+              "date": "2026-09-01",
+              "aiuCredits": 4.5,
+              "tokens": 245,
+              "requests": 2
+            },
+            {
+              "date": "2026-09-02",
+              "aiuCredits": 2.2,
+              "tokens": 117,
+              "requests": 1
+            },
+            {
+              "date": "2026-09-05",
+              "aiuCredits": 0.9,
+              "tokens": 48,
+              "requests": 1
+            },
+            {
+              "date": "2026-09-10",
+              "aiuCredits": 5.1,
+              "tokens": 322,
+              "requests": 2
+            },
+            {
+              "date": "2026-11-15",
+              "aiuCredits": 2.8,
+              "tokens": 137,
+              "requests": 1
+            },
+            {
+              "date": "2026-11-20",
+              "aiuCredits": 0,
+              "tokens": 0,
+              "requests": 1
+            }
+          ]
+        },
+        "summaryRows": [
+          {
+            "date": "2026-09-01",
+            "project": "org/alpha",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 3,
+            "inputTokens": 120,
+            "outputTokens": 30,
+            "tokens": 150,
+            "requests": 1,
+            "dayTotalAiuCredits": 4.5,
+            "modelTotalAiuCredits": 12.100000000000001,
+            "modelSharePercent": 78.06451612903227,
+            "projectTotalAiuCredits": 6.7,
+            "projectSharePercent": 43.225806451612904
+          },
+          {
+            "date": "2026-09-01",
+            "project": "org/alpha",
+            "model": "gpt-5.4",
+            "aiuCredits": 1.5,
+            "inputTokens": 80,
+            "outputTokens": 15,
+            "tokens": 95,
+            "requests": 1,
+            "dayTotalAiuCredits": 4.5,
+            "modelTotalAiuCredits": 2.4,
+            "modelSharePercent": 15.483870967741936,
+            "projectTotalAiuCredits": 6.7,
+            "projectSharePercent": 43.225806451612904
+          },
+          {
+            "date": "2026-09-02",
+            "project": "org/alpha",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 2.2,
+            "inputTokens": 95,
+            "outputTokens": 22,
+            "tokens": 117,
+            "requests": 1,
+            "dayTotalAiuCredits": 2.2,
+            "modelTotalAiuCredits": 12.100000000000001,
+            "modelSharePercent": 78.06451612903227,
+            "projectTotalAiuCredits": 6.7,
+            "projectSharePercent": 43.225806451612904
+          },
+          {
+            "date": "2026-09-05",
+            "project": "C:/repos/beta",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.9,
+            "inputTokens": 40,
+            "outputTokens": 8,
+            "tokens": 48,
+            "requests": 1,
+            "dayTotalAiuCredits": 0.9,
+            "modelTotalAiuCredits": 2.4,
+            "modelSharePercent": 15.483870967741936,
+            "projectTotalAiuCredits": 0.9,
+            "projectSharePercent": 5.806451612903226
+          },
+          {
+            "date": "2026-09-10",
+            "project": "Projet café 🚀",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 4.1,
+            "inputTokens": 200,
+            "outputTokens": 50,
+            "tokens": 250,
+            "requests": 1,
+            "dayTotalAiuCredits": 5.1,
+            "modelTotalAiuCredits": 12.100000000000001,
+            "modelSharePercent": 78.06451612903227,
+            "projectTotalAiuCredits": 5.1,
+            "projectSharePercent": 32.90322580645161
+          },
+          {
+            "date": "2026-09-10",
+            "project": "Projet café 🚀",
+            "model": "gemini-4-neon",
+            "aiuCredits": 1,
+            "inputTokens": 60,
+            "outputTokens": 12,
+            "tokens": 72,
+            "requests": 1,
+            "dayTotalAiuCredits": 5.1,
+            "modelTotalAiuCredits": 1,
+            "modelSharePercent": 6.451612903225806,
+            "projectTotalAiuCredits": 5.1,
+            "projectSharePercent": 32.90322580645161
+          },
+          {
+            "date": "2026-11-15",
+            "project": "org/gamma",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 2.8,
+            "inputTokens": 110,
+            "outputTokens": 27,
+            "tokens": 137,
+            "requests": 1,
+            "dayTotalAiuCredits": 2.8,
+            "modelTotalAiuCredits": 12.100000000000001,
+            "modelSharePercent": 78.06451612903227,
+            "projectTotalAiuCredits": 2.8,
+            "projectSharePercent": 18.064516129032256
+          },
+          {
+            "date": "2026-11-20",
+            "project": "org/delta",
+            "model": "gpt-5.4",
+            "aiuCredits": 0,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "tokens": 0,
+            "requests": 1,
+            "dayTotalAiuCredits": 0,
+            "modelTotalAiuCredits": 2.4,
+            "modelSharePercent": 15.483870967741936,
+            "projectTotalAiuCredits": 0,
+            "projectSharePercent": 0
+          }
+        ],
+        "sessionRows": [
+          {
+            "sessionId": "s6",
+            "createdAt": "2026-11-20 09:00:00",
+            "date": "2026-11-20",
+            "project": "org/delta",
+            "summary": "Zero-token edge case",
+            "models": "gpt-5.4",
+            "aiuCredits": 0,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "tokens": 0,
+            "requests": 1
+          },
+          {
+            "sessionId": "s5",
+            "createdAt": "2026-11-15 12:00:00",
+            "date": "2026-11-15",
+            "project": "org/gamma",
+            "summary": "",
+            "models": "claude-sonnet-5",
+            "aiuCredits": 2.8,
+            "inputTokens": 110,
+            "outputTokens": 27,
+            "tokens": 137,
+            "requests": 1
+          },
+          {
+            "sessionId": "s4",
+            "createdAt": "2026-09-10 08:00:00",
+            "date": "2026-09-10",
+            "project": "Projet café 🚀",
+            "summary": "Session with a non-ASCII project name",
+            "models": "claude-sonnet-5, gemini-4-neon",
+            "aiuCredits": 5.1,
+            "inputTokens": 260,
+            "outputTokens": 62,
+            "tokens": 322,
+            "requests": 2
+          },
+          {
+            "sessionId": "s3",
+            "createdAt": "2026-09-05 14:30:00",
+            "date": "2026-09-05",
+            "project": "C:/repos/beta",
+            "summary": "Beta session, cwd fallback (no repository)",
+            "models": "gpt-5.4",
+            "aiuCredits": 0.9,
+            "inputTokens": 40,
+            "outputTokens": 8,
+            "tokens": 48,
+            "requests": 1
+          },
+          {
+            "sessionId": "s2",
+            "createdAt": "2026-09-02 10:15:00",
+            "date": "2026-09-02",
+            "project": "org/alpha",
+            "summary": "Alpha session two",
+            "models": "claude-sonnet-5",
+            "aiuCredits": 2.2,
+            "inputTokens": 95,
+            "outputTokens": 22,
+            "tokens": 117,
+            "requests": 1
+          },
+          {
+            "sessionId": "s1",
+            "createdAt": "2026-09-01 09:00:00",
+            "date": "2026-09-01",
+            "project": "org/alpha",
+            "summary": "Alpha session one",
+            "models": "claude-sonnet-5, gpt-5.4",
+            "aiuCredits": 4.5,
+            "inputTokens": 200,
+            "outputTokens": 45,
+            "tokens": 245,
+            "requests": 2
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "export-date-range",
+    "call": "getExportReport",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "from": "2026-09-01",
+      "to": "2026-09-10"
+    },
+    "outcome": {
+      "ok": {
+        "preview": {
+          "totals": {
+            "aiuCredits": 12.7,
+            "tokens": 732,
+            "requests": 6
+          },
+          "sessionCount": 4,
+          "activeDays": 4,
+          "byModel": [
+            {
+              "model": "claude-sonnet-5",
+              "aiuCredits": 9.3,
+              "sharePercent": 73.22834645669293
+            },
+            {
+              "model": "gemini-4-neon",
+              "aiuCredits": 1,
+              "sharePercent": 7.874015748031496
+            },
+            {
+              "model": "gpt-5.4",
+              "aiuCredits": 2.4,
+              "sharePercent": 18.89763779527559
+            }
+          ],
+          "daily": [
+            {
+              "date": "2026-09-01",
+              "aiuCredits": 4.5,
+              "tokens": 245,
+              "requests": 2
+            },
+            {
+              "date": "2026-09-02",
+              "aiuCredits": 2.2,
+              "tokens": 117,
+              "requests": 1
+            },
+            {
+              "date": "2026-09-05",
+              "aiuCredits": 0.9,
+              "tokens": 48,
+              "requests": 1
+            },
+            {
+              "date": "2026-09-10",
+              "aiuCredits": 5.1,
+              "tokens": 322,
+              "requests": 2
+            }
+          ]
+        },
+        "summaryRows": [
+          {
+            "date": "2026-09-01",
+            "project": "org/alpha",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 3,
+            "inputTokens": 120,
+            "outputTokens": 30,
+            "tokens": 150,
+            "requests": 1,
+            "dayTotalAiuCredits": 4.5,
+            "modelTotalAiuCredits": 9.3,
+            "modelSharePercent": 73.22834645669293,
+            "projectTotalAiuCredits": 6.7,
+            "projectSharePercent": 52.75590551181103
+          },
+          {
+            "date": "2026-09-01",
+            "project": "org/alpha",
+            "model": "gpt-5.4",
+            "aiuCredits": 1.5,
+            "inputTokens": 80,
+            "outputTokens": 15,
+            "tokens": 95,
+            "requests": 1,
+            "dayTotalAiuCredits": 4.5,
+            "modelTotalAiuCredits": 2.4,
+            "modelSharePercent": 18.89763779527559,
+            "projectTotalAiuCredits": 6.7,
+            "projectSharePercent": 52.75590551181103
+          },
+          {
+            "date": "2026-09-02",
+            "project": "org/alpha",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 2.2,
+            "inputTokens": 95,
+            "outputTokens": 22,
+            "tokens": 117,
+            "requests": 1,
+            "dayTotalAiuCredits": 2.2,
+            "modelTotalAiuCredits": 9.3,
+            "modelSharePercent": 73.22834645669293,
+            "projectTotalAiuCredits": 6.7,
+            "projectSharePercent": 52.75590551181103
+          },
+          {
+            "date": "2026-09-05",
+            "project": "C:/repos/beta",
+            "model": "gpt-5.4",
+            "aiuCredits": 0.9,
+            "inputTokens": 40,
+            "outputTokens": 8,
+            "tokens": 48,
+            "requests": 1,
+            "dayTotalAiuCredits": 0.9,
+            "modelTotalAiuCredits": 2.4,
+            "modelSharePercent": 18.89763779527559,
+            "projectTotalAiuCredits": 0.9,
+            "projectSharePercent": 7.086614173228346
+          },
+          {
+            "date": "2026-09-10",
+            "project": "Projet café 🚀",
+            "model": "claude-sonnet-5",
+            "aiuCredits": 4.1,
+            "inputTokens": 200,
+            "outputTokens": 50,
+            "tokens": 250,
+            "requests": 1,
+            "dayTotalAiuCredits": 5.1,
+            "modelTotalAiuCredits": 9.3,
+            "modelSharePercent": 73.22834645669293,
+            "projectTotalAiuCredits": 5.1,
+            "projectSharePercent": 40.15748031496063
+          },
+          {
+            "date": "2026-09-10",
+            "project": "Projet café 🚀",
+            "model": "gemini-4-neon",
+            "aiuCredits": 1,
+            "inputTokens": 60,
+            "outputTokens": 12,
+            "tokens": 72,
+            "requests": 1,
+            "dayTotalAiuCredits": 5.1,
+            "modelTotalAiuCredits": 1,
+            "modelSharePercent": 7.874015748031496,
+            "projectTotalAiuCredits": 5.1,
+            "projectSharePercent": 40.15748031496063
+          }
+        ],
+        "sessionRows": [
+          {
+            "sessionId": "s4",
+            "createdAt": "2026-09-10 08:00:00",
+            "date": "2026-09-10",
+            "project": "Projet café 🚀",
+            "summary": "Session with a non-ASCII project name",
+            "models": "claude-sonnet-5, gemini-4-neon",
+            "aiuCredits": 5.1,
+            "inputTokens": 260,
+            "outputTokens": 62,
+            "tokens": 322,
+            "requests": 2
+          },
+          {
+            "sessionId": "s3",
+            "createdAt": "2026-09-05 14:30:00",
+            "date": "2026-09-05",
+            "project": "C:/repos/beta",
+            "summary": "Beta session, cwd fallback (no repository)",
+            "models": "gpt-5.4",
+            "aiuCredits": 0.9,
+            "inputTokens": 40,
+            "outputTokens": 8,
+            "tokens": 48,
+            "requests": 1
+          },
+          {
+            "sessionId": "s2",
+            "createdAt": "2026-09-02 10:15:00",
+            "date": "2026-09-02",
+            "project": "org/alpha",
+            "summary": "Alpha session two",
+            "models": "claude-sonnet-5",
+            "aiuCredits": 2.2,
+            "inputTokens": 95,
+            "outputTokens": 22,
+            "tokens": 117,
+            "requests": 1
+          },
+          {
+            "sessionId": "s1",
+            "createdAt": "2026-09-01 09:00:00",
+            "date": "2026-09-01",
+            "project": "org/alpha",
+            "summary": "Alpha session one",
+            "models": "claude-sonnet-5, gpt-5.4",
+            "aiuCredits": 4.5,
+            "inputTokens": 200,
+            "outputTokens": 45,
+            "tokens": 245,
+            "requests": 2
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "export-inverted-range-throws",
+    "call": "getExportReport",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "from": "2026-12-01",
+      "to": "2026-01-01"
+    },
+    "outcome": {
+      "threw": "Error",
+      "message": "Invalid export date range"
+    }
+  },
+  {
+    "name": "export-empty-range-has-no-rows",
+    "call": "getExportReport",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "from": "2000-01-01",
+      "to": "2000-01-02"
+    },
+    "outcome": {
+      "ok": {
+        "preview": {
+          "totals": {
+            "aiuCredits": 0,
+            "tokens": 0,
+            "requests": 0
+          },
+          "sessionCount": 0,
+          "activeDays": 0,
+          "byModel": [],
+          "daily": []
+        },
+        "summaryRows": [],
+        "sessionRows": []
+      }
+    }
+  },
+  {
+    "name": "export-zero-token-day-has-zero-shares",
+    "call": "getExportReport",
+    "dbPath": "{fixtures}/session-store.db",
+    "filters": {
+      "from": "2026-11-20",
+      "to": "2026-11-20"
+    },
+    "outcome": {
+      "ok": {
+        "preview": {
+          "totals": {
+            "aiuCredits": 0,
+            "tokens": 0,
+            "requests": 1
+          },
+          "sessionCount": 1,
+          "activeDays": 1,
+          "byModel": [
+            {
+              "model": "gpt-5.4",
+              "aiuCredits": 0,
+              "sharePercent": 0
+            }
+          ],
+          "daily": [
+            {
+              "date": "2026-11-20",
+              "aiuCredits": 0,
+              "tokens": 0,
+              "requests": 1
+            }
+          ]
+        },
+        "summaryRows": [
+          {
+            "date": "2026-11-20",
+            "project": "org/delta",
+            "model": "gpt-5.4",
+            "aiuCredits": 0,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "tokens": 0,
+            "requests": 1,
+            "dayTotalAiuCredits": 0,
+            "modelTotalAiuCredits": 0,
+            "modelSharePercent": 0,
+            "projectTotalAiuCredits": 0,
+            "projectSharePercent": 0
+          }
+        ],
+        "sessionRows": [
+          {
+            "sessionId": "s6",
+            "createdAt": "2026-11-20 09:00:00",
+            "date": "2026-11-20",
+            "project": "org/delta",
+            "summary": "Zero-token edge case",
+            "models": "gpt-5.4",
+            "aiuCredits": 0,
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "tokens": 0,
+            "requests": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "export-empty-store",
+    "call": "getExportReport",
+    "dbPath": "{fixtures}/empty.db",
+    "filters": {},
+    "outcome": {
+      "ok": {
+        "preview": {
+          "totals": {
+            "aiuCredits": 0,
+            "tokens": 0,
+            "requests": 0
+          },
+          "sessionCount": 0,
+          "activeDays": 0,
+          "byModel": [],
+          "daily": []
+        },
+        "summaryRows": [],
+        "sessionRows": []
+      }
+    }
+  },
+  {
+    "name": "raw-sessions-first-page",
+    "call": "getRawTablePage",
+    "dbPath": "{fixtures}/session-store.db",
+    "table": "sessions",
+    "page": 0,
+    "pageSize": 3,
+    "outcome": {
+      "ok": {
+        "columns": [
+          "id",
+          "cwd",
+          "repository",
+          "summary",
+          "created_at"
+        ],
+        "rows": [
+          {
+            "id": "s7",
+            "cwd": "C:/repos/epsilon",
+            "repository": "org/epsilon",
+            "summary": "Orphan session with no usage events",
+            "created_at": "2026-09-15 00:00:00"
+          },
+          {
+            "id": "s6",
+            "cwd": "C:/repos/delta",
+            "repository": "org/delta",
+            "summary": "Zero-token edge case",
+            "created_at": "2026-11-20 09:00:00"
+          },
+          {
+            "id": "s5",
+            "cwd": "C:/repos/gamma",
+            "repository": "org/gamma",
+            "summary": null,
+            "created_at": "2026-11-15 12:00:00"
+          }
+        ],
+        "total": 7,
+        "page": 0,
+        "pageSize": 3
+      }
+    }
+  },
+  {
+    "name": "raw-events-second-page",
+    "call": "getRawTablePage",
+    "dbPath": "{fixtures}/session-store.db",
+    "table": "assistant_usage_events",
+    "page": 1,
+    "pageSize": 3,
+    "outcome": {
+      "ok": {
+        "columns": [
+          "id",
+          "session_id",
+          "model",
+          "total_nano_aiu",
+          "input_tokens",
+          "output_tokens",
+          "created_at"
+        ],
+        "rows": [
+          {
+            "id": 5,
+            "session_id": "s4",
+            "model": "claude-sonnet-5",
+            "total_nano_aiu": 4100000000,
+            "input_tokens": 200,
+            "output_tokens": 50,
+            "created_at": "2026-09-10 08:05:00"
+          },
+          {
+            "id": 4,
+            "session_id": "s3",
+            "model": "gpt-5.4",
+            "total_nano_aiu": 900000000,
+            "input_tokens": 40,
+            "output_tokens": 8,
+            "created_at": "2026-09-05 14:35:00"
+          },
+          {
+            "id": 3,
+            "session_id": "s2",
+            "model": "claude-sonnet-5",
+            "total_nano_aiu": 2200000000,
+            "input_tokens": 95,
+            "output_tokens": 22,
+            "created_at": "2026-09-02 10:20:00"
+          }
+        ],
+        "total": 8,
+        "page": 1,
+        "pageSize": 3
+      }
+    }
+  },
+  {
+    "name": "raw-events-page-past-the-end",
+    "call": "getRawTablePage",
+    "dbPath": "{fixtures}/session-store.db",
+    "table": "assistant_usage_events",
+    "page": 99,
+    "pageSize": 3,
+    "outcome": {
+      "ok": {
+        "columns": [
+          "id",
+          "session_id",
+          "model",
+          "total_nano_aiu",
+          "input_tokens",
+          "output_tokens",
+          "created_at"
+        ],
+        "rows": [],
+        "total": 8,
+        "page": 99,
+        "pageSize": 3
+      }
+    }
+  },
+  {
+    "name": "raw-page-and-size-are-clamped",
+    "call": "getRawTablePage",
+    "dbPath": "{fixtures}/session-store.db",
+    "table": "sessions",
+    "page": -1.7,
+    "pageSize": 0,
+    "outcome": {
+      "ok": {
+        "columns": [
+          "id",
+          "cwd",
+          "repository",
+          "summary",
+          "created_at"
+        ],
+        "rows": [
+          {
+            "id": "s7",
+            "cwd": "C:/repos/epsilon",
+            "repository": "org/epsilon",
+            "summary": "Orphan session with no usage events",
+            "created_at": "2026-09-15 00:00:00"
+          }
+        ],
+        "total": 7,
+        "page": 0,
+        "pageSize": 1
+      }
+    }
+  },
+  {
+    "name": "raw-page-size-is-capped-at-500",
+    "call": "getRawTablePage",
+    "dbPath": "{fixtures}/session-store.db",
+    "table": "assistant_usage_events",
+    "page": 0,
+    "pageSize": 1000,
+    "outcome": {
+      "ok": {
+        "columns": [
+          "id",
+          "session_id",
+          "model",
+          "total_nano_aiu",
+          "input_tokens",
+          "output_tokens",
+          "created_at"
+        ],
+        "rows": [
+          {
+            "id": 8,
+            "session_id": "s6",
+            "model": "gpt-5.4",
+            "total_nano_aiu": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "created_at": "2026-11-20 09:05:00"
+          },
+          {
+            "id": 7,
+            "session_id": "s5",
+            "model": "claude-sonnet-5",
+            "total_nano_aiu": 2800000000,
+            "input_tokens": 110,
+            "output_tokens": 27,
+            "created_at": "2026-11-15 12:05:00"
+          },
+          {
+            "id": 6,
+            "session_id": "s4",
+            "model": "gemini-4-neon",
+            "total_nano_aiu": 1000000000,
+            "input_tokens": 60,
+            "output_tokens": 12,
+            "created_at": "2026-09-10 09:00:00"
+          },
+          {
+            "id": 5,
+            "session_id": "s4",
+            "model": "claude-sonnet-5",
+            "total_nano_aiu": 4100000000,
+            "input_tokens": 200,
+            "output_tokens": 50,
+            "created_at": "2026-09-10 08:05:00"
+          },
+          {
+            "id": 4,
+            "session_id": "s3",
+            "model": "gpt-5.4",
+            "total_nano_aiu": 900000000,
+            "input_tokens": 40,
+            "output_tokens": 8,
+            "created_at": "2026-09-05 14:35:00"
+          },
+          {
+            "id": 3,
+            "session_id": "s2",
+            "model": "claude-sonnet-5",
+            "total_nano_aiu": 2200000000,
+            "input_tokens": 95,
+            "output_tokens": 22,
+            "created_at": "2026-09-02 10:20:00"
+          },
+          {
+            "id": 2,
+            "session_id": "s1",
+            "model": "gpt-5.4",
+            "total_nano_aiu": 1500000000,
+            "input_tokens": 80,
+            "output_tokens": 15,
+            "created_at": "2026-09-01 11:00:00"
+          },
+          {
+            "id": 1,
+            "session_id": "s1",
+            "model": "claude-sonnet-5",
+            "total_nano_aiu": 3000000000,
+            "input_tokens": 120,
+            "output_tokens": 30,
+            "created_at": "2026-09-01 09:05:00"
+          }
+        ],
+        "total": 8,
+        "page": 0,
+        "pageSize": 500
+      }
+    }
+  },
+  {
+    "name": "raw-empty-store-lists-columns",
+    "call": "getRawTablePage",
+    "dbPath": "{fixtures}/empty.db",
+    "table": "sessions",
+    "page": 0,
+    "pageSize": 10,
+    "outcome": {
+      "ok": {
+        "columns": [
+          "id",
+          "cwd",
+          "repository",
+          "summary",
+          "created_at"
+        ],
+        "rows": [],
+        "total": 0,
+        "page": 0,
+        "pageSize": 10
+      }
+    }
+  },
+  {
+    "name": "default-db-path-under-home",
+    "call": "resolveDefaultDbPath",
+    "outcome": {
+      "ok": ".copilot\\session-store.db"
+    }
+  }
+]
