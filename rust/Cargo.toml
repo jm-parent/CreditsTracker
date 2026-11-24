@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["shared", "logger", "export", "agent_trace_protocol", "agent_trace_sanitizer", "agent_trace_correlator", "agent_trace_store"]
+members = ["shared", "logger", "export", "agent_trace_protocol", "agent_trace_sanitizer", "agent_trace_correlator", "agent_trace_store", "agent_trace_receiver"]
 
 [workspace.package]
 edition = "2021"

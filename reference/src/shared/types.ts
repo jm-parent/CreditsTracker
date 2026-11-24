@@ -42,6 +42,13 @@ export interface AgentTraceSession {
   spans: AgentTraceSpan[];
 }
 
+export interface AgentTraceCollectionStatus {
+  enabled: boolean;
+  listening: boolean;
+  endpoint: string | null;
+  errorMessage: string | null;
+}
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 /** Which process produced a log entry. */

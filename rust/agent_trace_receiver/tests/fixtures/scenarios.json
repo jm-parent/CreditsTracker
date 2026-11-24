@@ -1,0 +1,1716 @@
+[
+  {
+    "name": "receiver-http-contract",
+    "steps": [
+      {
+        "call": "startReceiver",
+        "dbPath": "receiver.db",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "b7ad6b7169203331",
+              "name": "invoke_agent copilot"
+            },
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1",
+                "gen_ai.tool.name": "grep",
+                "gen_ai.tool.call.id": "call-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "00f067aa0ba902b7",
+              "parentSpanId": "b7ad6b7169203331",
+              "name": "execute_tool grep"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "323"
+              },
+              "bodyBase64": "CsACCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EpkCEmgKEAr3ZRkWzUPdhEjrIRyAMZwSCLeta3FpIDMxKhRpbnZva2VfYWdlbnQgY29waWxvdDkAQMrfQKTqGEEAMtAJQqTqGEoiChZnZW5fYWkuY29udmVyc2F0aW9uLmlkEggKBnNlc3MtMRKsAQoQCvdlGRbNQ92ESOshHIAxnBIIAPBnqgupArciCLeta3FpIDMxKhFleGVjdXRlX3Rvb2wgZ3JlcDkACmUbQaTqGEEA1P9WQaTqGEoiChZnZW5fYWkuY29udmVyc2F0aW9uLmlkEggKBnNlc3MtMUoaChBnZW5fYWkudG9vbC5uYW1lEgYKBGdyZXBKHwoTZ2VuX2FpLnRvb2wuY2FsbC5pZBIICgZjYWxsLTE="
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": null
+          }
+        ]
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "0af7651916cd43dd8448eb211c80319c",
+                "spanId": "b7ad6b7169203331",
+                "parentSpanId": null,
+                "name": "invoke_agent copilot",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:05.000Z",
+                "durationMs": 5000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "0af7651916cd43dd8448eb211c80319c",
+                "spanId": "00f067aa0ba902b7",
+                "parentSpanId": "b7ad6b7169203331",
+                "name": "execute_tool grep",
+                "category": "tool",
+                "toolName": "grep",
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:01.000Z",
+                "endedAt": "2026-11-23T10:00:02.000Z",
+                "durationMs": 1000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": "call-1",
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              }
+            ]
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-2",
+                "gen_ai.tool.name": "grep",
+                "gen_ai.tool.call.id": "call-1"
+              },
+              "traceId": "1111111111111111111111111111aaaa",
+              "spanId": "1111111111111111",
+              "parentSpanId": "f0f0f0f0f0f0f0f0",
+              "name": "execute_tool grep"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "217"
+              },
+              "bodyBase64": "CtYBCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90Eq8BEqwBChAREREREREREREREREREaqqEggRERERERERESII8PDw8PDw8PAqEWV4ZWN1dGVfdG9vbCBncmVwOQAKZRtBpOoYQQDU/1ZBpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy0yShoKEGdlbl9haS50b29sLm5hbWUSBgoEZ3JlcEofChNnZW5fYWkudG9vbC5jYWxsLmlkEggKBmNhbGwtMQ=="
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-2"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-2",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-2"
+              },
+              "traceId": "1111111111111111111111111111aaaa",
+              "spanId": "f0f0f0f0f0f0f0f0",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "147"
+              },
+              "bodyBase64": "CpABCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EmoSaAoQERERERERERERERERERGqqhII8PDw8PDw8PAqFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy0y"
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": null
+          }
+        ]
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-2"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-2",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-2",
+                "traceId": "1111111111111111111111111111aaaa",
+                "spanId": "f0f0f0f0f0f0f0f0",
+                "parentSpanId": null,
+                "name": "invoke_agent copilot",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:05.000Z",
+                "durationMs": 5000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-2",
+                "traceId": "1111111111111111111111111111aaaa",
+                "spanId": "1111111111111111",
+                "parentSpanId": "f0f0f0f0f0f0f0f0",
+                "name": "execute_tool grep",
+                "category": "tool",
+                "toolName": "grep",
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:01.000Z",
+                "endedAt": "2026-11-23T10:00:02.000Z",
+                "durationMs": 1000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": "call-1",
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              }
+            ]
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "b7ad6b7169203331",
+              "name": "invoke_agent copilot"
+            },
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1",
+                "gen_ai.tool.name": "grep",
+                "gen_ai.tool.call.id": "call-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "00f067aa0ba902b7",
+              "parentSpanId": "b7ad6b7169203331",
+              "name": "execute_tool grep"
+            }
+          ],
+          "truncateTo": 20
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "20"
+              },
+              "bodyBase64": "CsACCiIKIAoMc2VydmljZS5uYW0="
+            },
+            "response": {
+              "status": 400,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "empty"
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "0"
+              },
+              "bodyBase64": ""
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": null
+          }
+        ]
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "text",
+          "text": "not protobuf"
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "12"
+              },
+              "bodyBase64": "bm90IHByb3RvYnVm"
+            },
+            "response": {
+              "status": 400,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-3"
+              },
+              "traceId": "2222222222222222222222222222bbbb",
+              "spanId": "2222222222222222",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "147"
+              },
+              "bodyBase64": "CpABCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EmoSaAoQIiIiIiIiIiIiIiIiIiK7uxIIIiIiIiIiIiIqFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy0z"
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": null
+          }
+        ]
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "unknown-app",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-4"
+              },
+              "traceId": "3333333333333333333333333333cccc",
+              "spanId": "3333333333333333",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "144"
+              },
+              "bodyBase64": "Co0BCh8KHQoMc2VydmljZS5uYW1lEg0KC3Vua25vd24tYXBwEmoSaAoQMzMzMzMzMzMzMzMzMzPMzBIIMzMzMzMzMzMqFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy00"
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": "CkkIARJFcGFydGlhbCB0cmFjZSBjb3ZlcmFnZTogcmVqZWN0ZWQgMSBzcGFuKHMpOiAxIGZyb20gdW5zdXBwb3J0ZWQgc291cmNl"
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": {
+              "totalRejectedSpans": 1,
+              "unsupportedSourceSpans": 1,
+              "missingSourceSessionSpans": 0,
+              "unresolvedTraceRootSpans": 0,
+              "errorMessage": "partial trace coverage: rejected 1 span(s): 1 from unsupported source"
+            }
+          }
+        ]
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428005000000000",
+              "endNs": "1795428000000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-5"
+              },
+              "traceId": "4444444444444444444444444444dddd",
+              "spanId": "4444444444444444",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "147"
+              },
+              "bodyBase64": "CpABCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EmoSaAoQRERERERERERERERERETd3RIIREREREREREQqFGludm9rZV9hZ2VudCBjb3BpbG90OQAy0AlCpOoYQQBAyt9ApOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy01"
+            },
+            "response": {
+              "status": 400,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "endNs": "1795428000000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-6"
+              },
+              "traceId": "5555555555555555555555555555eeee",
+              "spanId": "5555555555555555",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "138"
+              },
+              "bodyBase64": "CocBCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EmESXwoQVVVVVVVVVVVVVVVVVVXu7hIIVVVVVVVVVVUqFGludm9rZV9hZ2VudCBjb3BpbG90QQBAyt9ApOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy02"
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": null
+          }
+        ]
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-7"
+              },
+              "traceId": "6666",
+              "spanId": "6666666666666666",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "133"
+              },
+              "bodyBase64": "CoIBCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90ElwSWgoCZmYSCGZmZmZmZmZmKhRpbnZva2VfYWdlbnQgY29waWxvdDkACmUbQaTqGEEA1P9WQaTqGEoiChZnZW5fYWkuY29udmVyc2F0aW9uLmlkEggKBnNlc3MtNw=="
+            },
+            "response": {
+              "status": 400,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "contentType": "application/json",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "b7ad6b7169203331",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/json",
+                "content-length": "147"
+              },
+              "bodyBase64": "CpABCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EmoSaAoQCvdlGRbNQ92ESOshHIAxnBIIt61rcWkgMzEqFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy0x"
+            },
+            "response": {
+              "status": 415,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "exportRejected",
+            "value": {
+              "status": 415,
+              "errorMessage": "OTLP export rejected (HTTP 415): content type application/json is not supported; set the exporter protocol to http/protobuf."
+            }
+          }
+        ]
+      },
+      {
+        "call": "request",
+        "contentType": null,
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "b7ad6b7169203331",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-length": "147"
+              },
+              "bodyBase64": "CpABCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EmoSaAoQCvdlGRbNQ92ESOshHIAxnBIIt61rcWkgMzEqFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy0x"
+            },
+            "response": {
+              "status": 415,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": [
+          {
+            "event": "exportRejected",
+            "value": {
+              "status": 415,
+              "errorMessage": "OTLP export rejected (HTTP 415): content type (missing) is not supported; set the exporter protocol to http/protobuf."
+            }
+          }
+        ]
+      },
+      {
+        "call": "request",
+        "method": "GET",
+        "body": null,
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "GET",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf"
+              },
+              "bodyBase64": null
+            },
+            "response": {
+              "status": 405,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "path": "/nope",
+        "body": {
+          "kind": "empty"
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/nope",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "0"
+              },
+              "bodyBase64": ""
+            },
+            "response": {
+              "status": 404,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "headers": {
+          "origin": "http://evil.example"
+        },
+        "body": {
+          "kind": "empty"
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "0",
+                "origin": "http://evil.example"
+              },
+              "bodyBase64": ""
+            },
+            "response": {
+              "status": 403,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "headers": {
+          "host": "evil.example"
+        },
+        "body": {
+          "kind": "empty"
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "evil.example",
+                "content-type": "application/x-protobuf",
+                "content-length": "0"
+              },
+              "bodyBase64": ""
+            },
+            "response": {
+              "status": 403,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "headers": {
+          "host": "127.0.0.1:1"
+        },
+        "body": {
+          "kind": "empty"
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1:1",
+                "content-type": "application/x-protobuf",
+                "content-length": "0"
+              },
+              "bodyBase64": ""
+            },
+            "response": {
+              "status": 403,
+              "contentType": null,
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "0af7651916cd43dd8448eb211c80319c",
+                "spanId": "b7ad6b7169203331",
+                "parentSpanId": null,
+                "name": "invoke_agent copilot",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:05.000Z",
+                "durationMs": 5000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "0af7651916cd43dd8448eb211c80319c",
+                "spanId": "00f067aa0ba902b7",
+                "parentSpanId": "b7ad6b7169203331",
+                "name": "execute_tool grep",
+                "category": "tool",
+                "toolName": "grep",
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:01.000Z",
+                "endedAt": "2026-11-23T10:00:02.000Z",
+                "durationMs": 1000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": "call-1",
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              }
+            ]
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "closeReceiver",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      }
+    ]
+  },
+  {
+    "name": "receiver-expiry-and-discard",
+    "steps": [
+      {
+        "call": "startReceiver",
+        "dbPath": "expiry.db",
+        "pendingTtlMs": 100,
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-8",
+                "gen_ai.tool.name": "grep",
+                "gen_ai.tool.call.id": "call-1"
+              },
+              "traceId": "7777777777777777777777777777ffff",
+              "spanId": "7777777777777777",
+              "parentSpanId": "f0f0f0f0f0f0f0f0",
+              "name": "execute_tool grep"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "217"
+              },
+              "bodyBase64": "CtYBCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90Eq8BEqwBChB3d3d3d3d3d3d3d3d3d///Egh3d3d3d3d3dyII8PDw8PDw8PAqEWV4ZWN1dGVfdG9vbCBncmVwOQAKZRtBpOoYQQDU/1ZBpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy04ShoKEGdlbl9haS50b29sLm5hbWUSBgoEZ3JlcEofChNnZW5fYWkudG9vbC5jYWxsLmlkEggKBmNhbGwtMQ=="
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "wait",
+        "ms": 400,
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-8"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-8",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-8",
+                "traceId": "7777777777777777777777777777ffff",
+                "spanId": "7777777777777777",
+                "parentSpanId": "f0f0f0f0f0f0f0f0",
+                "name": "execute_tool grep",
+                "category": "tool",
+                "toolName": "grep",
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:01.000Z",
+                "endedAt": "2026-11-23T10:00:02.000Z",
+                "durationMs": 1000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": "call-1",
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              }
+            ]
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-9",
+                "gen_ai.tool.name": "grep",
+                "gen_ai.tool.call.id": "call-1"
+              },
+              "traceId": "8888888888888888888888888888aaaa",
+              "spanId": "8888888888888888",
+              "parentSpanId": "f0f0f0f0f0f0f0f0",
+              "name": "execute_tool grep"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "217"
+              },
+              "bodyBase64": "CtYBCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90Eq8BEqwBChCIiIiIiIiIiIiIiIiIiKqqEgiIiIiIiIiIiCII8PDw8PDw8PAqEWV4ZWN1dGVfdG9vbCBncmVwOQAKZRtBpOoYQQDU/1ZBpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy05ShoKEGdlbl9haS50b29sLm5hbWUSBgoEZ3JlcEofChNnZW5fYWkudG9vbC5jYWxsLmlkEggKBmNhbGwtMQ=="
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "discardPending",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "wait",
+        "ms": 300,
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "closeReceiver",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-9"
+        },
+        "result": {
+          "error": "Agent trace store is closed"
+        },
+        "events": []
+      }
+    ]
+  },
+  {
+    "name": "receiver-close-flushes-held",
+    "steps": [
+      {
+        "call": "startReceiver",
+        "dbPath": "flush.db",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {},
+              "traceId": "9999999999999999999999999999bbbb",
+              "spanId": "9999999999999999",
+              "parentSpanId": "f0f0f0f0f0f0f0f0",
+              "name": "execute_tool grep"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "117"
+              },
+              "bodyBase64": "CnMKIgogCgxzZXJ2aWNlLm5hbWUSEAoOZ2l0aHViLWNvcGlsb3QSTRJLChCZmZmZmZmZmZmZmZmZmbu7EgiZmZmZmZmZmSII8PDw8PDw8PAqEWV4ZWN1dGVfdG9vbCBncmVwOQAKZRtBpOoYQQDU/1ZBpOoY"
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "closeReceiver",
+        "result": {
+          "ok": null
+        },
+        "events": [
+          {
+            "event": "partialSuccess",
+            "value": {
+              "totalRejectedSpans": 1,
+              "unsupportedSourceSpans": 0,
+              "missingSourceSessionSpans": 0,
+              "unresolvedTraceRootSpans": 1,
+              "errorMessage": "partial trace coverage: rejected 1 span(s): 1 without a trace root or conversation context after 30 s"
+            }
+          }
+        ]
+      },
+      {
+        "call": "getSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-10"
+        },
+        "result": {
+          "error": "Agent trace store is closed"
+        },
+        "events": []
+      }
+    ]
+  },
+  {
+    "name": "service-lifecycle",
+    "steps": [
+      {
+        "call": "serviceCreate",
+        "userDataDir": "service-a",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceInitialize",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceStatus",
+        "result": {
+          "ok": {
+            "enabled": false,
+            "listening": false,
+            "endpoint": null,
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceSetEnabled",
+        "enabled": true,
+        "result": {
+          "ok": {
+            "enabled": true,
+            "listening": true,
+            "endpoint": "<endpoint>",
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "target": "service",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "b7ad6b7169203331",
+              "name": "invoke_agent copilot"
+            },
+            {
+              "startNs": "1795428001000000000",
+              "endNs": "1795428002000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-1",
+                "gen_ai.tool.name": "grep",
+                "gen_ai.tool.call.id": "call-1"
+              },
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "00f067aa0ba902b7",
+              "parentSpanId": "b7ad6b7169203331",
+              "name": "execute_tool grep"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "323"
+              },
+              "bodyBase64": "CsACCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EpkCEmgKEAr3ZRkWzUPdhEjrIRyAMZwSCLeta3FpIDMxKhRpbnZva2VfYWdlbnQgY29waWxvdDkAQMrfQKTqGEEAMtAJQqTqGEoiChZnZW5fYWkuY29udmVyc2F0aW9uLmlkEggKBnNlc3MtMRKsAQoQCvdlGRbNQ92ESOshHIAxnBIIAPBnqgupArciCLeta3FpIDMxKhFleGVjdXRlX3Rvb2wgZ3JlcDkACmUbQaTqGEEA1P9WQaTqGEoiChZnZW5fYWkuY29udmVyc2F0aW9uLmlkEggKBnNlc3MtMUoaChBnZW5fYWkudG9vbC5uYW1lEgYKBGdyZXBKHwoTZ2VuX2FpLnRvb2wuY2FsbC5pZBIICgZjYWxsLTE="
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceGetSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "partial",
+            "spans": [
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "0af7651916cd43dd8448eb211c80319c",
+                "spanId": "b7ad6b7169203331",
+                "parentSpanId": null,
+                "name": "invoke_agent copilot",
+                "category": "agent",
+                "toolName": null,
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:00.000Z",
+                "endedAt": "2026-11-23T10:00:05.000Z",
+                "durationMs": 5000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": null,
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              },
+              {
+                "source": "copilot-cli",
+                "sessionId": "sess-1",
+                "traceId": "0af7651916cd43dd8448eb211c80319c",
+                "spanId": "00f067aa0ba902b7",
+                "parentSpanId": "b7ad6b7169203331",
+                "name": "execute_tool grep",
+                "category": "tool",
+                "toolName": "grep",
+                "skillName": null,
+                "model": null,
+                "startedAt": "2026-11-23T10:00:01.000Z",
+                "endedAt": "2026-11-23T10:00:02.000Z",
+                "durationMs": 1000,
+                "status": "unset",
+                "errorType": null,
+                "toolCallId": "call-1",
+                "argumentsJson": null,
+                "resultText": null,
+                "contentState": "unavailable"
+              }
+            ]
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "target": "service",
+        "body": {
+          "kind": "otlp",
+          "resource": "unknown-app",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-4"
+              },
+              "traceId": "3333333333333333333333333333cccc",
+              "spanId": "3333333333333333",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "144"
+              },
+              "bodyBase64": "Co0BCh8KHQoMc2VydmljZS5uYW1lEg0KC3Vua25vd24tYXBwEmoSaAoQMzMzMzMzMzMzMzMzMzPMzBIIMzMzMzMzMzMqFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy00"
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": "CkkIARJFcGFydGlhbCB0cmFjZSBjb3ZlcmFnZTogcmVqZWN0ZWQgMSBzcGFuKHMpOiAxIGZyb20gdW5zdXBwb3J0ZWQgc291cmNl"
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceStatus",
+        "result": {
+          "ok": {
+            "enabled": true,
+            "listening": true,
+            "endpoint": "<endpoint>",
+            "errorMessage": "partial trace coverage: rejected 1 span(s): 1 from unsupported source"
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "request",
+        "target": "service",
+        "body": {
+          "kind": "otlp",
+          "resource": "github-copilot",
+          "spans": [
+            {
+              "startNs": "1795428000000000000",
+              "endNs": "1795428005000000000",
+              "attributes": {
+                "gen_ai.conversation.id": "sess-3"
+              },
+              "traceId": "2222222222222222222222222222bbbb",
+              "spanId": "2222222222222222",
+              "name": "invoke_agent copilot"
+            }
+          ]
+        },
+        "result": {
+          "ok": {
+            "wire": {
+              "method": "POST",
+              "path": "/v1/traces",
+              "headers": {
+                "host": "127.0.0.1",
+                "content-type": "application/x-protobuf",
+                "content-length": "147"
+              },
+              "bodyBase64": "CpABCiIKIAoMc2VydmljZS5uYW1lEhAKDmdpdGh1Yi1jb3BpbG90EmoSaAoQIiIiIiIiIiIiIiIiIiK7uxIIIiIiIiIiIiIqFGludm9rZV9hZ2VudCBjb3BpbG90OQBAyt9ApOoYQQAy0AlCpOoYSiIKFmdlbl9haS5jb252ZXJzYXRpb24uaWQSCAoGc2Vzcy0z"
+            },
+            "response": {
+              "status": 200,
+              "contentType": "application/x-protobuf",
+              "bodyBase64": ""
+            }
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceStatus",
+        "result": {
+          "ok": {
+            "enabled": true,
+            "listening": true,
+            "endpoint": "<endpoint>",
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceSetEnabled",
+        "enabled": false,
+        "result": {
+          "ok": {
+            "enabled": false,
+            "listening": false,
+            "endpoint": null,
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceSetEnabled",
+        "enabled": true,
+        "result": {
+          "ok": {
+            "enabled": true,
+            "listening": true,
+            "endpoint": "<endpoint>",
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceClear",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceGetSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceShutdown",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceStatus",
+        "result": {
+          "ok": {
+            "enabled": false,
+            "listening": false,
+            "endpoint": null,
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceGetSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "events": []
+      }
+    ]
+  },
+  {
+    "name": "service-reopen-keeps-opt-in",
+    "steps": [
+      {
+        "call": "serviceCreate",
+        "userDataDir": "service-b",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceInitialize",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceSetEnabled",
+        "enabled": true,
+        "result": {
+          "ok": {
+            "enabled": true,
+            "listening": true,
+            "endpoint": "<endpoint>",
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceShutdown",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceCreate",
+        "userDataDir": "service-b",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceInitialize",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceStatus",
+        "result": {
+          "ok": {
+            "enabled": true,
+            "listening": true,
+            "endpoint": "<endpoint>",
+            "errorMessage": null
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceShutdown",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      }
+    ]
+  },
+  {
+    "name": "service-receiver-start-failure",
+    "steps": [
+      {
+        "call": "serviceCreate",
+        "userDataDir": "service-c",
+        "receiverFailure": "listen EADDRINUSE: address already in use",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceInitialize",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceSetEnabled",
+        "enabled": true,
+        "result": {
+          "ok": {
+            "enabled": false,
+            "listening": false,
+            "endpoint": null,
+            "errorMessage": "Failed to start the local agent trace receiver: listen EADDRINUSE: address already in use"
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceStatus",
+        "result": {
+          "ok": {
+            "enabled": false,
+            "listening": false,
+            "endpoint": null,
+            "errorMessage": "Failed to start the local agent trace receiver: listen EADDRINUSE: address already in use"
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceShutdown",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      }
+    ]
+  },
+  {
+    "name": "service-store-open-failure",
+    "steps": [
+      {
+        "call": "serviceCreate",
+        "userDataDir": "service-d",
+        "storeFailure": "disk unavailable",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceInitialize",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      },
+      {
+        "call": "serviceStatus",
+        "result": {
+          "ok": {
+            "enabled": false,
+            "listening": false,
+            "endpoint": null,
+            "errorMessage": "Failed to initialize local agent trace storage: disk unavailable"
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceGetSession",
+        "selection": {
+          "source": "copilot-cli",
+          "sessionId": "sess-1"
+        },
+        "result": {
+          "ok": {
+            "source": "copilot-cli",
+            "sessionId": "sess-1",
+            "availability": "not-collected",
+            "spans": []
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceSetEnabled",
+        "enabled": true,
+        "result": {
+          "ok": {
+            "enabled": false,
+            "listening": false,
+            "endpoint": null,
+            "errorMessage": "Failed to initialize local agent trace storage: disk unavailable"
+          }
+        },
+        "events": []
+      },
+      {
+        "call": "serviceShutdown",
+        "result": {
+          "ok": null
+        },
+        "events": []
+      }
+    ]
+  }
+]

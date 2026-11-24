@@ -1,0 +1,29 @@
+[package]
+name = "agent_trace_receiver"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+description = "Rust port of `reference/src/agent-trace-receiver.ts` and `reference/src/agent-trace-service.ts`: the localhost OTLP receiver and the service that owns it"
+
+[dependencies]
+agent_trace_correlator = { path = "../agent_trace_correlator" }
+agent_trace_protocol = { path = "../agent_trace_protocol" }
+agent_trace_sanitizer = { path = "../agent_trace_sanitizer" }
+agent_trace_store = { path = "../agent_trace_store" }
+logger = { path = "../logger" }
+prost = "0.13"
+serde = "1"
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+shared = { path = "../shared" }
+tiny_http = "0.12"
+
+[dev-dependencies]
+base64 = "0.22"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lints.rust]
+unused_lifetimes = "warn"
+trivial_numeric_casts = "warn"
