@@ -1,0 +1,24 @@
+[package]
+name = "aggregate"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+description = "Rust port of `reference/src/merge.ts`: the merged CLI and VS Code usage database"
+
+[dependencies]
+rusqlite = { version = "0.43", features = ["bundled"] }
+vscode_chat = { path = "../vscode_chat" }
+
+[dev-dependencies]
+db = { path = "../db" }
+shared = { path = "../shared" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lints.rust]
+unused_lifetimes = "warn"
+trivial_numeric_casts = "warn"
