@@ -698,7 +698,7 @@ dependencies = [
 
 [[package]]
 name = "credits-tracker-app"
-version = "1.20.0"
+version = "0.0.0"
 dependencies = [
  "agent_trace_correlator",
  "agent_trace_protocol",

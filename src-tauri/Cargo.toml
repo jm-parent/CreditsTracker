@@ -1,6 +1,8 @@
 [package]
 name = "credits-tracker-app"
-version = "1.20.0"
+# Not the app version: tauri.conf.json reads it from ../package.json, the source of truth that
+# semantic-release bumps.
+version = "0.0.0"
 edition = "2024"
 rust-version = "1.97"
 publish = false

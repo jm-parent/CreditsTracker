@@ -22,7 +22,9 @@ use shared::{
 };
 use shortcut::SystemPlatform;
 use tauri::{AppHandle, Manager, State};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::{
+    DialogExt, MessageDialogButtons, MessageDialogKind, MessageDialogResult,
+};
 use tauri_plugin_opener::OpenerExt;
 use updater::{DownloadOutcome, UpdateBackend};
 
@@ -171,6 +173,16 @@ fn cancelled_export() -> ExportResult {
     ExportResult { cancelled: true, html_path: None, summary_rows: None, session_rows: None }
 }
 
+/// The first button is the default (Enter) on Windows and macOS, so Cancel comes first, as
+/// `defaultId: 1` in `src/main/ipc-handlers.ts`. The labels are unchanged.
+fn overwrite_prompt_buttons() -> MessageDialogButtons {
+    MessageDialogButtons::OkCancelCustom("Cancel".into(), "Overwrite".into())
+}
+
+fn is_overwrite_choice(result: &MessageDialogResult) -> bool {
+    matches!(result, MessageDialogResult::Custom(label) if label == "Overwrite")
+}
+
 #[tauri::command]
 pub async fn export_html(
     app: AppHandle,
@@ -226,11 +238,11 @@ async fn export_html_flow(
                 .message(message)
                 .title("Files already exist")
                 .kind(MessageDialogKind::Warning)
-                .buttons(MessageDialogButtons::OkCancelCustom("Overwrite".into(), "Cancel".into()))
-                .blocking_show())
+                .buttons(overwrite_prompt_buttons())
+                .blocking_show_with_result())
         })
         .await?;
-        if !overwrite {
+        if !is_overwrite_choice(&overwrite) {
             return Ok(cancelled_export());
         }
     }
@@ -619,5 +631,38 @@ mod tests {
             );
         }
         assert!(validate_external_repository_url(json!(42)).is_err());
+    }
+
+    #[test]
+    fn app_version_comes_from_package_json() {
+        let config: serde_json::Value =
+            serde_json::from_str(&read("tauri.conf.json")).expect("tauri.conf.json must be JSON");
+        let configured = config["version"].as_str().expect("tauri.conf.json must set a version");
+        // A path-valued version is read relative to src-tauri/, as Tauri does at build time.
+        let resolved = if configured.ends_with("package.json") {
+            let manifest: serde_json::Value =
+                serde_json::from_str(&read(configured)).expect("version file must be JSON");
+            manifest["version"].as_str().expect("version file must set a version").to_string()
+        } else {
+            configured.to_string()
+        };
+
+        let package: serde_json::Value =
+            serde_json::from_str(&read("../package.json")).expect("package.json must be JSON");
+        assert_eq!(resolved, package["version"].as_str().expect("package.json must set a version"));
+    }
+
+    #[test]
+    fn overwrite_prompt_defaults_to_cancel() {
+        use super::{is_overwrite_choice, overwrite_prompt_buttons};
+        use tauri_plugin_dialog::{MessageDialogButtons, MessageDialogResult};
+
+        let MessageDialogButtons::OkCancelCustom(first, second) = overwrite_prompt_buttons() else {
+            panic!("the overwrite prompt must use custom Overwrite and Cancel buttons");
+        };
+        assert_eq!((first.as_str(), second.as_str()), ("Cancel", "Overwrite"));
+        assert!(is_overwrite_choice(&MessageDialogResult::Custom("Overwrite".into())));
+        assert!(!is_overwrite_choice(&MessageDialogResult::Custom("Cancel".into())));
+        assert!(!is_overwrite_choice(&MessageDialogResult::Cancel));
     }
 }
